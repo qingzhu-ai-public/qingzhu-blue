@@ -6,6 +6,8 @@
 
 > **当前状态**：站点已跑通，Android 有 3 篇示例文档、分 3 个类目；其余平台在站点上预留了 Tab，显示 Coming soon。
 
+**线上地址**：<https://qingzhu-blue.github.io/qingzhu-blue/>　（Pages 源 = 本仓 `main` 根目录）
+
 ## 目录结构
 
 ```
