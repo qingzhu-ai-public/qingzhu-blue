@@ -4,9 +4,9 @@
 
 把扫描、连接、并发调度、批量配置、固件升级、实时通知这些底层复杂性封在 SDK 内部，开发者只写几行业务代码。站点同时承载各平台的文档与工程实践。
 
-> **当前状态**：Android 先行（3 篇示例文档 / 3 个类目）；其余平台在站点上预留了 Tab，显示 Coming soon。SDK 处于设计与骨架阶段，进度见 <https://github.com/qingzhu-blue/qingzhu-ble-android>。
+> **当前状态**：Android 先行（3 篇示例文档 / 3 个类目）；其余平台在站点上预留了 Tab，显示 Coming soon。SDK 处于设计与骨架阶段，进度见 <https://github.com/qingzhu-ai-public/qingzhu-ble-android>。
 
-**线上地址**：<https://qingzhu-blue.github.io/qingzhu-blue/>　（Pages 源 = 本仓 `main` 根目录）
+**线上地址**：<https://qingzhu-ai-public.github.io/qingzhu-blue/>　（Pages 源 = 本仓 `main` 根目录）
 
 ## 目录结构
 

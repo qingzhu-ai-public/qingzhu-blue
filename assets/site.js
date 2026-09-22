@@ -14,7 +14,7 @@
   var md = window.QZBmd;
   var esc = md.escape;
 
-  var REPO = 'https://github.com/qingzhu-blue';
+  var REPO = 'https://github.com/qingzhu-ai-public';
   var REPO_URL = REPO + '/qingzhu-blue';
   var SITE_NAME = '青竹 Blue｜BLE SDK';                      // 文档页标题后缀
   var BASE_TITLE = '青竹 Blue｜BLE SDK：把蓝牙开发的复杂封在里面，开发者只写几行';   // 首页标题
