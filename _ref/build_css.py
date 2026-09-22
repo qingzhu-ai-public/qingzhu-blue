@@ -85,7 +85,7 @@ header = (
     "   重新生成：python _ref/build_css.py\n"
     "   ========================================================================== */\n\n"
 )
-io.open(OUT, "w", encoding="utf-8").write(header + final)
+io.open(OUT, "w", encoding="utf-8", newline="\n").write(header + final)
 print("styles.css 已生成: %d 字节 | accent 引用 %d 处 | 括号平衡 %d/%d"
       % (len(header + final), final.count("var(--accent)"),
          final.count("{"), final.count("}")))
