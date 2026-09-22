@@ -1,10 +1,10 @@
 # 青竹 Blue
 
-**Cross-Platform Bluetooth SDK & Engineering Knowledge Base** —— 跨平台蓝牙 SDK 与工程实践平台。
+**Cross-Platform BLE SDK** —— 一套「什么蓝牙场景都能接、接起来还很省事」的蓝牙开发工具包。
 
-整理 Bluetooth 通用知识、各平台 BLE 实现差异，以及真实项目里踩过的连接稳定性、数据传输与设备兼容问题。
+把扫描、连接、并发调度、批量配置、固件升级、实时通知这些底层复杂性封在 SDK 内部，开发者只写几行业务代码。站点同时承载各平台的文档与工程实践。
 
-> **当前状态**：站点已跑通，Android 有 3 篇示例文档、分 3 个类目；其余平台在站点上预留了 Tab，显示 Coming soon。
+> **当前状态**：Android 先行（3 篇示例文档 / 3 个类目）；其余平台在站点上预留了 Tab，显示 Coming soon。SDK 处于设计与骨架阶段，进度见 <https://github.com/qingzhu-blue/qingzhu-ble-android>。
 
 **线上地址**：<https://qingzhu-blue.github.io/qingzhu-blue/>　（Pages 源 = 本仓 `main` 根目录）
 
@@ -22,7 +22,7 @@ docs/<平台>/categories.json      类目表（文件夹 → 中文名 + 顺序 
 docs/<平台>/<类目>/*.md          文档正文 ← 平时只动这里
 tools/build-docs.js              🔧 扫描 docs/ → 生成 docs-bundle.js
 .github/workflows/               push docs/ 后自动重建清单
-_e2e_site.js                     站点验收脚本（真浏览器，150 项断言）
+_e2e_site.js                     站点验收脚本（真浏览器，172 项断言）
 _ref/                            样式来源：色值迁移脚本 + 增量样式
 ```
 
@@ -182,7 +182,7 @@ node tools/build-docs.js --check
 # 改了 _ref/extra.css 后重新生成样式表
 python _ref/build_css.py
 
-# 真浏览器验收（150 项断言 + 截图到 _shots/）
+# 真浏览器验收（172 项断言 + 截图到 _shots/）
 node _e2e_site.js
 ```
 
@@ -194,7 +194,21 @@ node _e2e_site.js
 首页 | Bluetooth | Android | iOS | HarmonyOS | Flutter | React Native
 ```
 
-**首页**是营销落地页；**其余所有页面共用同一套文档双栏版式**（不跟首页共用营销版式）：
+**首页**是营销落地页，主线是「这套 SDK 解决了什么」；**其余所有页面共用同一套文档双栏版式**（不跟首页共用营销版式）。
+
+首页六个板块**全部是手写在 `index.html` 里的静态内容**，改文案直接改那里：
+
+| 板块 | 说什么 |
+|---|---|
+| Hero | 价值主张「把复杂交给 SDK，开发者只写几行」+ 一段示意代码（业务侧到底要写多少） |
+| Pain Points | 连上之后才暴露的四类难题：并发上限 / 掉线重连 / 地址变更找回 / 批量失败处理 |
+| What It Handles | **六类场景**（连一台 / 连多台 / 批量刷配置 / 顺序查询 / 固件升级 / 设备主动上报），每类配生活化比喻 + 开发者用途 + 能力标签 |
+| Inside the SDK | 「外面几行，里面是这些」：连接 / 数据 / 批量 / 通用四组内部机制，并标注 Android 先行 |
+| Supported Platforms | 平台卡，由各平台文档篇数驱动 |
+| GET STARTED | 指向 GitHub 组织 |
+
+> 只动首页板块时**不需要碰构建**：`assets/site.js` 只负责往 `[data-home="platforms"]` 里填平台卡、以及给 hero 主按钮选落地页。
+> 新板块的样式加在 `_ref/extra.css`（类名前缀 `scene*` / `hp-*`），改完跑 `python _ref/build_css.py` 重新生成。
 
 ```
 ┌──────────────────┬────────────────────────────────────────────┐
@@ -229,4 +243,5 @@ node _e2e_site.js
 
 ## 协议
 
-MIT
+**尚未选定** —— 本仓当前没有 `LICENSE` 文件，未附许可证即默认「保留所有权利」。
+SDK 仓（`qingzhu-ble-android`）若要让别人真正使用 SDK，需要单独选定并附上许可证（MIT / Apache-2.0 等）。

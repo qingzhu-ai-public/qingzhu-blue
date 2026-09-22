@@ -179,9 +179,16 @@ const STATE = `({
   chk('页面容器只有 首页 + 文档页（=2）', s.totalPages === TOTAL_PAGES, String(s.totalPages));
   chk('导航 7 个 Tab，顺序取自 platforms.json',
       JSON.stringify(s.navPages) === JSON.stringify(NAV), JSON.stringify(s.navPages));
-  chk('首页 hero 标题为「蓝牙开发那些坑」', s.bodyText.includes('蓝牙开发那些坑'));
-  chk('首页含「为什么创建青竹 Blue」', s.bodyText.includes('为什么创建青竹 blue'));
-  chk('首页含 6 张平台卡（Supported Platforms）', s.bodyText.includes('supported platforms'));
+  chk('浏览器标题是 SDK 定位（不是「跨平台开发平台」）',
+      s.title === '青竹 Blue｜BLE SDK：把蓝牙开发的复杂封在里面，开发者只写几行', s.title);
+  chk('🔴 首页立的是 SDK，不是「知识库」',
+      s.bodyText.includes('qingzhu ble sdk') && s.bodyText.includes('蓝牙开发工具包'));
+  chk('首页 hero 标题 =「把复杂交给 SDK，开发者只写几行」',
+      s.bodyText.includes('把复杂交给 sdk') && s.bodyText.includes('开发者只写几行'));
+  chk('首页有平台入口板块（Supported Platforms）', s.bodyText.includes('supported platforms'));
+  chk('🔴 旧首页文案已清除（按平台讲清楚 / 为什么创建 / 落地时全是细节）',
+      !s.bodyText.includes('按平台讲清楚') && !s.bodyText.includes('为什么创建青竹 blue')
+      && !s.bodyText.includes('落地时全是细节'));
   chk('🔴 首页无「先看 Android」类优先级引导',
       !s.bodyText.includes('先看 android') && !s.bodyText.includes('从 android 开始') && !s.bodyText.includes('android 优先'));
   chk('首页主按钮是中性文案',
@@ -219,6 +226,60 @@ const STATE = `({
   chk('hero 标题不超左栏宽度', hero.over <= 1, 'over=' + hero.over + 'px');
   chk('渐变高亮文字是蓝色渐变 + background-clip:text',
       hero.emClip === 'text' && hero.emBg.includes('rgb(37, 99, 235)'), hero.emBg.slice(0, 48));
+
+  // ---------- 1.1 首页正文：痛点 → 六类场景 → SDK 内部清单 ----------
+  console.log('  —— 首页叙事：痛点 / 六类场景 / SDK 内部清单');
+  const H = await c.ev(`(() => {
+    const q = (sel) => [...document.querySelectorAll('#page-home ' + sel)];
+    const scenes = q('.scene');
+    return {
+      pains: q('.mods .mod h3').map(h => h.textContent.trim()),
+      scenes: scenes.map(a => ({
+        num: (a.querySelector('.scene-num')||{}).textContent || '',
+        title: (a.querySelector('h3')||{}).textContent || '',
+        like: (a.querySelector('.scene-like')||{}).textContent || '',
+        use: (a.querySelector('.scene-use')||{}).textContent || '',
+        api: [...a.querySelectorAll('.scene-api .chip')].map(x => x.textContent.trim())
+      })),
+      groups: q('.hp-group').length,
+      groupChips: q('.hp-group').map(g => g.querySelectorAll('.chip').length),
+      chips: q('.hp-chips .chip').length,
+      notes: q('.hp-note').map(p => p.textContent.replace(/\\s+/g,' ').trim()),
+      heroCode: (document.querySelector('#page-home .hero-art .code-card')||{}).innerText || '',
+      cols: getComputedStyle(document.querySelector('#page-home .scenes')).gridTemplateColumns.split(' ').length
+    };
+  })()`);
+
+  chk('🔴 首页主线是「六类场景」', H.scenes.length === 6, String(H.scenes.length));
+  chk('六类场景顺序与文案正确',
+      JSON.stringify(H.scenes.map((x) => x.title)) ===
+      JSON.stringify(['连一台，慢慢操作', '同时连好几台，随时控制', '一批设备，挨个刷配置',
+        '连上后要问一串问题', '给设备升级固件', '设备主动汇报']),
+      JSON.stringify(H.scenes.map((x) => x.title)));
+  chk('🔴 每张场景卡都有编号 / 生活化比喻 / 开发者用途 / ≥3 个能力标签',
+      H.scenes.every((x, i) => x.num === String(i + 1).padStart(2, '0')
+        && x.like.indexOf('就像') === 0 && x.use.indexOf('开发者用它做') === 0 && x.api.length >= 3),
+      JSON.stringify(H.scenes.map((x) => [x.num, x.api.length])));
+  chk('六类场景各自点出真实用途（设置页 / 管理页 / 批量 / 查询 / OTA / 监控）',
+      ['设备设置页', '设备管理页', '批量配置', '查询设备信息', '固件升级', '实时监控']
+        .every((k, i) => H.scenes[i].use.includes(k)),
+      H.scenes.map((x) => x.use.slice(0, 12)).join(' | '));
+  chk('🔴 痛点段回答的是「连上之后」的问题，不是「怎么连」',
+      H.pains.length === 4 && H.pains[0].includes('一次连几台') && H.pains[1].includes('突然掉线')
+      && H.pains[2].includes('地址变了') && H.pains[3].includes('继续吗'),
+      JSON.stringify(H.pains));
+  chk('段末说明把痛点收敛到「SDK 的内部策略」',
+      H.notes.length === 2 && H.notes.some((t) => /sdk 的内部策略/i.test(t)),
+      H.notes.length + ' 条');
+  chk('SDK 内部清单：4 组、每组 ≥4 项、总计 ≥16 项',
+      H.groups === 4 && H.groupChips.every((n) => n >= 4) && H.chips >= 16,
+      'groups=' + H.groups + ' chips=' + H.chips + ' ' + JSON.stringify(H.groupChips));
+  chk('🔴 内部清单标注「Android 先行」（不假装已全平台可用）',
+      H.notes.some((t) => /android 先行实现/i.test(t)));
+  chk('🔴 hero 代码卡写明「以上全部由 SDK 内部处理」（「只写几行」的唯一证据）',
+      /SDK 内部处理/.test(H.heroCode) && /connect\(/.test(H.heroCode),
+      H.heroCode.replace(/\s+/g, ' ').slice(0, 60));
+  chk('桌面 1440 下场景卡是 3 列栅格', H.cols === 3, H.cols + ' 列');
 
   // ---------- 2. 品牌色 ----------
   console.log('\n【2】品牌色：已从绿迁到蓝，全页无绿色残留');
@@ -483,7 +544,7 @@ const STATE = `({
   chk('nav 高亮停在 Android', JSON.stringify(s.navActive) === JSON.stringify(['android']), JSON.stringify(s.navActive));
   chk('🔴 左栏只有这一篇被选中', s.sideActive === D_GEN, String(s.sideActive));
   chk('🟢 当前是文档时类目头不再单独高亮', s.sideCatActive === null, String(s.sideCatActive));
-  chk('浏览器标题 = 文档名｜站点名', s.title === 'Android BLE 总览｜青竹 Blue｜跨平台蓝牙开发平台', s.title);
+  chk('浏览器标题 = 文档名｜站点名', s.title === 'Android BLE 总览｜青竹 Blue｜BLE SDK', s.title);
 
   const doc = await c.ev(`(() => {
     const b = document.querySelector('#docsMain .doc-body');
@@ -643,6 +704,34 @@ const STATE = `({
       geo.sideVisible && geo.sideLeftOfMain, 'side.w=' + geo.sideWidth + ' main.left=' + geo.mainLeft);
   chk('桌面下目录折叠按钮隐藏', geo.toggleHidden === true);
 
+  // 首页几何（1440）：截图只说明「长这样」，溢出和折行必须量
+  await goto(SITE + '#home');
+  const hgeo = await c.ev(`(() => {
+    const mm = (sel) => [...document.querySelectorAll('#page-home ' + sel)];
+    const code = document.querySelector('#page-home .hero-art .code-card').getBoundingClientRect();
+    return {
+      over: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      page: [...document.querySelectorAll('.page')].filter(p => getComputedStyle(p).display !== 'none').map(p => p.id)[0],
+      painTitleLines: mm('.mods .mod h3').map(h => h.getClientRects().length),
+      painTitleFs: (mm('.mods .mod h3')[0] ? parseFloat(getComputedStyle(mm('.mods .mod h3')[0]).fontSize) : 0),
+      sceneClip: mm('.scene').filter(s => s.scrollHeight > s.clientHeight + 1).length,
+      codeW: Math.round(code.width), vw: document.documentElement.clientWidth,
+      codeOver: Math.round(document.querySelector('#page-home .hero-art .code-card').scrollWidth
+        - document.querySelector('#page-home .hero-art .code-card').clientWidth)
+    };
+  })()`);
+  chk('首页无横向溢出（1440）', hgeo.over <= 1, 'overflow=' + hgeo.over + 'px');
+  chk('🔴 痛点卡标题单行不折（栅格没被挤到换行）',
+      hgeo.page === 'page-home' && hgeo.painTitleLines.every((n) => n === 1),
+      'page=' + hgeo.page + ' 行数=' + JSON.stringify(hgeo.painTitleLines) + ' @' + hgeo.painTitleFs + 'px');
+  chk('🔴 场景卡内容未溢出卡片（长文案没被裁掉）', hgeo.sceneClip === 0, hgeo.sceneClip + ' 张裁切');
+  chk('hero 代码卡收在 hero 栏内（只有卡内横向滚动，不撑破页面）',
+      hgeo.codeW <= hgeo.vw / 2 + 40, 'code=' + hgeo.codeW + 'px vw=' + hgeo.vw);
+
+  // 🔴 首页量完必须回文档页：下面的窄屏测量量的是 .docs-side，
+  //    留在首页上会量到一个隐藏页里的元素（高度 0）→ 假绿
+  await goto(SITE + '#' + D_GEN);
+
   await c.send('Emulation.setDeviceMetricsOverride', { width: 700, height: 900, deviceScaleFactor: 1, mobile: false });
   await sleep(600);
   const mob = await c.ev(`(() => {
@@ -650,6 +739,7 @@ const STATE = `({
     const side = document.querySelector('.docs-side');
     const tw = document.querySelector('.doc-table-wrap');
     return {
+      page: [...document.querySelectorAll('.page')].filter(p => getComputedStyle(p).display !== 'none').map(p => p.id)[0],
       shown: links.filter(a => getComputedStyle(a).display !== 'none').length,
       total: links.length,
       docOver: document.documentElement.scrollWidth - document.documentElement.clientWidth,
@@ -661,7 +751,8 @@ const STATE = `({
   chk('700px 宽下 7 个 Tab 仍可见', mob.shown === mob.total, mob.shown + '/' + mob.total);
   chk('🔴 700px 宽下文档页无横向溢出', mob.docOver <= 1, 'overflow=' + mob.docOver + 'px');
   chk('窄屏出现「文档目录」折叠按钮', mob.toggleShown === true);
-  chk('窄屏左栏默认收起', mob.sideH === 0, 'height=' + mob.sideH);
+  chk('窄屏左栏默认收起', mob.page === 'page-docs' && mob.sideH === 0,
+      'page=' + mob.page + ' height=' + mob.sideH);
   await c.ev(`document.getElementById('docsToggle').click();'ok'`);
   await sleep(400);
   const opened = await c.ev(`({
@@ -672,6 +763,9 @@ const STATE = `({
   await c.shot('06_docs_mobile700.png');
   await c.ev(`document.getElementById('docsToggle').click();'ok'`);
   await sleep(300);
+  await goto(SITE + '#home');
+  const hMob = await c.ev(`document.documentElement.scrollWidth - document.documentElement.clientWidth`);
+  chk('🔴 700px 宽下首页无横向溢出', hMob <= 1, 'overflow=' + hMob + 'px');
   await c.send('Emulation.clearDeviceMetricsOverride');
   await sleep(300);
 
