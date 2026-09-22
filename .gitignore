@@ -1,0 +1,14 @@
+# 验收脚本产出的截图（本地自查用，不进仓）
+_shots/
+
+# 生成中间物
+_ref/buddy.css
+
+# 系统 / 编辑器
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+.idea/
+.vscode/
+node_modules/

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img">
+  <title>青竹 Blue</title>
+  <rect width="64" height="64" rx="16" fill="#e6efff"/>
+  <g fill="none" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M32 13 V51" stroke="#2563eb"/>
+    <path d="M32 13 L45 32 L32 51" stroke="#2563eb"/>
+    <path d="M32 13 L19 32 L32 51" stroke="#38bdf8"/>
+  </g>
+</svg>

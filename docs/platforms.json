@@ -1,0 +1,47 @@
+{
+  "_comment": "平台元数据。有序（数组顺序 = 导航顺序）。未收录任何文档的平台会自动显示 Coming soon 面板；一旦 docs/<id>/ 下有 .md 文件，面板自动消失。",
+  "platforms": [
+    {
+      "id": "bluetooth",
+      "name": "Bluetooth",
+      "title": "Bluetooth 通用知识",
+      "summary": "通用蓝牙知识放在所有平台之前，讲协议本身；各平台页只讲「这个平台怎么实现」。",
+      "plan": ["BLE", "GAP", "GATT", "ATT", "L2CAP", "Advertising", "Connection", "Security", "Data Transfer"]
+    },
+    {
+      "id": "android",
+      "name": "Android",
+      "title": "Android BLE 开发",
+      "summary": "平台页 = 系统知识 + API 机制 + 工程实践 + 青竹 BLE SDK，四块放在一处。",
+      "plan": ["Overview", "Bluetooth API", "BLE Architecture", "Scanner", "Connection", "GATT", "MTU", "Notification", "Background", "Permission", "Common Issues", "Qingzhu BLE SDK"]
+    },
+    {
+      "id": "ios",
+      "name": "iOS",
+      "title": "iOS BLE 开发",
+      "summary": "按 Android 的同一套结构写：CoreBluetooth 的模型、后台模式与权限限制，以及青竹 BLE SDK 的接入方式。",
+      "plan": ["CoreBluetooth", "CBCentralManager", "CBPeripheral", "Service", "Characteristic", "Background Mode", "Permission", "Common Issues", "Qingzhu BLE SDK"]
+    },
+    {
+      "id": "harmonyos",
+      "name": "HarmonyOS",
+      "title": "HarmonyOS BLE 开发",
+      "summary": "目录结构还没定——接口能力、系统限制和权限模型需要先摸一遍，再决定按什么粒度拆。下面的目录只是草稿。",
+      "plan": ["Overview", "BLE API", "扫描与广播", "连接与 GATT", "权限模型", "常见问题"]
+    },
+    {
+      "id": "flutter",
+      "name": "Flutter",
+      "title": "Flutter BLE 开发",
+      "summary": "重点在桥接：Dart 侧 API 怎么设计、原生侧怎么复用已有的 Android / iOS 实现，而不是再写一套协议。",
+      "plan": ["Plugin", "Native Bridge", "Usage", "Qingzhu BLE SDK"]
+    },
+    {
+      "id": "react-native",
+      "name": "React Native",
+      "title": "React Native BLE 开发",
+      "summary": "要先回答一个问题：走桥接复用原生 SDK，还是重写一套实现。定了这个，目录结构才有意义。",
+      "plan": ["Overview", "Native Bridge", "Example", "Qingzhu BLE SDK"]
+    }
+  ]
+}

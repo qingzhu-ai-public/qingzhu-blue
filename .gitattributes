@@ -1,0 +1,7 @@
+# 全仓统一 LF：CI 会重建 assets/docs-bundle.js 并回提，
+# 若换行符随平台变化，每次重建都会产生只差换行的伪提交。
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.ico binary

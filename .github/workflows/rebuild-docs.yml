@@ -1,0 +1,52 @@
+name: Rebuild docs bundle
+
+# 站点内容由 assets/docs-bundle.js 驱动（构建期生成）。
+# 这个工作流让「在 GitHub 网页上直接新建一篇 .md」也能自动上线：
+#   push docs/** → 重新扫描 → 提交新的 bundle → Pages 自动更新
+#
+# 注意：paths 只盯着 docs/** 与构建脚本本身。提交 bundle 时改的是 assets/，
+# 不会再次触发本工作流，因此不存在自我循环。
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/**'
+      - 'tools/build-docs.js'
+      - '.github/workflows/rebuild-docs.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: rebuild-docs
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 校验文档（front matter / slug 冲突 / order 重复 / 站内死链）
+        run: node tools/build-docs.js --check
+
+      - name: 生成 assets/docs-bundle.js
+        run: node tools/build-docs.js
+
+      - name: 提交变更
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/docs-bundle.js
+          if git diff --staged --quiet; then
+            echo "文档清单无变化，跳过提交"
+          else
+            git commit -m "chore(docs): 重新生成文档清单"
+            git push
+          fi

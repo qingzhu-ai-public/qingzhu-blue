@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>青竹 Blue｜跨平台蓝牙开发平台：Bluetooth 知识、多平台 BLE SDK 与工程实践</title>
+  <meta name="description" content="青竹 Blue 是一个专注蓝牙开发的跨平台技术平台：整理 Bluetooth 通用知识、Android / iOS / HarmonyOS / Flutter / React Native 的 BLE 实现差异与真实工程实践。">
+  <link rel="icon" href="assets/logo.svg">
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+
+<body>
+<header class="site-header"><div class="container topbar"><a class="brand" href="#home" data-page="home"><img src="assets/logo.svg" alt="青竹 Blue logo"><b>青竹 <span>Blue</span></b></a><nav class="nav" id="nav"></nav></div></header>
+
+<main id="pages">
+
+  <!-- ============================ 首页（静态） ============================ -->
+  <section class="page active" id="page-home" data-title="跨平台蓝牙开发平台">
+    <div class="hero"><div class="container hero-grid"><div><div class="eyebrow">Cross-Platform Bluetooth Engineering</div><h1>蓝牙开发那些坑，<br><em>按平台讲清楚</em></h1><p class="hero-copy"><strong>青竹 Blue</strong> 是一个专注蓝牙开发的跨平台技术平台：整理 Bluetooth 通用知识、各平台 BLE 实现差异，以及真实项目里踩过的连接稳定性、数据传输与设备兼容问题。</p><div class="actions"><a class="btn btn-primary" id="heroCta" href="#home">浏览文档 <span>→</span></a><a class="btn btn-outline" href="https://github.com/qingzhu-blue" target="_blank" rel="noopener">GitHub</a></div><div class="hero-meta"><span>✓ 按平台组织</span><span>✓ BLE 为主线</span><span>✓ 文档与 SDK 同源</span><span>✓ 内容持续更新</span></div></div><div class="hero-art"><div class="mini-ui"><div class="mini-top"><span>QZBleDemo</span><span>已连接</span></div><div class="mini-row"><div class="mini-avatar">1</div><strong>扫描设备</strong><small>2000ms · 发现 3 台</small></div><div class="mini-row"><div class="mini-avatar">2</div><strong>连接设备</strong><small>autoConnect=false</small></div><div class="mini-row"><div class="mini-avatar">3</div><strong>服务发现</strong><small>1 个 Service · 3 个 Characteristic</small></div><div class="mini-row"><div class="mini-avatar">4</div><strong>订阅 Notify</strong><small>数据解析 → 业务回调</small></div></div><div class="caption">Android BLE 的典型链路：扫描 → 连接 → 服务发现 → 订阅通知 → 读写数据</div></div></div></div>
+
+    <section class="section alt"><div class="container"><div class="section-heading"><div class="eyebrow">为什么创建青竹 Blue</div><h2>蓝牙开发看似简单，<br>落地时全是细节</h2><p>同一段 BLE 代码，换个平台、换个机型、换个系统版本，行为就可能完全不同</p></div><div class="mods"><article class="mod"><div class="mod-head"><span class="mod-ico">01</span><h3>平台 API 各不相同</h3></div><p>CoreBluetooth、android.bluetooth、鸿蒙的 BLE 接口，<b>模型抽象不一样</b>，一份实现没法跨平台照搬。</p></article><article class="mod"><div class="mod-head"><span class="mod-ico">02</span><h3>系统行为有差异</h3></div><p>权限模型、后台策略、扫描限流、连接缓存，<b>各系统各版本都不一样</b>，踩过才知道。</p></article><article class="mod"><div class="mod-head"><span class="mod-ico">03</span><h3>连接稳定性是硬骨头</h3></div><p>断连重连、GATT 133、Notify 丢包、MTU 协商，<b>真机上才暴露</b>的问题最多。</p></article><article class="mod"><div class="mod-head"><span class="mod-ico">04</span><h3>经验是散的</h3></div><p>这些结论散在论坛、Issue 和自己的笔记里。青竹 Blue 想把它们<b>按平台整理成能直接用的东西</b>。</p></article></div></div></section>
+
+    <!-- 平台卡由 assets/site.js 依据各平台文档数量渲染：有文档 → 「N 篇文档」，无文档 → 「整理中」 -->
+    <section class="section"><div class="container"><div class="section-heading"><div class="eyebrow">Supported Platforms</div><h2>按平台进入</h2><p>内容按平台组织：已有文档的平台可以直接进，其余平台的目录正在整理，陆续补齐</p></div><div class="platforms" data-home="platforms"></div></div></section>
+
+    <section class="download-band"><div class="container"><div class="download-box"><div><div class="eyebrow" style="color:var(--accent-2)">READY TO START</div><h2>文档与 SDK 都在 GitHub 上</h2><p>跟着进度一起更新，欢迎提 Issue 说你想看什么</p><div class="notice">内容持续更新中，其余平台的目录会陆续补齐</div></div><div class="download-actions"><a class="btn" href="https://github.com/qingzhu-blue" target="_blank" rel="noopener">前往 GitHub 组织 →</a><small>org · qingzhu-blue</small></div></div></div></section>
+  </section>
+
+  <!-- ==========================================================================
+       文档区：非首页统一走这个双栏版式（左目录树 + 右正文）。
+       内容全部由 assets/site.js 读 docs/platforms.json + docs/ 下的 Markdown 渲染。
+       加一篇文档 = 往 docs/<平台>/ 丢一个 .md（见 README.md）。
+       ========================================================================== -->
+  <section class="page" id="page-docs" data-title="">
+    <div class="docs-shell">
+      <button class="docs-toggle" id="docsToggle" type="button" aria-expanded="false" aria-controls="docsSide">文档目录</button>
+      <aside class="docs-side" id="docsSide"></aside>
+      <div class="docs-main" id="docsMain"></div>
+    </div>
+  </section>
+
+  <!-- 平台「固定介绍」：不属于文档、也不随文档数量变化的手写板块。
+       site.js 在渲染完该平台的文档目录之后，把它追加进对应平台页。
+       没有 <template> 的平台 = 纯文档列表（或 Coming soon）。 -->
+  <template data-platform-intro="android">
+    <section class="section alt"><div class="container"><div class="section-heading"><div class="eyebrow">Qingzhu BLE SDK</div><h2>SDK 与 Example 同一个仓</h2><p>Demo 就是接入范例，跟 SDK 一起发版；不拆成 scanner-demo / ota-demo 那种教学片段</p></div><div class="showcase"><div><div class="code-card"><span class="cc-title">qingzhu-ble-android/</span>├── <b>qz-ble-sdk/</b>          <i># 青竹 BLE 封装</i><br>├── <b>example/</b>             <i># QZBleDemo（完整 Demo）</i><br>│   ├── scan/                <i># 扫描 + 设备列表</i><br>│   ├── connect/             <i># 连接 + 自动重连</i><br>│   ├── gatt/                <i># 服务发现 / 读写 / Notify</i><br>│   ├── ota/                 <i># OTA 升级</i><br>│   └── log/                 <i># 日志调试</i><br>└── README.md</div></div><div><div class="eyebrow">QZBleDemo 覆盖范围</div><h2>一个接近真实项目<br>结构的 Demo</h2><p>不做一堆只演示单个接口的碎片工程，Demo 本身按真实业务分层组织。</p><div class="soon-plan" style="justify-content:flex-start"><span class="chip">扫描设备</span><span class="chip">设备列表</span><span class="chip">连接设备</span><span class="chip">服务发现</span><span class="chip">Characteristic 读取</span><span class="chip">Write</span><span class="chip">Notify</span><span class="chip">数据解析</span><span class="chip">自动重连</span><span class="chip">OTA</span><span class="chip">日志调试</span></div></div></div></div></section>
+
+    <section class="section"><div class="container"><div class="section-heading"><div class="eyebrow">当前进度</div><h2>文档与 SDK 并行推进</h2><p>文档按平台落地，SDK 与 Demo 随后跟上，两边同一套结构</p></div><div class="mods"><article class="mod"><div class="mod-head"><span class="mod-ico">✓</span><h3>已就位</h3><span class="mod-freq">已上线</span></div><p>站点与导航模型、文档体系（丢一个 <b>.md</b> 就自动成篇），以及 Android 的首批篇目</p></article><article class="mod"><div class="mod-head"><span class="mod-ico">…</span><h3>进行中</h3><span class="mod-freq">下一步</span></div><p>Android 后续篇目（扫描策略、连接与重连、GATT 交互、OTA）与 <b>qingzhu-ble-android</b> 仓骨架</p></article><article class="mod"><div class="mod-head"><span class="mod-ico">○</span><h3>待定</h3><span class="mod-freq">要拍板</span></div><p>HarmonyOS 与 React Native 的结构定义，以及协议与规范层（帧格式 / 错误码 / OTA 流程）放在哪</p></article><article class="mod"><div class="mod-head"><span class="mod-ico">→</span><h3>随后</h3><span class="mod-freq">后续</span></div><p>iOS / Flutter 按同一套结构补齐，Bluetooth 通用知识页先于各平台落地</p></article></div></div></section>
+  </template>
+
+</main>
+
+<footer class="footer"><div class="container footer-row"><span>© 2026 青竹 AI · 青竹 Blue（Qingzhu Blue）· 内容持续更新中</span><span><a href="https://github.com/qingzhu-blue" target="_blank" rel="noopener">GitHub 组织</a> · <a href="#home" data-page="home">返回首页</a></span></div></footer>
+
+<!-- 数据（构建期生成）→ Markdown 渲染器 → 站点控制器，顺序不可换 -->
+<script src="assets/docs-bundle.js"></script>
+<script src="assets/md.js"></script>
+<script src="assets/site.js"></script>
+</body>
+
+</html>
