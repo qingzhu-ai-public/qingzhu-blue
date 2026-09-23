@@ -200,10 +200,11 @@ node _e2e_site.js
 
 | 板块 | 说什么 |
 |---|---|
-| Hero | 价值主张「把复杂交给 SDK，开发者只写几行」+ 一段示意代码（业务侧到底要写多少） |
-| Pain Points | 连上之后才暴露的四类难题：并发上限 / 掉线重连 / 地址变更找回 / 批量失败处理 |
-| What It Handles | **六类场景**（连一台 / 连多台 / 批量刷配置 / 顺序查询 / 固件升级 / 设备主动上报），每类配生活化比喻 + 开发者用途 + 能力标签 |
-| Inside the SDK | 「外面几行，里面是这些」：连接 / 数据 / 批量 / 通用四组内部机制，并标注 Android 先行 |
+| Hero | 价值主张「一个方法，对接一台设备」+ 真实 API 代码卡（QingzhuBle 七个方法） |
+| Pain Points | 「你以为 vs 实际上」五连：撞车换址 / 硬断电假在线 / 并发串包 / 写死台数 / 串并行与超时 |
+| The API | 五个基础方法 + 两个组合形态的六张方法卡（scan / find / findAndConnect / findAndConfig / connect·config / sendMessage）+ 一句话选型 |
+| Inside the SDK | 「外面几行，里面是这些」：长连接 / 智能多连接 / 任务池 / 收发管道 / 传输加速五组内部机制 |
+| Zero Config · Pluggable | 零配置（nRF Connect 等价）/ settings() 全可配 / 协议插件 / 白标 |
 | Supported Platforms | 平台卡，由各平台文档篇数驱动 |
 | GET STARTED | 指向 GitHub 组织 |
 

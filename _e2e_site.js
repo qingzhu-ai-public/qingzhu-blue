@@ -180,11 +180,11 @@ const STATE = `({
   chk('导航 7 个 Tab，顺序取自 platforms.json',
       JSON.stringify(s.navPages) === JSON.stringify(NAV), JSON.stringify(s.navPages));
   chk('浏览器标题是 SDK 定位（不是「跨平台开发平台」）',
-      s.title === '青竹 Blue｜BLE SDK：把蓝牙开发的复杂封在里面，开发者只写几行', s.title);
+      s.title === '青竹 Blue｜BLE SDK：一个方法，对接一台设备', s.title);
   chk('🔴 首页立的是 SDK，不是「知识库」',
       s.bodyText.includes('qingzhu ble sdk') && s.bodyText.includes('蓝牙开发工具包'));
-  chk('首页 hero 标题 =「把复杂交给 SDK，开发者只写几行」',
-      s.bodyText.includes('把复杂交给 sdk') && s.bodyText.includes('开发者只写几行'));
+  chk('首页 hero 标题 =「一个方法，对接一台设备」',
+      s.bodyText.includes('一个方法') && s.bodyText.includes('对接一台设备'));
   chk('首页有平台入口板块（Supported Platforms）', s.bodyText.includes('supported platforms'));
   chk('🔴 旧首页文案已清除（按平台讲清楚 / 为什么创建 / 落地时全是细节）',
       !s.bodyText.includes('按平台讲清楚') && !s.bodyText.includes('为什么创建青竹 blue')
@@ -227,13 +227,13 @@ const STATE = `({
   chk('渐变高亮文字是蓝色渐变 + background-clip:text',
       hero.emClip === 'text' && hero.emBg.includes('rgb(37, 99, 235)'), hero.emBg.slice(0, 48));
 
-  // ---------- 1.1 首页正文：痛点 → 六类场景 → SDK 内部清单 ----------
-  console.log('  —— 首页叙事：痛点 / 六类场景 / SDK 内部清单');
+  // ---------- 1.1 首页正文：痛点 → 方法一览 → SDK 内部清单 → 零配置与定制 ----------
+  console.log('  —— 首页叙事：痛点 / 方法一览 / 内部清单 / 零配置与定制');
   const H = await c.ev(`(() => {
     const q = (sel) => [...document.querySelectorAll('#page-home ' + sel)];
-    const scenes = q('.scene');
+    const scenes = q('#api .scene');
     return {
-      pains: q('.mods .mod h3').map(h => h.textContent.trim()),
+      pains: q('#pains .mod h3').map(h => h.textContent.trim()),
       scenes: scenes.map(a => ({
         num: (a.querySelector('.scene-num')||{}).textContent || '',
         title: (a.querySelector('h3')||{}).textContent || '',
@@ -241,45 +241,51 @@ const STATE = `({
         use: (a.querySelector('.scene-use')||{}).textContent || '',
         api: [...a.querySelectorAll('.scene-api .chip')].map(x => x.textContent.trim())
       })),
-      groups: q('.hp-group').length,
-      groupChips: q('.hp-group').map(g => g.querySelectorAll('.chip').length),
-      chips: q('.hp-chips .chip').length,
+      groups: q('#inside .hp-group').length,
+      groupChips: q('#inside .hp-group').map(g => g.querySelectorAll('.chip').length),
+      chips: q('#inside .hp-chips .chip').length,
       notes: q('.hp-note').map(p => p.textContent.replace(/\\s+/g,' ').trim()),
+      custom: q('#custom .mod h3').map(h => h.textContent.trim()),
+      customText: ((document.querySelector('#page-home #custom')||{}).innerText || '').replace(/\\s+/g,' ').toLowerCase(),
       heroCode: (document.querySelector('#page-home .hero-art .code-card')||{}).innerText || '',
       cols: getComputedStyle(document.querySelector('#page-home .scenes')).gridTemplateColumns.split(' ').length
     };
   })()`);
 
-  chk('🔴 首页主线是「六类场景」', H.scenes.length === 6, String(H.scenes.length));
-  chk('六类场景顺序与文案正确',
+  chk('🔴 首页主线是「方法一览」（六张卡铺开全部 API 入口）', H.scenes.length === 6, String(H.scenes.length));
+  chk('方法卡顺序与标题正确',
       JSON.stringify(H.scenes.map((x) => x.title)) ===
-      JSON.stringify(['连一台，慢慢操作', '同时连好几台，随时控制', '一批设备，挨个刷配置',
-        '连上后要问一串问题', '给设备升级固件', '设备主动汇报']),
+      JSON.stringify(['scan｜扫一圈，全看见', 'find｜出现即动手', 'findAndConnect｜找到就不撒手',
+        'findAndConfig｜配完就走', 'connect / config｜设备已知，直接干', 'sendMessage｜一问一答，必有结果']),
       JSON.stringify(H.scenes.map((x) => x.title)));
-  chk('🔴 每张场景卡都有编号 / 生活化比喻 / 开发者用途 / ≥3 个能力标签',
+  chk('🔴 每张方法卡都有编号 / 生活化比喻 / 开发者用途 / ≥3 个能力标签',
       H.scenes.every((x, i) => x.num === String(i + 1).padStart(2, '0')
         && x.like.indexOf('就像') === 0 && x.use.indexOf('开发者用它做') === 0 && x.api.length >= 3),
       JSON.stringify(H.scenes.map((x) => [x.num, x.api.length])));
-  chk('六类场景各自点出真实用途（设置页 / 管理页 / 批量 / 查询 / OTA / 监控）',
-      ['设备设置页', '设备管理页', '批量配置', '查询设备信息', '固件升级', '实时监控']
+  chk('六张方法卡各自点出真实用途（发现 / 查找 / 管理页 / 批量 / 直连 / 收发）',
+      ['设备发现页', '目标设备查找', '设备管理页', '批量配置', '直连', '指令收发']
         .every((k, i) => H.scenes[i].use.includes(k)),
       H.scenes.map((x) => x.use.slice(0, 12)).join(' | '));
-  chk('🔴 痛点段回答的是「连上之后」的问题，不是「怎么连」',
-      H.pains.length === 4 && H.pains[0].includes('一次连几台') && H.pains[1].includes('突然掉线')
-      && H.pains[2].includes('地址变了') && H.pains[3].includes('继续吗'),
+  chk('🔴 痛点段是「你以为 vs 实际上」五连（撞车换址 / 硬断电 / 串包 / 写死台数 / 串并行超时）',
+      H.pains.length === 5 && H.pains[0].includes('连上就行') && H.pains[1].includes('断了就重连')
+      && H.pains[2].includes('发数据就发') && H.pains[3].includes('连几台都行') && H.pains[4].includes('连上就完事'),
       JSON.stringify(H.pains));
-  chk('段末说明把痛点收敛到「SDK 的内部策略」',
-      H.notes.length === 2 && H.notes.some((t) => /sdk 的内部策略/i.test(t)),
+  chk('痛点段末把问题收敛到「SDK 的内部策略」',
+      H.notes.length === 3 && H.notes.some((t) => /sdk 的内部策略/i.test(t)),
       H.notes.length + ' 条');
-  chk('SDK 内部清单：4 组、每组 ≥4 项、总计 ≥16 项',
-      H.groups === 4 && H.groupChips.every((n) => n >= 4) && H.chips >= 16,
+  chk('SDK 内部清单：5 组、每组 ≥4 项、总计 ≥20 项',
+      H.groups === 5 && H.groupChips.every((n) => n >= 4) && H.chips >= 20,
       'groups=' + H.groups + ' chips=' + H.chips + ' ' + JSON.stringify(H.groupChips));
   chk('🔴 内部清单标注「Android 先行」（不假装已全平台可用）',
       H.notes.some((t) => /android 先行实现/i.test(t)));
-  chk('🔴 hero 代码卡写明「以上全部由 SDK 内部处理」（「只写几行」的唯一证据）',
-      /SDK 内部处理/.test(H.heroCode) && /connect\(/.test(H.heroCode),
+  chk('🔴 零配置板块：nRF Connect 等价 / settings 全可配 / 协议插件 / 白标',
+      H.custom.length === 4 && /nrf connect/.test(H.customText)
+      && H.customText.includes('白标') && H.customText.includes('不改 core 一行') && H.customText.includes('ble.settings()'),
+      JSON.stringify(H.custom));
+  chk('🔴 hero 代码卡写明「以上全部由 SDK 内部处理」（真实 API：QingzhuBle 七个方法）',
+      /SDK 内部处理/.test(H.heroCode) && /connect\(/.test(H.heroCode) && /getInstance/.test(H.heroCode),
       H.heroCode.replace(/\s+/g, ' ').slice(0, 60));
-  chk('桌面 1440 下场景卡是 3 列栅格', H.cols === 3, H.cols + ' 列');
+  chk('桌面 1440 下方法卡是 3 列栅格', H.cols === 3, H.cols + ' 列');
 
   // ---------- 2. 品牌色 ----------
   console.log('\n【2】品牌色：已从绿迁到蓝，全页无绿色残留');
