@@ -4,7 +4,7 @@
 
 业务只提交「哪台设备要做什么」，底层负责寻人、建连、队列、重试和收尾；换设备只需要接入协议。站点同时承载各平台的文档与工程实践。
 
-> **当前状态**：Android 已实现任务式 BLE SDK（核心 36 个测试、3 个试玩 App）；站点目前有 3 篇 Android 文档 / 3 个类目，其余平台预留 Tab 显示 Coming soon。SDK 进度见 <https://github.com/qingzhu-ai-public/qingzhu-ble-android>。
+> **当前状态**：Android 已实现任务式 BLE SDK（核心 36 个测试、3 个试玩 App）；站点目前有 8 篇 Android 文档 / 3 个类目，其余平台预留 Tab 显示 Coming soon。SDK 进度见 <https://github.com/qingzhu-ai-public/qingzhu-ble-android>。
 
 **线上地址**：<https://qingzhu-ai-public.github.io/qingzhu-blue/>　（Pages 源 = 本仓 `main` 根目录）
 
@@ -22,7 +22,7 @@ docs/<平台>/categories.json      类目表（文件夹 → 中文名 + 顺序 
 docs/<平台>/<类目>/*.md          文档正文 ← 平时只动这里
 tools/build-docs.js              🔧 扫描 docs/ → 生成 docs-bundle.js
 .github/workflows/               push docs/ 后自动重建清单
-_e2e_site.js                     站点验收脚本（真浏览器，173 项断言）
+_e2e_site.js                     站点验收脚本（真浏览器，172 项断言）
 _ref/                            样式来源：色值迁移脚本 + 增量样式
 ```
 
@@ -34,9 +34,14 @@ docs/android/
 ├── 01-getting-started/      ← 类目「入门教程」
 │   ├── 01-overview.md
 │   └── 02-permissions.md
-├── 02-experience/           ← 类目「个人经验」
-│   └── 01-common-issues.md
-└── 03-sdk-guide/            ← 类目「SDK 使用指南」（还没文章 → 站上显示「待补」）
+├── 03-sdk-guide/            ← 类目「SDK 使用指南」
+│   ├── 01-overview.md
+│   ├── 02-quickstart.md
+│   ├── 03-task-and-intent.md
+│   ├── 04-multi-device.md
+│   └── 05-protocol-plugin.md
+└── 02-experience/           ← 类目「工程实践」
+    └── 01-common-issues.md
 ```
 
 文件夹名的 `NN-` 前缀只用来给文件夹排序，站点上不显示；真实显示名来自 `categories.json`。
@@ -121,13 +126,18 @@ order: 15          ← 插到 10 和 20 之间，不用重命名任何文件
 
 ```
 $ node tools/build-docs.js
-   3 篇  android      3 个类目
+   8 篇  android      3 个类目
          2 篇  入门教程   #android/getting-started
                 10  order Android BLE 总览     ← docs/android/01-getting-started/01-overview.md
                 20  order 权限与版本适配        ← docs/android/01-getting-started/02-permissions.md
-         1 篇  个人经验   #android/experience
+         5 篇  SDK 使用指南   #android/sdk-guide
+                10  order 青竹 BLE SDK 总览     ← docs/android/03-sdk-guide/01-overview.md
+                20  order 快速接入              ← docs/android/03-sdk-guide/02-quickstart.md
+                30  order 任务与意图             ← docs/android/03-sdk-guide/03-task-and-intent.md
+                40  order 多设备调度             ← docs/android/03-sdk-guide/04-multi-device.md
+                50  order 协议插件              ← docs/android/03-sdk-guide/05-protocol-plugin.md
+         1 篇  工程实践   #android/experience
                 30  order 常见问题排查          ← docs/android/02-experience/01-common-issues.md
-          —   SDK 使用指南   #android/sdk-guide
 ```
 
 **它还会顺手查死链**：正文里写的 `[xxx](#android/xxx/yyy)` 如果指向不存在的平台 / 类目 / 文档，构建会给出提示 —— 移动文档到另一个类目时最容易漏改这个，而这种链接在页面上是静默失效的。
@@ -182,7 +192,7 @@ node tools/build-docs.js --check
 # 改了 _ref/extra.css 后重新生成样式表
 python _ref/build_css.py
 
-# 真浏览器验收（173 项断言 + 截图到 _shots/）
+# 真浏览器验收（172 项断言 + 截图到 _shots/）
 node _e2e_site.js
 ```
 
@@ -212,15 +222,20 @@ node _e2e_site.js
 > 新板块的样式加在 `_ref/extra.css`（类名前缀 `scene*` / `hp-*`），改完跑 `python _ref/build_css.py` 重新生成。
 
 ```
-┌──────────────────┬────────────────────────────────────────────┐
-│ Android 文档      │                                            │
-│ ▾ 入门教程     2 │  #android                → 平台页：类目卡片    │
-│    Android BLE 总览│  #android/<类目>          → 类目页：文档列表   │
-│    权限与版本适配  │  #android/<类目>/<slug>   → 文档正文          │
-│ ▾ 个人经验     1 │                                            │
-│    常见问题排查    │  没文档的平台（iOS 等）→ Coming soon，       │
-│    SDK 使用指南 待补│  此时左栏整块收起（左栏只列有内容的平台）  │
-└──────────────────┴────────────────────────────────────────────┘
+┌──────────────────────┬────────────────────────────────────────┐
+│ Android 文档          │                                        │
+│ ▾ 入门教程         2 │  #android                → 平台页：类目卡片 │
+│    Android BLE 总览   │  #android/<类目>          → 类目页：文档列表 │
+│    权限与版本适配      │  #android/<类目>/<slug>   → 文档正文      │
+│ ▾ SDK 使用指南     5 │                                        │
+│    青竹 BLE SDK 总览   │  没文档的平台（iOS 等）→ Coming soon，   │
+│    快速接入           │  此时左栏整块收起（左栏只列有内容的平台）│
+│    任务与意图         │                                        │
+│    多设备调度         │                                        │
+│    协议插件           │                                        │
+│ ▾ 工程实践         1 │                                        │
+│    常见问题排查       │                                        │
+└──────────────────────┴────────────────────────────────────────┘
 ```
 
 - **左栏**：只列**有内容的平台**，一级是类目、二级是文章；空类目标「待补」。桌面下 sticky 跟随滚动，
