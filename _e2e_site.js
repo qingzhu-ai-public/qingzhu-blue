@@ -6,7 +6,7 @@
  *
  * 验的事：
  *   1. 首屏是首页，导航 Tab 由 docs/platforms.json 驱动；首页不强调任何平台优先
- *   2. 品牌色确实从绿迁到蓝
+ *   2. 品牌色统一为青竹绿系
  *   3. 🔴 左栏只列「有内容的平台」（当前只有 Android），一级是类目、二级是文档
  *   4. 平台页 = 类目卡片；空类目标「待补」；无文档的平台只有 Coming soon 且左栏收起
  *   5. 点类目卡 → 类目页 → 点条目 → 正文
@@ -234,8 +234,8 @@ const STATE = `({
   })()`);
   chk('hero 标题刚好 2 行', hero.lines === 2, hero.lines + ' 行 @ ' + hero.fs + 'px');
   chk('hero 标题不超左栏宽度', hero.over <= 1, 'over=' + hero.over + 'px');
-  chk('渐变高亮文字是蓝色渐变 + background-clip:text',
-      hero.emClip === 'text' && hero.emBg.includes('rgb(37, 99, 235)'), hero.emBg.slice(0, 48));
+  chk('渐变高亮文字是青竹绿渐变 + background-clip:text',
+      hero.emClip === 'text' && hero.emBg.includes('rgb(15, 157, 106)'), hero.emBg.slice(0, 48));
 
   // ---------- 1.1 首页正文：痛点 → 方法一览 → SDK 内部清单 → 零配置与定制 ----------
   console.log('  —— 首页叙事：痛点 / 方法一览 / 内部清单 / 零配置与定制');
@@ -300,25 +300,33 @@ const STATE = `({
   chk('桌面 1440 下方法卡是 3 列栅格', H.cols === 3, H.cols + ' 列');
 
   // ---------- 2. 品牌色 ----------
-  console.log('\n【2】品牌色：已从绿迁到蓝，全页无绿色残留');
+  console.log('\n【2】品牌色：统一为青竹绿系，全页无蓝色残留');
   const color = await c.ev(`(() => {
-    const greens = [];
+    const blues = [];
     document.querySelectorAll('*').forEach(el => {
       const st = getComputedStyle(el);
       [['color',st.color],['bg',st.backgroundColor],['bgimg',st.backgroundImage],['border',st.borderTopColor]]
-        .forEach(([k,v]) => { if (v && (v.includes('15, 157, 106') || v.includes('11, 122, 84') || v.includes('13, 138, 122'))) greens.push(el.tagName+'.'+el.className+'/'+k); });
+        .forEach(([k,v]) => {
+          if (v && (v.includes('37, 99, 235') || v.includes('30, 64, 175')
+            || v.includes('59, 130, 246') || v.includes('56, 189, 248')
+            || v.includes('14, 165, 233') || v.includes('34, 211, 238')
+            || v.includes('77, 131, 222') || v.includes('2, 132, 199')
+            || v.includes('18, 58, 122') || v.includes('11, 31, 51'))) {
+            blues.push(el.tagName+'.'+el.className+'/'+k);
+          }
+        });
     });
     return {
       btn: getComputedStyle(document.querySelector('.btn-primary')).backgroundImage,
       eyebrow: getComputedStyle(document.querySelector('.eyebrow')).color,
       cta: getComputedStyle(document.querySelector('.nav-cta')).backgroundImage,
-      greens: greens.slice(0, 5), greenCount: greens.length
+      blues: blues.slice(0, 5), blueCount: blues.length
     };
   })()`);
-  chk('主按钮是蓝色 rgb(37, 99, 235)', color.btn.includes('rgb(37, 99, 235)'), color.btn.slice(0, 60));
-  chk('eyebrow 小标题是蓝色', color.eyebrow === 'rgb(37, 99, 235)', color.eyebrow);
-  chk('导航 CTA 是蓝色', color.cta.includes('rgb(37, 99, 235)'), color.cta.slice(0, 60));
-  chk('🔴 全页无残留绿色', color.greenCount === 0, '命中 ' + color.greenCount + ' ' + JSON.stringify(color.greens));
+  chk('主按钮是青竹绿 rgb(15, 157, 106)', color.btn.includes('rgb(15, 157, 106)'), color.btn.slice(0, 60));
+  chk('eyebrow 小标题是青竹绿', color.eyebrow === 'rgb(15, 157, 106)', color.eyebrow);
+  chk('导航 CTA 是青竹绿', color.cta.includes('rgb(15, 157, 106)'), color.cta.slice(0, 60));
+  chk('🔴 全页无残留蓝色', color.blueCount === 0, '命中 ' + color.blueCount + ' ' + JSON.stringify(color.blues));
 
   // ---------- 3. 左栏：只列有内容的平台，一级是类目 ----------
   console.log('\n【3】🔴 左栏只放 Android：一级 = 类目，二级 = 文档');

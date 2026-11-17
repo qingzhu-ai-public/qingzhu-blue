@@ -12,7 +12,7 @@
 
 ```
 index.html                       站点外壳：导航 + 首页（静态），其余页面运行时渲染
-assets/styles.css                样式表（沿用「青竹 Buddy 官网」设计系统，品牌色迁移为蓝系）
+assets/styles.css                样式表（沿用「青竹 Buddy 官网」设计系统，品牌色统一为青竹绿系）
 assets/md.js                     迷你 Markdown 渲染器（零依赖）
 assets/site.js                   站点控制器：读清单 → 渲染类目树 / 类目页 / 文档页 / 路由
 assets/docs-bundle.js            🔧 生成物：清单 + 正文（勿手改）
