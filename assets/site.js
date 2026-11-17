@@ -17,7 +17,7 @@
   var REPO = 'https://github.com/qingzhu-ai-public';
   var REPO_URL = REPO + '/qingzhu-blue';
   var SITE_NAME = '青竹 Blue｜BLE SDK';                      // 文档页标题后缀
-  var BASE_TITLE = '青竹 Blue｜BLE SDK：一个方法，对接一台设备';   // 首页标题
+  var BASE_TITLE = '青竹 Blue｜任务式 Android BLE SDK';   // 首页标题
 
   var pagesEl = document.getElementById('pages');
   var navEl = document.getElementById('nav');

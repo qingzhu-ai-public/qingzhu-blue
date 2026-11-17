@@ -180,11 +180,11 @@ const STATE = `({
   chk('导航 7 个 Tab，顺序取自 platforms.json',
       JSON.stringify(s.navPages) === JSON.stringify(NAV), JSON.stringify(s.navPages));
   chk('浏览器标题是 SDK 定位（不是「跨平台开发平台」）',
-      s.title === '青竹 Blue｜BLE SDK：一个方法，对接一台设备', s.title);
+      s.title === '青竹 Blue｜任务式 Android BLE SDK', s.title);
   chk('🔴 首页立的是 SDK，不是「知识库」',
-      s.bodyText.includes('qingzhu ble sdk') && s.bodyText.includes('蓝牙开发工具包'));
-  chk('首页 hero 标题 =「一个方法，对接一台设备」',
-      s.bodyText.includes('一个方法') && s.bodyText.includes('对接一台设备'));
+      s.bodyText.includes('qingzhu ble sdk') && s.bodyText.includes('任务式'));
+  chk('首页 hero 标题 =「把复杂 BLE，收进一个内核」',
+      s.bodyText.includes('把复杂 ble') && s.bodyText.includes('收进一个内核'));
   chk('首页有平台入口板块（Supported Platforms）', s.bodyText.includes('supported platforms'));
   chk('🔴 旧首页文案已清除（按平台讲清楚 / 为什么创建 / 落地时全是细节）',
       !s.bodyText.includes('按平台讲清楚') && !s.bodyText.includes('为什么创建青竹 blue')
@@ -253,22 +253,23 @@ const STATE = `({
   })()`);
 
   chk('🔴 首页主线是「方法一览」（六张卡铺开全部 API 入口）', H.scenes.length === 6, String(H.scenes.length));
-  chk('方法卡顺序与标题正确',
+  chk('入口卡顺序与标题正确',
       JSON.stringify(H.scenes.map((x) => x.title)) ===
-      JSON.stringify(['scan｜扫一圈，全看见', 'find｜出现即动手', 'findAndConnect｜找到就不撒手',
-        'findAndConfig｜配完就走', 'connect / config｜设备已知，直接干', 'sendMessage｜一问一答，必有结果']),
+      JSON.stringify(['startScan｜扫描先有结果', 'submit｜只给 MAC 也能开工',
+        'QTask｜一台设备一个任务', 'executeIntent｜重复操作不互相覆盖',
+        'setMaxConnections｜多设备批量调度', 'ProtocolPlugin｜换设备只接协议']),
       JSON.stringify(H.scenes.map((x) => x.title)));
-  chk('🔴 每张方法卡都有编号 / 生活化比喻 / 开发者用途 / ≥3 个能力标签',
+  chk('🔴 每张入口卡都有编号 / 生活化比喻 / 开发者用途 / ≥3 个能力标签',
       H.scenes.every((x, i) => x.num === String(i + 1).padStart(2, '0')
         && x.like.indexOf('就像') === 0 && x.use.indexOf('开发者用它做') === 0 && x.api.length >= 3),
       JSON.stringify(H.scenes.map((x) => [x.num, x.api.length])));
-  chk('六张方法卡各自点出真实用途（发现 / 查找 / 管理页 / 批量 / 直连 / 收发）',
-      ['设备发现页', '目标设备查找', '设备管理页', '批量配置', '直连', '指令收发']
+  chk('六张入口卡各自点出真实用途（发现 / 批量 / 任务 / 反复操作 / 多设备 / 新协议）',
+      ['设备发现页', '批量添加', '任务列表', '反复点击', '多设备项目', '新设备接入']
         .every((k, i) => H.scenes[i].use.includes(k)),
       H.scenes.map((x) => x.use.slice(0, 12)).join(' | '));
-  chk('🔴 痛点段是「你以为 vs 实际上」五连（撞车换址 / 硬断电 / 串包 / 写死台数 / 串并行超时）',
-      H.pains.length === 5 && H.pains[0].includes('连上就行') && H.pains[1].includes('断了就重连')
-      && H.pains[2].includes('发数据就发') && H.pains[3].includes('连几台都行') && H.pains[4].includes('连上就完事'),
+  chk('🔴 痛点段覆盖扫描 / 连接 / 发数据 / 多设备 / 多协议',
+      H.pains.length === 5 && H.pains[0].includes('扫描慢') && H.pains[1].includes('连接慢')
+      && H.pains[2].includes('发数据慢') && H.pains[3].includes('多设备连不稳') && H.pains[4].includes('多协议重复'),
       JSON.stringify(H.pains));
   chk('痛点段末把问题收敛到「SDK 的内部策略」',
       H.notes.length === 3 && H.notes.some((t) => /sdk 的内部策略/i.test(t)),
@@ -278,12 +279,13 @@ const STATE = `({
       'groups=' + H.groups + ' chips=' + H.chips + ' ' + JSON.stringify(H.groupChips));
   chk('🔴 内部清单标注「Android 先行」（不假装已全平台可用）',
       H.notes.some((t) => /android 先行实现/i.test(t)));
-  chk('🔴 零配置板块：nRF Connect 等价 / settings 全可配 / 协议插件 / 白标',
+  chk('🔴 零配置板块：nRF Connect 等价 / ScanOptions / 协议插件 / 二次封装',
       H.custom.length === 4 && /nrf connect/.test(H.customText)
-      && H.customText.includes('白标') && H.customText.includes('不改 core 一行') && H.customText.includes('ble.settings()'),
+      && H.customText.includes('scanoptions') && H.customText.includes('不改 core 一行')
+      && H.customText.includes('qingzhusdk.settings()') && H.customText.includes('二次封装'),
       JSON.stringify(H.custom));
-  chk('🔴 hero 代码卡写明「以上全部由 SDK 内部处理」（真实 API：QingzhuBle 七个方法）',
-      /SDK 内部处理/.test(H.heroCode) && /connect\(/.test(H.heroCode) && /getInstance/.test(H.heroCode),
+  chk('🔴 hero 代码卡写明「以上全部由 SDK 内部处理」（真实 API：QingzhuSdk）',
+      /SDK 内部处理/.test(H.heroCode) && /QingzhuSdk/.test(H.heroCode) && /submit\(/.test(H.heroCode),
       H.heroCode.replace(/\s+/g, ' ').slice(0, 60));
   chk('桌面 1440 下方法卡是 3 列栅格', H.cols === 3, H.cols + ' 列');
 

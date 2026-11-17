@@ -1,10 +1,10 @@
 # 青竹 Blue
 
-**Cross-Platform BLE SDK** —— 一套「什么蓝牙场景都能接、接起来还很省事」的蓝牙开发工具包。
+**任务式 Android BLE SDK** —— 把扫描、连接、批量调度、异常治理和协议插件收进一个内核。
 
-把扫描、连接、并发调度、批量配置、固件升级、实时通知这些底层复杂性封在 SDK 内部，开发者只写几行业务代码。站点同时承载各平台的文档与工程实践。
+业务只提交「哪台设备要做什么」，底层负责寻人、建连、队列、重试和收尾；换设备只需要接入协议。站点同时承载各平台的文档与工程实践。
 
-> **当前状态**：Android 先行（3 篇示例文档 / 3 个类目）；其余平台在站点上预留了 Tab，显示 Coming soon。SDK 处于设计与骨架阶段，进度见 <https://github.com/qingzhu-ai-public/qingzhu-ble-android>。
+> **当前状态**：Android 已实现任务式 BLE SDK（核心 36 个测试、3 个试玩 App）；站点目前有 3 篇 Android 文档 / 3 个类目，其余平台预留 Tab 显示 Coming soon。SDK 进度见 <https://github.com/qingzhu-ai-public/qingzhu-ble-android>。
 
 **线上地址**：<https://qingzhu-ai-public.github.io/qingzhu-blue/>　（Pages 源 = 本仓 `main` 根目录）
 
@@ -22,7 +22,7 @@ docs/<平台>/categories.json      类目表（文件夹 → 中文名 + 顺序 
 docs/<平台>/<类目>/*.md          文档正文 ← 平时只动这里
 tools/build-docs.js              🔧 扫描 docs/ → 生成 docs-bundle.js
 .github/workflows/               push docs/ 后自动重建清单
-_e2e_site.js                     站点验收脚本（真浏览器，172 项断言）
+_e2e_site.js                     站点验收脚本（真浏览器，173 项断言）
 _ref/                            样式来源：色值迁移脚本 + 增量样式
 ```
 
@@ -182,7 +182,7 @@ node tools/build-docs.js --check
 # 改了 _ref/extra.css 后重新生成样式表
 python _ref/build_css.py
 
-# 真浏览器验收（172 项断言 + 截图到 _shots/）
+# 真浏览器验收（173 项断言 + 截图到 _shots/）
 node _e2e_site.js
 ```
 
@@ -200,11 +200,11 @@ node _e2e_site.js
 
 | 板块 | 说什么 |
 |---|---|
-| Hero | 价值主张「一个方法，对接一台设备」+ 真实 API 代码卡（QingzhuBle 七个方法） |
-| Pain Points | 「你以为 vs 实际上」五连：撞车换址 / 硬断电假在线 / 并发串包 / 写死台数 / 串并行与超时 |
-| The API | 五个基础方法 + 两个组合形态的六张方法卡（scan / find / findAndConnect / findAndConfig / connect·config / sendMessage）+ 一句话选型 |
-| Inside the SDK | 「外面几行，里面是这些」：长连接 / 智能多连接 / 任务池 / 收发管道 / 传输加速五组内部机制 |
-| Zero Config · Pluggable | 零配置（nRF Connect 等价）/ settings() 全可配 / 协议插件 / 白标 |
+| Hero | 价值主张「把复杂 BLE，收进一个内核」+ 当前任务式 API 代码卡（QingzhuSdk / submit / subscribe） |
+| Pain Points | 扫描慢 / 连接慢 / 发数据慢 / 多设备连不稳 / 多协议重复实现 |
+| The API | 六个任务式入口：startScan / submit / QTask / executeIntent / setMaxConnections / ProtocolPlugin |
+| Inside the SDK | 任务池 / 意图队列 / 建连与传输 / 异常治理 / 自适应与批次五组内部机制 |
+| Zero Config · Pluggable | 零配置（nRF Connect 等价）/ ScanOptions / 协议插件 / 可二次封装 |
 | Supported Platforms | 平台卡，由各平台文档篇数驱动 |
 | GET STARTED | 指向 GitHub 组织 |
 
@@ -237,7 +237,7 @@ node _e2e_site.js
 | 仓库 | 说明 |
 |---|---|
 | `qingzhu-blue` | 本仓：官网 + 文档 + Bluetooth 通用知识 |
-| `qingzhu-ble-android` | Android SDK（`qz-ble-sdk/`）+ 完整 Demo（`example/` → QZBleDemo） |
+| `qingzhu-ble-android` | Android SDK（`qingzhu-core` / `qingzhu-company-sdk` / 协议插件）+ 3 个试玩 App |
 | `qingzhu-ble-ios` / `-harmonyos` / `-flutter` / `-react-native` | 暂不创建，站点留位 |
 
 **Example 不单独成仓**：Demo 是 SDK 的一部分，跟 SDK 一起发版。
