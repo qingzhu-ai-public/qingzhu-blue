@@ -4,7 +4,7 @@
 
 业务只提交「哪台设备要做什么」，底层负责寻人、建连、队列、重试和收尾；换设备只需要接入协议。站点同时承载各平台的文档与工程实践。
 
-> **当前状态**：Android 已实现任务式 BLE SDK（核心 36 个测试、3 个试玩 App）；站点目前有 8 篇 Android 文档 / 3 个类目，其余平台预留 Tab 显示 Coming soon。SDK 进度见 <https://github.com/qingzhu-ai-public/qingzhu-ble-android>。
+> **当前状态**：Android 已实现任务式 BLE SDK（核心 36 个测试、3 个试玩 App）；站点目前有 9 篇 Android 文档 / 3 个类目，其余平台预留 Tab 显示 Coming soon。SDK 进度见 <https://github.com/qingzhu-ai-public/qingzhu-ble-android>。
 
 **线上地址**：<https://qingzhu-ai-public.github.io/qingzhu-blue/>　（Pages 源 = 本仓 `main` 根目录）
 
@@ -41,6 +41,7 @@ docs/android/
 │   ├── 04-multi-device.md
 │   └── 05-protocol-plugin.md
 └── 02-experience/           ← 类目「工程实践」
+    ├── 01-from-runnable-to-production.md
     └── 01-common-issues.md
 ```
 
@@ -126,7 +127,7 @@ order: 15          ← 插到 10 和 20 之间，不用重命名任何文件
 
 ```
 $ node tools/build-docs.js
-   8 篇  android      3 个类目
+   9 篇  android      3 个类目
          2 篇  入门教程   #android/getting-started
                 10  order Android BLE 总览     ← docs/android/01-getting-started/01-overview.md
                 20  order 权限与版本适配        ← docs/android/01-getting-started/02-permissions.md
@@ -136,7 +137,8 @@ $ node tools/build-docs.js
                 30  order 任务与意图             ← docs/android/03-sdk-guide/03-task-and-intent.md
                 40  order 多设备调度             ← docs/android/03-sdk-guide/04-multi-device.md
                 50  order 协议插件              ← docs/android/03-sdk-guide/05-protocol-plugin.md
-         1 篇  工程实践   #android/experience
+         2 篇  工程实践   #android/experience
+                10  order 从可运行到生产级      ← docs/android/02-experience/01-from-runnable-to-production.md
                 30  order 常见问题排查          ← docs/android/02-experience/01-common-issues.md
 ```
 
@@ -216,7 +218,7 @@ node _e2e_site.js
 | Inside the SDK | 任务池 / 意图队列 / 建连与传输 / 异常治理 / 自适应与批次五组内部机制 |
 | Zero Config · Pluggable | 零配置（nRF Connect 等价）/ ScanOptions / 协议插件 / 可二次封装 |
 | Supported Platforms | 平台卡，由各平台文档篇数驱动 |
-| GET STARTED | 指向 GitHub 组织 |
+| GET STARTED | 指向 SDK 仓库与下载入口 |
 
 > 只动首页板块时**不需要碰构建**：`assets/site.js` 只负责往 `[data-home="platforms"]` 里填平台卡、以及给 hero 主按钮选落地页。
 > 新板块的样式加在 `_ref/extra.css`（类名前缀 `scene*` / `hp-*`），改完跑 `python _ref/build_css.py` 重新生成。
@@ -233,7 +235,8 @@ node _e2e_site.js
 │    任务与意图         │                                        │
 │    多设备调度         │                                        │
 │    协议插件           │                                        │
-│ ▾ 工程实践         1 │                                        │
+│ ▾ 工程实践         2 │                                        │
+│    从可运行到生产级   │                                        │
 │    常见问题排查       │                                        │
 └──────────────────────┴────────────────────────────────────────┘
 ```

@@ -45,7 +45,7 @@ const TOTAL_PAGES = 2;                                     // 首页 + 文档页
 const CATS = [
   { id: 'getting-started', name: '入门教程', n: 2 },
   { id: 'sdk-guide', name: 'SDK 使用指南', n: 5 },
-  { id: 'experience', name: '工程实践', n: 1 },
+  { id: 'experience', name: '工程实践', n: 2 },
 ];
 const D_GEN = 'android/getting-started/overview';
 const D_PERM = 'android/getting-started/permissions';
@@ -54,11 +54,12 @@ const D_SDK_QUICKSTART = 'android/sdk-guide/quickstart';
 const D_SDK_TASK = 'android/sdk-guide/task-and-intent';
 const D_SDK_MULTI = 'android/sdk-guide/multi-device';
 const D_SDK_PROTOCOL = 'android/sdk-guide/protocol-plugin';
+const D_PRACTICE = 'android/experience/from-runnable-to-production';
 const D_ISSUE = 'android/experience/common-issues';
 const ALL_DOCS = [
   D_GEN, D_PERM,
   D_SDK_OVERVIEW, D_SDK_QUICKSTART, D_SDK_TASK, D_SDK_MULTI, D_SDK_PROTOCOL,
-  D_ISSUE
+  D_PRACTICE, D_ISSUE
 ];
 
 function httpJson(p) {
@@ -210,8 +211,8 @@ const STATE = `({
     });
     return o;
   })()`);
-  chk('Android 卡自动显示「8 篇文档」',
-      /8 篇文档/.test(cards.android?.text || '') && cards.android?.soon === false, cards.android?.text);
+  chk('Android 卡自动显示「9 篇文档」',
+      /9 篇文档/.test(cards.android?.text || '') && cards.android?.soon === false, cards.android?.text);
   chk('Android 卡副标题列出类目名（不再是平台首篇标题）',
       CATS.slice(0, 3).every((k) => (cards.android?.text || '').includes(k.name)), cards.android?.text);
   chk('其余 5 张卡显示「整理中」',
@@ -351,14 +352,14 @@ const STATE = `({
   chk('🔴 左栏不出现其它平台名（不再平铺 6 个平台）',
       OTHER_PLATFORM_NAMES.every((n) => side.txt.indexOf(n) < 0),
       'txt=' + side.txt.slice(0, 80));
-  chk('有内容的类目标篇数（入门教程 2 / SDK 使用指南 5 / 工程实践 1）',
-      side.heads[0].count === '2' && side.heads[1].count === '5' && side.heads[2].count === '1',
+  chk('有内容的类目标篇数（入门教程 2 / SDK 使用指南 5 / 工程实践 2）',
+      side.heads[0].count === '2' && side.heads[1].count === '5' && side.heads[2].count === '2',
       side.heads.map((h) => h.name + '=' + (h.count || h.tag)).join(' | '));
   chk('SDK 使用指南已展开且无「待补」',
       side.heads[1].tag !== '待补' && side.heads[1].pending === false && side.heads[1].hasList === true,
       side.heads[1].tag || side.heads[1].count);
-  chk('左栏共 8 篇文章，全属于 android',
-      side.items.length === 8 && side.items.every((i) => i.doc.startsWith('android/')),
+  chk('左栏共 9 篇文章，全属于 android',
+      side.items.length === 9 && side.items.every((i) => i.doc.startsWith('android/')),
       side.items.map((i) => i.doc).join(' , '));
   chk('文档 id 带类目段（android/<类目>/<slug>）',
       JSON.stringify(side.items.map((i) => i.doc)) === JSON.stringify(ALL_DOCS),
@@ -423,8 +424,8 @@ const STATE = `({
       chk('  平台页 = 3 张类目卡（文件夹即类目）', main.cards === 3, String(main.cards));
       chk('  类目卡名称 / 顺序与 categories.json 一致',
           JSON.stringify(main.names) === JSON.stringify(CATS.map((k) => k.name)), JSON.stringify(main.names));
-      chk('  类目卡标篇数：入门 2 / SDK 指南 5 / 工程实践 1',
-          main.counts[0] === '2 篇' && main.counts[1] === '5 篇' && main.counts[2] === '1 篇',
+      chk('  类目卡标篇数：入门 2 / SDK 指南 5 / 工程实践 2',
+          main.counts[0] === '2 篇' && main.counts[1] === '5 篇' && main.counts[2] === '2 篇',
           JSON.stringify(main.counts));
       chk('  没有空类目卡', main.emptyCards === 0, String(main.emptyCards));
       chk('🟢 有内容的平台页左栏可见（无 no-side）', main.noSide === false);
@@ -445,7 +446,7 @@ const STATE = `({
       })`);
       chk('  点类目卡 → 进类目页（#android/experience）', cat.hash === '#android/experience' && cat.h1 === '工程实践',
           cat.hash + ' | ' + cat.h1);
-      chk('  类目页列出该类目的 1 篇文档', cat.items === 1, String(cat.items));
+      chk('  类目页列出该类目的 2 篇文档', cat.items === 2, String(cat.items));
       chk('  面包屑指回 Android', cat.crumb.indexOf('Android') >= 0, cat.crumb.replace(/\s+/g, ' ').trim().slice(0, 40));
       chk('🟢 左栏该类目头高亮', cat.catHL === 'android/experience', String(cat.catHL));
       await c.shot('03_category_experience.png');
@@ -539,7 +540,7 @@ const STATE = `({
     catManifest: (window.QZB_SITE.categories.android||[]).map(c=>c.id+':'+c.docs.length),
     sideItems: [...document.querySelectorAll('#docsSide .ds-item')].map(a=>a.getAttribute('data-doc'))
   })`);
-  chk('清单里 Android 八篇的 order 顺序正确',
+  chk('清单里 Android 九篇的 order 顺序正确',
       JSON.stringify(order.manifest) === JSON.stringify([
         'getting-started/overview#10',
         'getting-started/permissions#20',
@@ -548,11 +549,12 @@ const STATE = `({
         'sdk-guide/task-and-intent#30',
         'sdk-guide/multi-device#40',
         'sdk-guide/protocol-plugin#50',
+        'experience/from-runnable-to-production#10',
         'experience/common-issues#30'
       ]),
       JSON.stringify(order.manifest));
-  chk('清单里类目顺序与篇数 = getting-started:2 / sdk-guide:5 / experience:1',
-      JSON.stringify(order.catManifest) === JSON.stringify(['getting-started:2', 'sdk-guide:5', 'experience:1']),
+  chk('清单里类目顺序与篇数 = getting-started:2 / sdk-guide:5 / experience:2',
+      JSON.stringify(order.catManifest) === JSON.stringify(['getting-started:2', 'sdk-guide:5', 'experience:2']),
       JSON.stringify(order.catManifest));
   chk('左栏顺序 = 类目顺序 → 类目内 order 顺序',
       JSON.stringify(order.sideItems) === JSON.stringify(ALL_DOCS), JSON.stringify(order.sideItems));
