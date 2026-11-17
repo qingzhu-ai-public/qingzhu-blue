@@ -1,12 +1,12 @@
 ---
-title: 从可运行到生产级：Android BLE SDK 工程实践
+title: AI 时代，如何做一个生产级 Android BLE SDK？
 order: 10
-summary: 从 AI 生成的 BLE MVP 到生产级 SDK：两层差距、任务式内核、多设备调度、异常治理与协议插件
+summary: 一次让 AI 参考开源项目写 BLE SDK 的实验，以及任务式内核、多设备调度、异常治理和多 SDK 治理
 tags: 工程实践,长文
 updated: 2026-11-17
 ---
 
-# 从可运行到生产级：Android BLE SDK 工程实践
+# AI 时代，如何做一个生产级 Android BLE SDK ？
 
 > 一次"让 AI 参考开源项目写 BLE SDK"的实验，以及青竹 SDK 如何同时解决两类生产问题：**批量通信的可靠性**，和**大型 BLE 项目里的多 SDK 维护**。
 
@@ -20,7 +20,7 @@ updated: 2026-11-17
 - 本文用一组实验说明这两层差距从哪里来，再用我这几年积累的青竹 SDK，说明这些经验如何被收进"任务式、资源调度、异常治理、宿主加协议插件"四个机制里。
 - 最后讨论有经验的工程师应该如何指导 AI：把经验变成约束，而不是把约束留在脑子里。
 
-**关于本文的诚实声明。** 青竹 SDK 是我的个人项目（源码仓库：<https://github.com/qingzhu-ai-public/qingzhu-ble-android>）。文中所有技术描述，我都区分了三类：**已实现**、**部分实现**、**规划中**，并在第 5.2 节用一张表集中列出。性能、兼容性和长时间稳定性方面，我目前还没有系统的实测数据；多 SDK 治理带来的维护收益，目前也是**设计目标**，尚未度量。文中不会给出任何未经验证的数字。代码示例除标注"真实 API"外，均为教学伪代码。
+**源码仓库：** [qingzhu-ble-android](https://github.com/qingzhu-ai-public/qingzhu-ble-android)
 
 **目录**
 

@@ -138,7 +138,7 @@ $ node tools/build-docs.js
                 40  order 多设备调度             ← docs/android/03-sdk-guide/04-multi-device.md
                 50  order 协议插件              ← docs/android/03-sdk-guide/05-protocol-plugin.md
          2 篇  工程实践   #android/experience
-                10  order 从可运行到生产级      ← docs/android/02-experience/01-from-runnable-to-production.md
+                10  order AI 时代：生产级 BLE SDK ← docs/android/02-experience/01-from-runnable-to-production.md
                 30  order 常见问题排查          ← docs/android/02-experience/01-common-issues.md
 ```
 
@@ -236,7 +236,7 @@ node _e2e_site.js
 │    多设备调度         │                                        │
 │    协议插件           │                                        │
 │ ▾ 工程实践         2 │                                        │
-│    从可运行到生产级   │                                        │
+│    AI 时代：生产级 SDK │                                        │
 │    常见问题排查       │                                        │
 └──────────────────────┴────────────────────────────────────────┘
 ```
