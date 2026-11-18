@@ -1,10 +1,12 @@
-# 青竹 Blue
+# 青竹蓝牙开发指南
 
-**任务式 Android BLE SDK** —— 把扫描、连接、批量调度、异常治理和协议插件收进一个内核。
+**《青竹全栈开发指南》的蓝牙分支** —— 目标是把所有技术栈里的蓝牙知识收进一处，让学习蓝牙开发的人，以后只要来这里浏览就够了。
 
-业务只提交「哪台设备要做什么」，底层负责寻人、建连、队列、重试和收尾；换设备只需要接入协议。站点同时承载各平台的文档与工程实践。
+本站覆盖经典蓝牙、BLE、协议栈、Android / iOS / Web / 嵌入式等平台视角、权限、后台、抓包、测试、性能与工程实践；同时提供 **青竹 Android BLE SDK**，把扫描、连接、队列、重试、多设备调度和异常治理收进一个任务式内核。学完教程，就能直接使用现成框架落地。
 
-> **当前状态**：Android 已实现任务式 BLE SDK（核心 36 个测试、3 个试玩 App）；站点目前有 9 篇 Android 文档 / 3 个类目，其余平台预留 Tab 显示 Coming soon。SDK 进度见 <https://github.com/qingzhu-ai-public/qingzhu-ble-android>。
+未来还会有《青竹AI应用开发指南》，各指南分支共用同一套「知识讲全、工程做实、工具交到手里」的方法。
+
+> **当前状态**：Android 先行，已有 9 篇站点文档 / 3 个类目、36 个核心测试、3 个试玩 App；《Android 蓝牙指南》30 章书系正在逐章同步。SDK 进度见 <https://github.com/qingzhu-ai-public/qingzhu-ble-android>。
 
 **线上地址**：<https://qingzhu-ai-public.github.io/qingzhu-blue/>　（Pages 源 = 本仓 `main` 根目录）
 
@@ -206,19 +208,19 @@ node _e2e_site.js
 首页 | Bluetooth | Android | iOS | HarmonyOS | Flutter | React Native
 ```
 
-**首页**是营销落地页，主线是「这套 SDK 解决了什么」；**其余所有页面共用同一套文档双栏版式**（不跟首页共用营销版式）。
+**首页**是《青竹蓝牙开发指南》门户，主线是「全技术栈蓝牙知识 → 青竹 Android BLE SDK 落地」；**其余所有页面共用同一套文档双栏版式**（不跟首页共用门户版式）。
 
-首页六个板块**全部是手写在 `index.html` 里的静态内容**，改文案直接改那里：
+首页七个板块**全部是手写在 `index.html` 里的静态内容**，改文案直接改那里：
 
 | 板块 | 说什么 |
 |---|---|
-| Hero | 价值主张「把复杂 BLE，收进一个内核」+ 当前任务式 API 代码卡（QingzhuSdk / submit / subscribe） |
-| Pain Points | 扫描慢 / 连接慢 / 发数据慢 / 多设备连不稳 / 多协议重复实现 |
-| The API | 六个任务式入口：startScan / submit / QTask / executeIntent / setMaxConnections / ProtocolPlugin |
-| Inside the SDK | 任务池 / 意图队列 / 建连与传输 / 异常治理 / 自适应与批次五组内部机制 |
-| Zero Config · Pluggable | 零配置（nRF Connect 等价）/ ScanOptions / 协议插件 / 可二次封装 |
-| Supported Platforms | 平台卡，由各平台文档篇数驱动 |
-| GET STARTED | 指向 SDK 仓库与下载入口 |
+| Hero | 「学蓝牙，来这里就够了」+ 指南分支关系 + 任务式 SDK 代码卡 |
+| Why This Guide | 知识散 / 经典蓝牙缺 / BLE 只到 Demo / 学完还要造轮子 / 教程框架割裂 |
+| Guide → Framework | 3 个学习入口 + 3 个 SDK 落地入口 |
+| Android BLE SDK | 指南体系 / 任务式内核 / 多设备调度 / 异常兼容 / 协议扩展 |
+| Learning Path | 30 章指南 → 10 个实验 → 任务式 SDK → 自有协议插件 |
+| All Bluetooth Stacks | 平台卡，由各平台文档篇数驱动 |
+| START HERE | 从教程入门，用 SDK 交付 |
 
 > 只动首页板块时**不需要碰构建**：`assets/site.js` 只负责往 `[data-home="platforms"]` 里填平台卡、以及给 hero 主按钮选落地页。
 > 新板块的样式加在 `_ref/extra.css`（类名前缀 `scene*` / `hp-*`），改完跑 `python _ref/build_css.py` 重新生成。

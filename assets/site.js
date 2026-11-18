@@ -1,5 +1,5 @@
 /* ==========================================================================
-   青竹 Blue —— 站点控制器
+   《青竹蓝牙开发指南》—— 站点控制器
    全部内容由 window.QZB（assets/docs-bundle.js，构建期生成）驱动：
      · 导航 Tab    ← platforms.json 顺序（没文档的平台进 Coming soon）
      · 首页平台卡  ← 各平台文档篇数
@@ -16,8 +16,8 @@
 
   var REPO = 'https://github.com/qingzhu-ai-public';
   var REPO_URL = REPO + '/qingzhu-blue';
-  var SITE_NAME = '青竹 Blue｜BLE SDK';                      // 文档页标题后缀
-  var BASE_TITLE = '青竹 Blue｜任务式 Android BLE SDK';   // 首页标题
+  var SITE_NAME = '青竹蓝牙开发指南';                    // 文档页标题后缀
+  var BASE_TITLE = '青竹蓝牙开发指南｜青竹全栈开发指南分支'; // 首页标题
 
   var pagesEl = document.getElementById('pages');
   var navEl = document.getElementById('nav');
@@ -104,7 +104,7 @@
     if (live) {
       cta.setAttribute('href', '#' + live);
       cta.setAttribute('data-page', live);
-      cta.innerHTML = '浏览文档 <span>→</span>';
+      cta.innerHTML = '浏览教程 <span>→</span>';
     } else {
       cta.setAttribute('href', REPO);
       cta.setAttribute('target', '_blank');

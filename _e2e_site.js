@@ -1,5 +1,5 @@
 /**
- * 青竹 Blue 站点验收（headless Edge + CDP，零依赖）
+ * 《青竹蓝牙开发指南》站点验收（headless Edge + CDP，零依赖）
  *
  * 站点形态：首页 = 营销落地页；非首页 = 文档双栏（左类目树 + 右正文）。
  * 目录模型：docs/<平台>/<类目>/*.md —— **文件夹即类目**。
@@ -189,20 +189,21 @@ const STATE = `({
   chk('页面容器只有 首页 + 文档页（=2）', s.totalPages === TOTAL_PAGES, String(s.totalPages));
   chk('导航 7 个 Tab，顺序取自 platforms.json',
       JSON.stringify(s.navPages) === JSON.stringify(NAV), JSON.stringify(s.navPages));
-  chk('浏览器标题是 SDK 定位（不是「跨平台开发平台」）',
-      s.title === '青竹 Blue｜任务式 Android BLE SDK', s.title);
-  chk('🔴 首页立的是 SDK，不是「知识库」',
-      s.bodyText.includes('qingzhu ble sdk') && s.bodyText.includes('任务式'));
-  chk('首页 hero 标题 =「把复杂 BLE，收进一个内核」',
-      s.bodyText.includes('把复杂 ble') && s.bodyText.includes('收进一个内核'));
-  chk('首页有平台入口板块（Supported Platforms）', s.bodyText.includes('supported platforms'));
+  chk('浏览器标题是《青竹蓝牙开发指南》定位',
+      s.title === '青竹蓝牙开发指南｜青竹全栈开发指南分支', s.title);
+  chk('🔴 首页立的是指南门户，不是单纯 SDK 落地页',
+      s.bodyText.includes('青竹蓝牙开发指南') && s.bodyText.includes('青竹全栈开发指南')
+      && s.bodyText.includes('青竹ai应用开发指南'));
+  chk('首页 hero 标题 =「学蓝牙，来这里就够了」',
+      s.bodyText.includes('学蓝牙') && s.bodyText.includes('来这里就够了'));
+  chk('首页有平台入口板块（All Bluetooth Stacks）', s.bodyText.includes('all bluetooth stacks'));
   chk('🔴 旧首页文案已清除（按平台讲清楚 / 为什么创建 / 落地时全是细节）',
       !s.bodyText.includes('按平台讲清楚') && !s.bodyText.includes('为什么创建青竹 blue')
       && !s.bodyText.includes('落地时全是细节'));
   chk('🔴 首页无「先看 Android」类优先级引导',
       !s.bodyText.includes('先看 android') && !s.bodyText.includes('从 android 开始') && !s.bodyText.includes('android 优先'));
-  chk('首页主按钮是中性文案',
-      (await c.ev(`document.getElementById('heroCta').textContent.replace(/\\s+/g,' ').trim()`)) === '浏览文档 →');
+  chk('首页主按钮是「浏览教程」',
+      (await c.ev(`document.getElementById('heroCta').textContent.replace(/\\s+/g,' ').trim()`)) === '浏览教程 →');
 
   const cards = await c.ev(`(() => {
     const o = {};
@@ -262,24 +263,23 @@ const STATE = `({
     };
   })()`);
 
-  chk('🔴 首页主线是「方法一览」（六张卡铺开全部 API 入口）', H.scenes.length === 6, String(H.scenes.length));
-  chk('入口卡顺序与标题正确',
+  chk('🔴 首页主线是「指南 → 框架」（三张学习卡 + 三张 SDK 卡）', H.scenes.length === 6, String(H.scenes.length));
+  chk('指南与 SDK 入口卡顺序正确',
       JSON.stringify(H.scenes.map((x) => x.title)) ===
-      JSON.stringify(['startScan｜扫描先有结果', 'submit｜只给 MAC 也能开工',
-        'QTask｜一台设备一个任务', 'executeIntent｜重复操作不互相覆盖',
-        'setMaxConnections｜多设备批量调度', 'ProtocolPlugin｜换设备只接协议']),
+      JSON.stringify(['指南｜经典蓝牙全链路', '指南｜BLE 全链路', '指南｜工程实践全链路',
+        'SDK｜startScan：扫描与过滤', 'SDK｜submit：任务式收发', 'SDK｜ProtocolPlugin：接自有协议']),
       JSON.stringify(H.scenes.map((x) => x.title)));
   chk('🔴 每张入口卡都有编号 / 生活化比喻 / 开发者用途 / ≥3 个能力标签',
       H.scenes.every((x, i) => x.num === String(i + 1).padStart(2, '0')
         && x.like.indexOf('就像') === 0 && x.use.indexOf('开发者用它做') === 0 && x.api.length >= 3),
       JSON.stringify(H.scenes.map((x) => [x.num, x.api.length])));
-  chk('六张入口卡各自点出真实用途（发现 / 批量 / 任务 / 反复操作 / 多设备 / 新协议）',
-      ['设备发现页', '批量添加', '任务列表', '反复点击', '多设备项目', '新设备接入']
+  chk('六张卡各自点出真实用途（系统学习 / BLE 入门 / 线上排错 / 扫描 / 批量 / 新协议）',
+      ['系统学习', 'BLE 入门', '线上排错', '设备发现页', '批量任务', '新设备接入']
         .every((k, i) => H.scenes[i].use.includes(k)),
       H.scenes.map((x) => x.use.slice(0, 12)).join(' | '));
-  chk('🔴 痛点段覆盖扫描 / 连接 / 发数据 / 多设备 / 多协议',
-      H.pains.length === 5 && H.pains[0].includes('扫描慢') && H.pains[1].includes('连接慢')
-      && H.pains[2].includes('发数据慢') && H.pains[3].includes('多设备连不稳') && H.pains[4].includes('多协议重复'),
+  chk('🔴 痛点段覆盖知识散 / 经典蓝牙 / Demo 化 / 重复造轮子 / 教程框架割裂',
+      H.pains.length === 5 && H.pains[0].includes('知识太散') && H.pains[1].includes('经典蓝牙没人讲')
+      && H.pains[2].includes('只到 Demo') && H.pains[3].includes('学完还要造轮子') && H.pains[4].includes('教程和框架割裂'),
       JSON.stringify(H.pains));
   chk('痛点段末把问题收敛到「SDK 的内部策略」',
       H.notes.length === 3 && H.notes.some((t) => /sdk 的内部策略/i.test(t)),
@@ -289,10 +289,10 @@ const STATE = `({
       'groups=' + H.groups + ' chips=' + H.chips + ' ' + JSON.stringify(H.groupChips));
   chk('🔴 内部清单标注「Android 先行」（不假装已全平台可用）',
       H.notes.some((t) => /android 先行实现/i.test(t)));
-  chk('🔴 零配置板块：nRF Connect 等价 / ScanOptions / 协议插件 / 二次封装',
-      H.custom.length === 4 && /nrf connect/.test(H.customText)
-      && H.customText.includes('scanoptions') && H.customText.includes('不改 core 一行')
-      && H.customText.includes('qingzhusdk.settings()') && H.customText.includes('二次封装'),
+  chk('🔴 学习路径板块：全栈指南 / AI 分支 / 30 章 / 任务式 SDK / 协议插件',
+      H.custom.length === 4 && H.customText.includes('青竹全栈开发指南')
+      && H.customText.includes('青竹ai应用开发指南') && H.customText.includes('30 章')
+      && H.customText.includes('任务式') && H.customText.includes('protocolplugin'),
       JSON.stringify(H.custom));
   chk('🔴 hero 代码卡写明「以上全部由 SDK 内部处理」（真实 API：QingzhuSdk）',
       /SDK 内部处理/.test(H.heroCode) && /QingzhuSdk/.test(H.heroCode) && /submit\(/.test(H.heroCode),
@@ -578,7 +578,7 @@ const STATE = `({
   chk('nav 高亮停在 Android', JSON.stringify(s.navActive) === JSON.stringify(['android']), JSON.stringify(s.navActive));
   chk('🔴 左栏只有这一篇被选中', s.sideActive === D_GEN, String(s.sideActive));
   chk('🟢 当前是文档时类目头不再单独高亮', s.sideCatActive === null, String(s.sideCatActive));
-  chk('浏览器标题 = 文档名｜站点名', s.title === 'Android BLE 总览｜青竹 Blue｜BLE SDK', s.title);
+  chk('浏览器标题 = 文档名｜站点名', s.title === 'Android BLE 总览｜青竹蓝牙开发指南', s.title);
 
   const doc = await c.ev(`(() => {
     const b = document.querySelector('#docsMain .doc-body');
@@ -868,7 +868,7 @@ const STATE = `({
   chk('全程无 JS 错误', !errs || errs.length === 0, JSON.stringify(errs));
 
   console.log('\n' + '='.repeat(62));
-  console.log(`青竹 Blue 站点验收：通过 ${pass} 项，失败 ${fail} 项`);
+  console.log(`青竹蓝牙开发指南站点验收：通过 ${pass} 项，失败 ${fail} 项`);
   console.log('='.repeat(62));
   shutdownBrowser();
   process.exit(fail ? 1 : 0);

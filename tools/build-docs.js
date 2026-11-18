@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * 青竹 Blue —— 文档构建脚本
+ * 《青竹蓝牙开发指南》—— 文档构建脚本
  *
  * 扫描 docs/<平台>/<类目>/*.md，解析 front matter，生成 assets/docs-bundle.js。
  * 站点不联网、不做运行时目录请求：加文档 = 加一个 .md + 跑一次本脚本。
@@ -288,7 +288,7 @@ function main() {
 
   const { platforms, categories, docs, src, scanned } = scan();
 
-  console.log('青竹 Blue 文档构建');
+  console.log('青竹蓝牙开发指南文档构建');
   console.log('─'.repeat(66));
   let liveCat = 0;
   for (const p of platforms) {
