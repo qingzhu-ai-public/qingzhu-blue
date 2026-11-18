@@ -190,6 +190,90 @@ task.executeIntent(command, (intentId, status, result, error) -> {
 
 `TaskIntentResult` 是「有没有被受理」，`TaskIntentStatus` 是「这一条命令最终办完没有」。两者都和 `TaskState` 不是同一个维度。
 
+## 单个配置：什么时候可以退出页面
+
+推荐把一次配置动作绑定到一条命令回执：
+
+```java
+QTask task = QingzhuSdk.submit(mac, null);
+
+TaskIntentResult accepted = task.executeIntent(configCommand,
+        (intentId, status, result, error) -> {
+            if (status == TaskIntentStatus.SUCCEEDED
+                    && task.getOutcome() == TaskOutcome.SUCCEEDED
+                    && task.getError() == null) {
+                finish();          // 配置成功，退出
+            } else if (status == TaskIntentStatus.FAILED) {
+                showError(error);  // 不退出
+            } else {
+                showCancelled();   // 不退出
+            }
+        });
+
+if (accepted == TaskIntentResult.BUSY
+        || accepted == TaskIntentResult.CLOSED) {
+    showRejected(accepted);       // 没被接受，不会收到 callback
+}
+```
+
+| 组合 | 结果 |
+|---|---|
+| `BUSY / CLOSED` | 没受理，不回调，不退出 |
+| `SUCCEEDED + TaskOutcome.SUCCEEDED + error == null` | 配置成功，退出 |
+| `FAILED + CONNECT_FAILED` | 连接阶段失败，不退出 |
+| `FAILED + OPERATION_FAILED` | 发送/业务失败，不退出 |
+| `CANCELLED` | 取消或前序失败，不退出 |
+
+注意：`result` 可能为 null；`CONNECTED + SUCCEEDED` 也可能是成功，不能一直等 `READY`。
+
+## 批量配置：什么时候可以退出页面
+
+批量配置用显式 `Batch`，不要用自动学习批次来判断业务结束。
+
+```java
+QSdk.Batch batch = QingzhuSdk.beginBatch(result -> {
+    if (result.isAllSucceeded()) {
+        finish();                 // 全部成功，退出
+    } else {
+        showBatchSummary(result); // 展示成功/失败/取消数量
+    }
+});
+
+for (String mac : macs) {
+    if (batch.submit(mac, configCommand) == null) {
+        // BUSY / CLOSED / 被别的批次认领：没有计入本轮
+    }
+}
+batch.finish();
+```
+
+`BatchResult`：
+
+| 字段 | 含义 |
+|---|---|
+| `getTotal()` | 本轮被接受的任务数 |
+| `getSucceeded()` | 成功数量 |
+| `getConnectFailed()` | 连接失败数量 |
+| `getOperationFailed()` | 发送/业务失败数量 |
+| `getCancelled()` | 取消、删除或未终态数量 |
+| `isAllSucceeded()` | `total > 0 且 succeeded == total` |
+
+结束条件：
+
+```text
+所有被接受任务 outcome != NONE
+且 pendingIntentCount() == 0
+且不再处于 SEARCHING / QUEUED / CONNECTING / SENDING
+→ BatchListener.onFinished(result)
+```
+
+补充规则：
+
+- `submit()` 返回 null 的命令不会执行，也不计入结果；
+- `batch.cancel()` 也会触发 `onFinished()`；
+- 10 分钟兜底超时强制结算；
+- 回调在主线程触发一次。
+
 ## 取消与删除
 
 ```java

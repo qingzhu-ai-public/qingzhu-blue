@@ -121,6 +121,8 @@ QingzhuSdk.subscribe(tasks -> {
 });
 ```
 
+如果做正式配置页，单个配置何时退出、批量配置何时退出，见 [任务与意图：单个配置 / 批量配置](#android/sdk-guide/task-and-intent)。
+
 ## 8. 构建与测试
 
 ```bash
