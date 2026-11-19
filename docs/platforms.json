@@ -5,8 +5,7 @@
       "id": "bluetooth",
       "name": "Bluetooth",
       "title": "Bluetooth 通用知识",
-      "summary": "通用蓝牙知识放在所有平台之前，讲协议本身；各平台页只讲「这个平台怎么实现」。",
-      "plan": ["BLE", "GAP", "GATT", "ATT", "L2CAP", "Advertising", "Connection", "Security", "Data Transfer"]
+      "summary": "先看经典蓝牙与 BLE 怎么选，再用温度传感器走一遍广播、连接、数据收发和安全流程。涉及系统 API 的地方可以跳到对应的 Android 章节。"
     },
     {
       "id": "android",

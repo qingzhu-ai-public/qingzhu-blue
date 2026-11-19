@@ -6,7 +6,7 @@
 
 未来还会有《青竹AI应用开发指南》，各指南分支共用同一套「知识讲全、工程做实、工具交到手里」的方法。
 
-> **当前状态**：Android 先行，已有 44 篇站点文档 / 3 个类目、36 个核心测试、3 个试玩 App；《Android 蓝牙指南》30 章书系已全量上站。SDK 进度见 <https://github.com/qingzhu-ai-public/qingzhu-ble-android>。
+> **当前内容**：[Bluetooth 通用知识](https://qingzhu-ai-public.github.io/qingzhu-blue/#bluetooth) 8 篇，覆盖选型、发现与连接、数据收发、安全和排障。Android 有 44 篇文档，包含《Android 蓝牙指南》30 章书系。SDK 和试玩 App 见 [青竹 Android BLE SDK](https://github.com/qingzhu-ai-public/qingzhu-ble-android)。
 
 **线上地址**：<https://qingzhu-ai-public.github.io/qingzhu-blue/>　（Pages 源 = 本仓 `main` 根目录）
 
@@ -24,7 +24,7 @@ docs/<平台>/categories.json      类目表（文件夹 → 中文名 + 顺序 
 docs/<平台>/<类目>/*.md          文档正文 ← 平时只动这里
 tools/build-docs.js              🔧 扫描 docs/ → 生成 docs-bundle.js
 .github/workflows/               push docs/ 后自动重建清单
-_e2e_site.js                     站点验收脚本（真浏览器，172 项断言）
+_e2e_site.js                     站点验收脚本（真浏览器）
 _ref/                            样式来源：色值迁移脚本 + 增量样式
 ```
 
@@ -200,7 +200,7 @@ node tools/build-docs.js --check
 # 改了 _ref/extra.css 后重新生成样式表
 python _ref/build_css.py
 
-# 真浏览器验收（172 项断言 + 截图到 _shots/）
+# 真浏览器验收（截图到 _shots/）
 node _e2e_site.js
 ```
 
@@ -231,19 +231,14 @@ node _e2e_site.js
 
 ```
 ┌──────────────────────┬────────────────────────────────────────┐
-│ Android 文档          │                                        │
-│ ▾ 开发指南        37 │  #android                → 平台页：类目卡片 │
-│    Android BLE 总览   │  #android/<类目>          → 类目页：文档列表 │
-│    权限与版本适配      │  #android/<类目>/<slug>   → 文档正文      │
-│ ▾ SDK 使用指南     5 │                                        │
-│    青竹 BLE SDK 总览   │  没文档的平台（iOS 等）→ Coming soon，   │
-│    快速接入           │  此时左栏整块收起（左栏只列有内容的平台）│
-│    任务与命令         │                                        │
-│    多设备调度         │                                        │
-│    协议插件           │                                        │
+│ 技术文档             │                                        │
+│ ▾ 蓝牙入门与连接   4 │  #bluetooth                     平台页 │
+│    导读              │  #bluetooth/fundamentals         类目页 │
+│    …                 │  #bluetooth/fundamentals/reading-guide  │
+│ ▾ BLE 数据与安全   4 │                                 文档正文 │
+│ ▾ 开发指南        37 │                                        │
+│ ▾ SDK 使用指南     5 │  空平台显示 Coming soon，左栏收起       │
 │ ▾ 工程实践         2 │                                        │
-│    AI 时代：生产级 SDK │                                        │
-│    常见问题排查       │                                        │
 └──────────────────────┴────────────────────────────────────────┘
 ```
 
