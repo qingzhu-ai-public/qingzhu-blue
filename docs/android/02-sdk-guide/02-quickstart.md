@@ -1,9 +1,9 @@
 ---
 title: 快速接入
 order: 20
-summary: 克隆工程、接入源码模块、初始化、扫描和提交第一条任务
+summary: 克隆工程、接入源码模块、初始化、扫描和发出第一条命令
 tags: 必读,接入
-updated: 2026-11-17
+updated: 2026-11-19
 ---
 
 # 快速接入
@@ -96,32 +96,49 @@ QingzhuSdk.startScan(
 QingzhuSdk.stopScan();
 ```
 
-## 6. 提交第一条任务
+## 6. 发出第一条命令
 
 ```java
-QCommand command = QCommand.builder()
-        .send("{\"action\":\"echo\",\"text\":\"hello\"}")
-        .keepConnected(false)
-        .build();
+QTask task = QingzhuSdk.createTask("AA:BB:CC:DD:EE:FF");
 
-QTask task = QingzhuSdk.submit("AA:BB:CC:DD:EE:FF", command);
+task.send(
+        QCommand.builder()
+                .send("{\"action\":\"echo\",\"text\":\"hello\"}")
+                .build(),
+        result -> {
+            if (result.isSuccess()) {
+                Log.i("SDK", "回执：" + result.payload());
+            } else {
+                Log.w("SDK", "失败于 " + result.stage() + "：" + result.error());
+            }
+        }
+);
 ```
 
 只给 MAC 也可以：SDK 会先扫描寻人，再自动连接和发送。
 
-## 7. 订阅任务状态
+> `createTask()` 会先删除该设备已有的任务再新建。页面里多次点击同一个按钮时，如果希望复用已有任务（保留已建立的连接），改用 `getTask(mac)`，没有才创建。
+
+## 7. 观察任务状态
+
+列表页用池级观察，注册后立即推一次全量快照：
 
 ```java
-QingzhuSdk.subscribe(tasks -> {
-    for (QTask task : tasks) {
-        String state = task.getState().name();
-        int progress = task.getProgress();
-        String error = task.getError();
+Subscription sub = QingzhuSdk.observeAll(this, snapshots -> {
+    for (TaskSnapshot s : snapshots) {
+        TaskState state = s.state();
+        int progress = s.progress();
+        String error = s.error();
     }
 });
+
+// 页面销毁
+sub.cancel();
 ```
 
-如果做正式配置页，单个配置何时退出、批量配置何时退出，见 [任务与意图：单个配置 / 批量配置](#android/sdk-guide/task-and-intent)。
+`owner` 传 Activity 或 Fragment 时，被回收后自动停止回调。
+
+单个页面的退出时机见 [任务与命令：什么时候可以退出页面](#android/sdk-guide/task-and-command)。
 
 ## 8. 构建与测试
 
@@ -130,4 +147,4 @@ QingzhuSdk.subscribe(tasks -> {
 ./gradlew :qingzhu-demo-main:assembleDebug
 ```
 
-下一步：[任务与意图](#android/sdk-guide/task-and-intent) · [多设备调度](#android/sdk-guide/multi-device)
+下一步：[任务与命令](#android/sdk-guide/task-and-command) · [多设备调度](#android/sdk-guide/multi-device)

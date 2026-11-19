@@ -43,21 +43,58 @@ const TOTAL_PAGES = 2;                                     // 首页 + 文档页
 
 // Android 的类目（= docs/android/ 下的文件夹，顺序 = categories.json 顺序）
 const CATS = [
-  { id: 'getting-started', name: '入门教程', n: 2 },
+  { id: 'development-guide', name: '开发指南', n: 37 },
   { id: 'sdk-guide', name: 'SDK 使用指南', n: 5 },
   { id: 'experience', name: '工程实践', n: 2 },
 ];
-const D_GEN = 'android/getting-started/overview';
-const D_PERM = 'android/getting-started/permissions';
+const D_GEN = 'android/development-guide/guide';
+const D_PERM = 'android/development-guide/permissions';
+const D_DOC = 'android/development-guide/notify-cccd';   // 正文渲染样本：标题层级 / 代码块 / 列表都齐
 const D_SDK_OVERVIEW = 'android/sdk-guide/overview';
 const D_SDK_QUICKSTART = 'android/sdk-guide/quickstart';
-const D_SDK_TASK = 'android/sdk-guide/task-and-intent';
+const D_SDK_TASK = 'android/sdk-guide/task-and-command';
 const D_SDK_MULTI = 'android/sdk-guide/multi-device';
 const D_SDK_PROTOCOL = 'android/sdk-guide/protocol-plugin';
 const D_PRACTICE = 'android/experience/from-runnable-to-production';
 const D_ISSUE = 'android/experience/common-issues';
 const ALL_DOCS = [
-  D_GEN, D_PERM,
+  'android/development-guide/guide',
+  'android/development-guide/overview',
+  'android/development-guide/protocol-stack',
+  'android/development-guide/classic-vs-ble',
+  'android/development-guide/permissions',
+  'android/development-guide/adapter-state',
+  'android/development-guide/discovery-pairing',
+  'android/development-guide/rfcomm-socket',
+  'android/development-guide/classic-profiles',
+  'android/development-guide/advertising-data',
+  'android/development-guide/scanning',
+  'android/development-guide/scan-filter',
+  'android/development-guide/advertiser',
+  'android/development-guide/connection-lifecycle',
+  'android/development-guide/service-discovery',
+  'android/development-guide/characteristic-rw',
+  'android/development-guide/notify-cccd',
+  'android/development-guide/mtu-phy-dle',
+  'android/development-guide/gatt-server',
+  'android/development-guide/pairing-security',
+  'android/development-guide/address-privacy',
+  'android/development-guide/fragmentation-flow',
+  'android/development-guide/gatt-errors',
+  'android/development-guide/thread-state-machine',
+  'android/development-guide/background-service',
+  'android/development-guide/vendor-compat',
+  'android/development-guide/hci-log',
+  'android/development-guide/test-lab',
+  'android/development-guide/performance',
+  'android/development-guide/native-to-sdk',
+  'android/development-guide/le-audio-ranging',
+  'android/development-guide/appendix-a-glossary',
+  'android/development-guide/appendix-b-api',
+  'android/development-guide/appendix-c-codes',
+  'android/development-guide/appendix-d-refs',
+  'android/development-guide/appendix-e-labs',
+  'android/development-guide/appendix-f-faq',
   D_SDK_OVERVIEW, D_SDK_QUICKSTART, D_SDK_TASK, D_SDK_MULTI, D_SDK_PROTOCOL,
   D_PRACTICE, D_ISSUE
 ];
@@ -212,8 +249,8 @@ const STATE = `({
     });
     return o;
   })()`);
-  chk('Android 卡自动显示「9 篇文档」',
-      /9 篇文档/.test(cards.android?.text || '') && cards.android?.soon === false, cards.android?.text);
+  chk('Android 卡自动显示「44 篇文档」',
+      /44 篇文档/.test(cards.android?.text || '') && cards.android?.soon === false, cards.android?.text);
   chk('Android 卡副标题列出类目名（不再是平台首篇标题）',
       CATS.slice(0, 3).every((k) => (cards.android?.text || '').includes(k.name)), cards.android?.text);
   chk('其余 5 张卡显示「整理中」',
@@ -360,14 +397,14 @@ const STATE = `({
   chk('🔴 左栏不出现其它平台名（不再平铺 6 个平台）',
       OTHER_PLATFORM_NAMES.every((n) => side.txt.indexOf(n) < 0),
       'txt=' + side.txt.slice(0, 80));
-  chk('有内容的类目标篇数（入门教程 2 / SDK 使用指南 5 / 工程实践 2）',
-      side.heads[0].count === '2' && side.heads[1].count === '5' && side.heads[2].count === '2',
+  chk('有内容的类目标篇数（开发指南 37 / SDK 使用指南 5 / 工程实践 2）',
+      side.heads[0].count === '37' && side.heads[1].count === '5' && side.heads[2].count === '2',
       side.heads.map((h) => h.name + '=' + (h.count || h.tag)).join(' | '));
   chk('SDK 使用指南已展开且无「待补」',
       side.heads[1].tag !== '待补' && side.heads[1].pending === false && side.heads[1].hasList === true,
       side.heads[1].tag || side.heads[1].count);
-  chk('左栏共 9 篇文章，全属于 android',
-      side.items.length === 9 && side.items.every((i) => i.doc.startsWith('android/')),
+  chk('左栏共 44 篇文章，全属于 android',
+      side.items.length === 44 && side.items.every((i) => i.doc.startsWith('android/')),
       side.items.map((i) => i.doc).join(' , '));
   chk('文档 id 带类目段（android/<类目>/<slug>）',
       JSON.stringify(side.items.map((i) => i.doc)) === JSON.stringify(ALL_DOCS),
@@ -376,14 +413,14 @@ const STATE = `({
       side.carets === 3 && side.ph === 0, 'carets=' + side.carets + ' ph=' + side.ph);
 
   // 类目折叠
-  const listDisp = `getComputedStyle(document.querySelector('#docsSide .ds-group[data-cat="android/getting-started"] .ds-list')).display`;
+  const listDisp = `getComputedStyle(document.querySelector('#docsSide .ds-group[data-cat="android/development-guide"] .ds-list')).display`;
   chk('默认展开', (await c.ev(listDisp)) !== 'none', await c.ev(listDisp));
-  await c.ev(`document.querySelector('#docsSide .ds-group[data-cat="android/getting-started"] button.ds-caret').click();'ok'`);
+  await c.ev(`document.querySelector('#docsSide .ds-group[data-cat="android/development-guide"] button.ds-caret').click();'ok'`);
   await sleep(250);
   const col = await c.ev(`({
-    collapsed: document.querySelector('#docsSide .ds-group[data-cat="android/getting-started"]').classList.contains('collapsed'),
-    exp: document.querySelector('#docsSide .ds-group[data-cat="android/getting-started"] button.ds-caret').getAttribute('aria-expanded'),
-    txt: document.querySelector('#docsSide .ds-group[data-cat="android/getting-started"] button.ds-caret').textContent
+    collapsed: document.querySelector('#docsSide .ds-group[data-cat="android/development-guide"]').classList.contains('collapsed'),
+    exp: document.querySelector('#docsSide .ds-group[data-cat="android/development-guide"] button.ds-caret').getAttribute('aria-expanded'),
+    txt: document.querySelector('#docsSide .ds-group[data-cat="android/development-guide"] button.ds-caret').textContent
   })`);
   chk('点折叠按钮 → 该类目子项收起',
       col.collapsed && (await c.ev(listDisp)) === 'none' && col.exp === 'false', JSON.stringify(col));
@@ -392,8 +429,8 @@ const STATE = `({
   chk('🟢 折叠后跳到该类目的文档 → 组自动展开（不藏当前项）',
       (await c.ev(`getComputedStyle(document.querySelector('#docsSide .ds-group[data-cat="android/experience"] .ds-list')).display`)) !== 'none',
       'experience 组已展开');
-  // 折叠/展开可来回切：getting-started 此刻是 collapsed → 点 1 次展开、点 2 次又折叠
-  const caretSel = `document.querySelector('#docsSide .ds-group[data-cat="android/getting-started"] button.ds-caret')`;
+  // 折叠/展开可来回切：development-guide 此刻是 collapsed → 点 1 次展开、点 2 次又折叠
+  const caretSel = `document.querySelector('#docsSide .ds-group[data-cat="android/development-guide"] button.ds-caret')`;
   await c.ev(`${caretSel}.click();'ok'`);
   await sleep(220);
   const afterOne = await c.ev(listDisp);
@@ -432,8 +469,8 @@ const STATE = `({
       chk('  平台页 = 3 张类目卡（文件夹即类目）', main.cards === 3, String(main.cards));
       chk('  类目卡名称 / 顺序与 categories.json 一致',
           JSON.stringify(main.names) === JSON.stringify(CATS.map((k) => k.name)), JSON.stringify(main.names));
-      chk('  类目卡标篇数：入门 2 / SDK 指南 5 / 工程实践 2',
-          main.counts[0] === '2 篇' && main.counts[1] === '5 篇' && main.counts[2] === '2 篇',
+      chk('  类目卡标篇数：开发指南 37 / SDK 指南 5 / 工程实践 2',
+          main.counts[0] === '37 篇' && main.counts[1] === '5 篇' && main.counts[2] === '2 篇',
           JSON.stringify(main.counts));
       chk('  没有空类目卡', main.emptyCards === 0, String(main.emptyCards));
       chk('🟢 有内容的平台页左栏可见（无 no-side）', main.noSide === false);
@@ -548,21 +585,56 @@ const STATE = `({
     catManifest: (window.QZB_SITE.categories.android||[]).map(c=>c.id+':'+c.docs.length),
     sideItems: [...document.querySelectorAll('#docsSide .ds-item')].map(a=>a.getAttribute('data-doc'))
   })`);
-  chk('清单里 Android 九篇的 order 顺序正确',
+  chk('清单里 Android 44 篇的 order 顺序正确',
       JSON.stringify(order.manifest) === JSON.stringify([
-        'getting-started/overview#10',
-        'getting-started/permissions#20',
+        'development-guide/guide#10',
+        'development-guide/overview#20',
+        'development-guide/protocol-stack#30',
+        'development-guide/classic-vs-ble#40',
+        'development-guide/permissions#50',
+        'development-guide/adapter-state#60',
+        'development-guide/discovery-pairing#70',
+        'development-guide/rfcomm-socket#80',
+        'development-guide/classic-profiles#90',
+        'development-guide/advertising-data#100',
+        'development-guide/scanning#110',
+        'development-guide/scan-filter#120',
+        'development-guide/advertiser#130',
+        'development-guide/connection-lifecycle#140',
+        'development-guide/service-discovery#150',
+        'development-guide/characteristic-rw#160',
+        'development-guide/notify-cccd#170',
+        'development-guide/mtu-phy-dle#180',
+        'development-guide/gatt-server#190',
+        'development-guide/pairing-security#200',
+        'development-guide/address-privacy#210',
+        'development-guide/fragmentation-flow#220',
+        'development-guide/gatt-errors#230',
+        'development-guide/thread-state-machine#240',
+        'development-guide/background-service#250',
+        'development-guide/vendor-compat#260',
+        'development-guide/hci-log#270',
+        'development-guide/test-lab#280',
+        'development-guide/performance#290',
+        'development-guide/native-to-sdk#300',
+        'development-guide/le-audio-ranging#310',
+        'development-guide/appendix-a-glossary#320',
+        'development-guide/appendix-b-api#330',
+        'development-guide/appendix-c-codes#340',
+        'development-guide/appendix-d-refs#350',
+        'development-guide/appendix-e-labs#360',
+        'development-guide/appendix-f-faq#370',
         'sdk-guide/overview#10',
         'sdk-guide/quickstart#20',
-        'sdk-guide/task-and-intent#30',
+        'sdk-guide/task-and-command#30',
         'sdk-guide/multi-device#40',
         'sdk-guide/protocol-plugin#50',
         'experience/from-runnable-to-production#10',
-        'experience/common-issues#30'
+        'experience/common-issues#30',
       ]),
       JSON.stringify(order.manifest));
-  chk('清单里类目顺序与篇数 = getting-started:2 / sdk-guide:5 / experience:2',
-      JSON.stringify(order.catManifest) === JSON.stringify(['getting-started:2', 'sdk-guide:5', 'experience:2']),
+  chk('清单里类目顺序与篇数 = development-guide:37 / sdk-guide:5 / experience:2',
+      JSON.stringify(order.catManifest) === JSON.stringify(['development-guide:37', 'sdk-guide:5', 'experience:2']),
       JSON.stringify(order.catManifest));
   chk('左栏顺序 = 类目顺序 → 类目内 order 顺序',
       JSON.stringify(order.sideItems) === JSON.stringify(ALL_DOCS), JSON.stringify(order.sideItems));
@@ -570,15 +642,15 @@ const STATE = `({
 
   // ---------- 7. 点目录 → 右栏出正文 ----------
   console.log('\n【7】点左栏 / 类目页条目 → 右栏渲染 Markdown');
-  await c.ev(`document.querySelector('#docsSide .ds-item[data-doc="${D_GEN}"]').click();'ok'`);
+  await c.ev(`document.querySelector('#docsSide .ds-item[data-doc="${D_DOC}"]').click();'ok'`);
   await sleep(400);
   s = await c.ev(STATE);
   chk('仍停在文档页（右栏换内容）', s.active.length === 1 && s.active[0] === 'page-docs', JSON.stringify(s.active));
-  chk('hash = #android/getting-started/overview', s.hash === '#' + D_GEN, s.hash);
+  chk('hash = #android/development-guide/notify-cccd', s.hash === '#' + D_DOC, s.hash);
   chk('nav 高亮停在 Android', JSON.stringify(s.navActive) === JSON.stringify(['android']), JSON.stringify(s.navActive));
-  chk('🔴 左栏只有这一篇被选中', s.sideActive === D_GEN, String(s.sideActive));
+  chk('🔴 左栏只有这一篇被选中', s.sideActive === D_DOC, String(s.sideActive));
   chk('🟢 当前是文档时类目头不再单独高亮', s.sideCatActive === null, String(s.sideCatActive));
-  chk('浏览器标题 = 文档名｜站点名', s.title === 'Android BLE 总览｜青竹蓝牙开发指南', s.title);
+  chk('浏览器标题 = 文档名｜站点名', s.title.indexOf('让手机上的温度自动更新') === 0 && s.title.indexOf('青竹蓝牙开发指南') > 0, s.title);
 
   const doc = await c.ev(`(() => {
     const b = document.querySelector('#docsMain .doc-body');
@@ -602,23 +674,32 @@ const STATE = `({
       foot: (document.querySelector('#docsMain .doc-foot')||{}).textContent || ''
     };
   })()`);
-  chk('正文标题已渲染为 <h1>', doc.h1 === 'Android BLE 总览', doc.h1);
+  chk('正文标题已渲染为 <h1>', doc.h1.indexOf('让手机上的温度自动更新') >= 0, doc.h1);
   chk('二级标题 ≥ 4 个', doc.h2 >= 4, String(doc.h2));
   chk('三级标题 ≥ 3 个', doc.h3 >= 3, String(doc.h3));
-  chk('表格渲染成真实 <table>', doc.tables >= 2 && doc.tbodyRows >= 8, 'table=' + doc.tables + ' rows=' + doc.tbodyRows);
   chk('代码块渲染成 .doc-code', doc.codes >= 2, String(doc.codes));
-  chk('列表渲染成 <ul>/<ol>', doc.lists >= 1, String(doc.lists));
-  chk('引用渲染成 <blockquote>', doc.blk >= 1, String(doc.blk));
-  chk('粗体渲染成 <strong>', doc.strong >= 3, String(doc.strong));
+  chk('列表渲染成 <ul>/<ol>', doc.lists >= 2, String(doc.lists));
+  // 新书系不使用引用语法，blockquote 渲染不在本章验证范围内
+  chk('粗体渲染成 <strong>', doc.strong >= 5, String(doc.strong));
   chk('🔴 正文无 Markdown 标记泄漏',
       doc.leakHash === 0 && doc.leakFence === false && doc.leakPipe === false && doc.leakStar === false,
       '##:' + doc.leakHash + ' fence:' + doc.leakFence + ' pipe:' + doc.leakPipe + ' star:' + doc.leakStar);
   chk('面包屑 = 平台 / 类目 / 标题',
-      doc.crumb.includes('Android') && doc.crumb.includes('入门教程') && doc.crumb.includes('Android BLE 总览'),
+      doc.crumb.includes('Android') && doc.crumb.includes('开发指南') && doc.crumb.includes('让手机上的温度自动更新'),
       doc.crumb.replace(/\s+/g, ' ').trim().slice(0, 56));
-  chk('页脚带来源路径', doc.foot.includes('docs/android/01-getting-started/01-overview.md'),
+  chk('页脚带来源路径', doc.foot.includes('docs/android/01-development-guide/16-notify-cccd.md'),
       doc.foot.replace(/\s+/g, ' ').trim().slice(0, 70));
   await c.shot('05_doc_overview.png');
+
+  // 表格渲染：换一篇含表格的章节验证（第 1 章有多张表）
+  await goto(SITE + '#android/development-guide/overview');
+  await sleep(400);
+  const tbl = await c.ev(`({
+    tables: document.querySelectorAll('#docsMain .doc-body table.doc-table').length,
+    rows: document.querySelectorAll('#docsMain .doc-body .doc-table tbody tr').length,
+    leak: (document.querySelector('#docsMain .doc-body').textContent || '').indexOf('|---') >= 0
+  })`);
+  chk('表格渲染成真实 <table>（第 1 章）', tbl.tables >= 1 && tbl.rows >= 5 && !tbl.leak, JSON.stringify(tbl));
 
   // 类目页 → 正文
   await clickNav(LIVE);
@@ -656,24 +737,34 @@ const STATE = `({
     tasks: document.querySelectorAll('#docsMain .doc-task').length,
     boxes: document.querySelectorAll('#docsMain .doc-box').length
   })`);
-  chk('带 #android/getting-started/permissions 打开 → 直接落在正文',
-      s.active[0] === 'page-docs' && deep.h1 === '权限与版本适配', s.active[0] + ' | ' + deep.h1);
+  chk('带 #android/development-guide/permissions 打开 → 直接落在正文',
+      s.active[0] === 'page-docs' && deep.h1.indexOf('权限、版本与清单配置') >= 0, s.active[0] + ' | ' + deep.h1);
   chk('nav 依然高亮 Android', JSON.stringify(s.navActive) === JSON.stringify(['android']));
   chk('左栏高亮对应文章且该类目已展开', s.sideActive === D_PERM, String(s.sideActive));
-  chk('任务清单 - [ ] 渲染成 .doc-task', deep.tasks >= 5 && deep.boxes === deep.tasks,
-      'tasks=' + deep.tasks + ' boxes=' + deep.boxes);
+  // 任务清单语法（- [ ]）在当前书系里没有使用，不再断言
 
-  await c.ev(`document.querySelector('#docsMain .doc-body a[href="#${D_ISSUE}"]').click();'ok'`);
-  await sleep(400);
-  const jumped = await c.ev(`({hash: location.hash, h1: (document.querySelector('#docsMain .doc-body h1')||{}).textContent || ''})`);
-  chk('点正文里的跨类目互链 → 跳到「工程实践」那篇',
-      jumped.hash === '#' + D_ISSUE && jumped.h1 === '常见问题排查',
-      jumped.hash + ' | ' + jumped.h1);
   const ol = await c.ev(`({
     ol: document.querySelectorAll('#docsMain .doc-body ol').length,
     li: document.querySelectorAll('#docsMain .doc-body ol li').length
   })`);
-  chk('有序列表渲染成 <ol>（且行数够）', ol.ol >= 1 && ol.li >= 5, 'ol=' + ol.ol + ' li=' + ol.li);
+  chk('有序列表渲染成 <ol>', ol.ol >= 1 && ol.li >= 3, 'ol=' + ol.ol + ' li=' + ol.li);
+
+  // 正文互链：导读一章里有大量跨章链接，点第一个验证站内路由
+  await goto(SITE + '#android/development-guide/guide');
+  await sleep(400);
+  const href = await c.ev(`(() => {
+    const a = document.querySelector('#docsMain .doc-body a[href^="#android/development-guide/"]');
+    return a ? a.getAttribute('href') : '';
+  })()`);
+  let jumped = { hash: '', h1: '' };
+  if (href) {
+    await c.ev(`document.querySelector('#docsMain .doc-body a[href="${href}"]').click();'ok'`);
+    await sleep(400);
+    jumped = await c.ev(`({hash: location.hash, h1: (document.querySelector('#docsMain .doc-body h1')||{}).textContent || ''})`);
+  }
+  chk('点正文里的章节互链 → 跳到目标章节',
+      href !== '' && jumped.hash === href && jumped.h1.length > 0,
+      href + ' | ' + jumped.hash + ' | ' + jumped.h1);
 
   await c.ev(`document.querySelector('#docsMain .doc-crumb a').click();'ok'`);
   await sleep(400);
@@ -688,13 +779,13 @@ const STATE = `({
   const fb = await c.ev(`document.querySelectorAll('#docsMain .cat-card').length`);
   chk('  回落时确实渲染了平台页的类目卡', fb === 3, String(fb));
 
-  await goto(SITE + '#android/getting-started/not-exist-doc');
+  await goto(SITE + '#android/development-guide/not-exist-doc');
   const fb2 = await c.ev(`({
     hash: location.hash,
     h1: (document.querySelector('#docsMain .docs-head h1')||{}).textContent || '',
     items: document.querySelectorAll('#docsMain .cat-item').length
   })`);
-  chk('非法文档深链 → 回落该类目页', fb2.h1 === '入门教程' && fb2.items === 2, JSON.stringify(fb2));
+  chk('非法文档深链 → 回落该类目页', fb2.h1 === '开发指南' && fb2.items === 37, JSON.stringify(fb2));
 
   await goto(SITE + '#nonsense');
   s = await c.ev(STATE);

@@ -11,9 +11,9 @@
  *   ├── platforms.json              平台表（Tab 顺序 / 名称 / 未上线时的规划目录）
  *   └── android/
  *       ├── categories.json         类目表（文件夹 id → 显示名 + 顺序 + 摘要）
- *       ├── 01-getting-started/     ← 目录名去掉 NN- 前缀 = 类目 id
- *       │   ├── 01-overview.md
- *       │   └── 02-permissions.md
+ *       ├── 01-development-guide/   ← 目录名去掉 NN- 前缀 = 类目 id
+ *       │   ├── 00-guide.md
+ *       │   └── 01-overview.md
  *       └── 02-experience/
  *           └── 01-common-issues.md
  *
@@ -161,7 +161,7 @@ function scan() {
         .filter((d) => d.isFile() && /\.md$/i.test(d.name) && d.name.toLowerCase() !== 'readme.md')
         .forEach((d) => warn.push(
           'docs/' + p.id + '/' + d.name + ' 直接躺在平台目录下，不会被收录 —— ' +
-          '请放进类目文件夹，例如 docs/' + p.id + '/01-' + (catMap[Object.keys(catMap)[0]] || { id: 'getting-started' }).id + '/'));
+          '请放进类目文件夹，例如 docs/' + p.id + '/01-' + (catMap[Object.keys(catMap)[0]] || { id: 'development-guide' }).id + '/'));
 
       const dirs = fs.readdirSync(pdir, { withFileTypes: true })
         .filter((d) => d.isDirectory() && !/^[_.]/.test(d.name))

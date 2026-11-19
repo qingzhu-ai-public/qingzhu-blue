@@ -6,7 +6,7 @@
 
 未来还会有《青竹AI应用开发指南》，各指南分支共用同一套「知识讲全、工程做实、工具交到手里」的方法。
 
-> **当前状态**：Android 先行，已有 9 篇站点文档 / 3 个类目、36 个核心测试、3 个试玩 App；《Android 蓝牙指南》30 章书系正在逐章同步。SDK 进度见 <https://github.com/qingzhu-ai-public/qingzhu-ble-android>。
+> **当前状态**：Android 先行，已有 44 篇站点文档 / 3 个类目、36 个核心测试、3 个试玩 App；《Android 蓝牙指南》30 章书系已全量上站。SDK 进度见 <https://github.com/qingzhu-ai-public/qingzhu-ble-android>。
 
 **线上地址**：<https://qingzhu-ai-public.github.io/qingzhu-blue/>　（Pages 源 = 本仓 `main` 根目录）
 
@@ -33,16 +33,18 @@ _ref/                            样式来源：色值迁移脚本 + 增量样�
 ```
 docs/android/
 ├── categories.json          ← 给文件夹配中文名与顺序
-├── 01-getting-started/      ← 类目「入门教程」
+├── 01-development-guide/    ← 类目「开发指南」（37 篇书系）
+│   ├── 00-guide.md
 │   ├── 01-overview.md
-│   └── 02-permissions.md
-├── 03-sdk-guide/            ← 类目「SDK 使用指南」
+│   ├── …
+│   └── 95-appendix-f-faq.md
+├── 02-sdk-guide/            ← 类目「SDK 使用指南」
 │   ├── 01-overview.md
 │   ├── 02-quickstart.md
-│   ├── 03-task-and-intent.md
+│   ├── 03-task-and-command.md
 │   ├── 04-multi-device.md
 │   └── 05-protocol-plugin.md
-└── 02-experience/           ← 类目「工程实践」
+└── 03-experience/           ← 类目「工程实践」
     ├── 01-from-runnable-to-production.md
     └── 01-common-issues.md
 ```
@@ -129,19 +131,21 @@ order: 15          ← 插到 10 和 20 之间，不用重命名任何文件
 
 ```
 $ node tools/build-docs.js
-   9 篇  android      3 个类目
-         2 篇  入门教程   #android/getting-started
-                10  order Android BLE 总览     ← docs/android/01-getting-started/01-overview.md
-                20  order 权限与版本适配        ← docs/android/01-getting-started/02-permissions.md
+  44 篇  android      3 个类目
+        37 篇  开发指南   #android/development-guide
+               10  order 导读 先接通一台设备      ← docs/android/01-development-guide/00-guide.md
+               20  order Android 蓝牙全景        ← docs/android/01-development-guide/01-overview.md
+               …
+              370  order 附录 F 从现象查故障      ← docs/android/01-development-guide/95-appendix-f-faq.md
          5 篇  SDK 使用指南   #android/sdk-guide
-                10  order 青竹 BLE SDK 总览     ← docs/android/03-sdk-guide/01-overview.md
-                20  order 快速接入              ← docs/android/03-sdk-guide/02-quickstart.md
-                30  order 任务与意图             ← docs/android/03-sdk-guide/03-task-and-intent.md
-                40  order 多设备调度             ← docs/android/03-sdk-guide/04-multi-device.md
-                50  order 协议插件              ← docs/android/03-sdk-guide/05-protocol-plugin.md
+               10  order 青竹 BLE SDK 总览      ← docs/android/02-sdk-guide/01-overview.md
+               20  order 快速接入               ← docs/android/02-sdk-guide/02-quickstart.md
+               30  order 任务与命令              ← docs/android/02-sdk-guide/03-task-and-command.md
+               40  order 多设备调度              ← docs/android/02-sdk-guide/04-multi-device.md
+               50  order 协议插件               ← docs/android/02-sdk-guide/05-protocol-plugin.md
          2 篇  工程实践   #android/experience
-                10  order AI 时代：生产级 BLE SDK ← docs/android/02-experience/01-from-runnable-to-production.md
-                30  order 常见问题排查          ← docs/android/02-experience/01-common-issues.md
+               10  order AI 时代：生产级 BLE SDK ← docs/android/03-experience/01-from-runnable-to-production.md
+               30  order 常见问题排查           ← docs/android/03-experience/01-common-issues.md
 ```
 
 **它还会顺手查死链**：正文里写的 `[xxx](#android/xxx/yyy)` 如果指向不存在的平台 / 类目 / 文档，构建会给出提示 —— 移动文档到另一个类目时最容易漏改这个，而这种链接在页面上是静默失效的。
@@ -150,7 +154,7 @@ $ node tools/build-docs.js
 
 ### 新建文档（不用装任何东西）
 
-1. 打开 `docs/android/01-getting-started/` 之类的类目文件夹 → 右上角 **Add file → Create new file**
+1. 打开 `docs/android/01-development-guide/` 之类的类目文件夹 → 右上角 **Add file → Create new file**
 2. 文件名填 `03-mtu.md`（文件名里打 `/` 可以顺手建出新文件夹）
 3. 内容里贴 front matter + 正文 → 页面底部 **Commit changes**
 4. 等约 1 分钟，Actions 自动重建清单，站点就更新了
@@ -161,7 +165,7 @@ $ node tools/build-docs.js
 |---|---|
 | 调一篇在类目内的顺序 | 打开那个 `.md` → 铅笔 → 把 `order: 30` 改成 `order: 15` → Commit |
 | 用文件名排序 | 打开文件 → 文件名旁的铅笔/下拉 → **Rename** → 改成 `01-xxx.md` → Commit |
-| 把一篇换到别的类目 | 打开文件 → 文件名旁的铅笔/下拉 → **Rename** → 在名字里写上新类目路径，如 `02-experience/04-mtu.md` → Commit |
+| 把一篇换到别的类目 | 打开文件 → 文件名旁的铅笔/下拉 → **Rename** → 在名字里写上新类目路径，如 `03-experience/04-mtu.md` → Commit |
 | 调整类目顺序 | 打开 `docs/android/categories.json` → 铅笔 → 调整 `categories` 数组里那几行的先后 → Commit |
 | 给类目改中文名 | 同上，改 `"name"` 字段 |
 | 一次调多篇 | 建议本地改完一次性 push，比在网页上点十次省事 |
@@ -228,13 +232,13 @@ node _e2e_site.js
 ```
 ┌──────────────────────┬────────────────────────────────────────┐
 │ Android 文档          │                                        │
-│ ▾ 入门教程         2 │  #android                → 平台页：类目卡片 │
+│ ▾ 开发指南        37 │  #android                → 平台页：类目卡片 │
 │    Android BLE 总览   │  #android/<类目>          → 类目页：文档列表 │
 │    权限与版本适配      │  #android/<类目>/<slug>   → 文档正文      │
 │ ▾ SDK 使用指南     5 │                                        │
 │    青竹 BLE SDK 总览   │  没文档的平台（iOS 等）→ Coming soon，   │
 │    快速接入           │  此时左栏整块收起（左栏只列有内容的平台）│
-│    任务与意图         │                                        │
+│    任务与命令         │                                        │
 │    多设备调度         │                                        │
 │    协议插件           │                                        │
 │ ▾ 工程实践         2 │                                        │
