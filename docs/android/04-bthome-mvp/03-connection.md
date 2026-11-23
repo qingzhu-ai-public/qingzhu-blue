@@ -7,21 +7,16 @@ summary: 连接教学外设并找到可读写的特征。
 
 # 连接篇　选中一台设备，请它建立连接
 
-点列表中的「连接」，等详情页允许请求新读数。下面先列出连接流程使用的完整文件，再跟着一次点击理解重点。
+在手机 A 的列表里点「连接」，看详情页的「请求新读数」何时从灰色变为可点。
 
 ## 本篇完整代码
 
-以下文件取自同一个 Android Studio 工程，包含各自的 import、成员变量和全部方法。按标出的路径对照项目，配套文件已在工程中提供。后面的讲解按本篇功能顺序展开。
+按文件名展开。每个文件都可以完整查看。 [跳到讲解](#walkthrough)
 
-先找到这些文件的位置。
-
-- [SensorClient.java](#client)
-- [SensorActivity.java](#activity)
-- [DemoProtocol.java](#protocol)
+<details>
+<summary>AndroidManifest.xml · 声明系统权限</summary>
 
 <a id="manifest"></a>
-
-### AndroidManifest.xml
 
 路径 `app/src/main/AndroidManifest.xml`。
 
@@ -48,9 +43,12 @@ summary: 连接教学外设并找到可读写的特征。
 </manifest>
 ```
 
-<a id="client"></a>
+</details>
 
-### SensorClient.java
+<details>
+<summary>SensorClient.java · 扫描、连接和读写</summary>
+
+<a id="client"></a>
 
 路径 `app/src/main/java/guide/bluetooth/bthome/SensorClient.java`。
 
@@ -356,9 +354,12 @@ final class SensorClient {
 }
 ```
 
-<a id="activity"></a>
+</details>
 
-### SensorActivity.java
+<details>
+<summary>SensorActivity.java · 处理点击、权限和界面</summary>
+
+<a id="activity"></a>
 
 路径 `app/src/main/java/guide/bluetooth/bthome/SensorActivity.java`。
 
@@ -787,9 +788,12 @@ public final class SensorActivity extends Activity implements SensorClient.View 
 }
 ```
 
-<a id="protocol"></a>
+</details>
 
-### DemoProtocol.java
+<details>
+<summary>DemoProtocol.java · 两端约定的编号与指令</summary>
+
+<a id="protocol"></a>
 
 路径 `app/src/main/java/guide/bluetooth/bthome/DemoProtocol.java`。
 
@@ -827,9 +831,13 @@ final class DemoProtocol {
 }
 ```
 
+</details>
+
+<a id="walkthrough"></a>
+
 ## 对着代码讲重点
 
-现在沿着一次操作读下面的几个关键位置。需要查看上下文时，回到本篇前面的完整文件。
+点连接 → connectGatt → 连接回调 → discoverServices → 找到特征 → 点亮请求按钮。
 
 ## 点击连接时，程序记得你选了谁
 
@@ -915,6 +923,10 @@ ready 进入 READY 阶段，enter 调用页面的 allowRequest，最终通过 re
 ## 返回列表时清理连接
 
 用户返回时，Activity 调用 stopSessions，再由客户端 close 先 disconnect，随后 close 释放 GATT。清理时还会取消超时、停止扫描和禁用请求按钮。退出前台同样结束本次练习。
+
+## 自己试一次
+
+趁详情页还显示正在连接时点「返回列表」。确认上一次连接的回调没有让已关闭的详情页重新出现。
 
 **一句话记住**　先连上设备，再找到对的服务和特征，才知道往哪里发数据。
 

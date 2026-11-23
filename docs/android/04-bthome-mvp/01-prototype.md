@@ -31,9 +31,22 @@ summary: 在线体验扫描、连接和读数，再运行 Android 工程。
 
 返回列表时清除等待中的定时任务，避免上一页已经关了、旧结果又跑出来。原生 App 同样需要处理旧回调和退出清理。
 
+## 第一次运行到手机上
+
+先用一台 Android 手机把 App 跑起来。看到 **「附近设备」** 页面和 **「开始扫描」** 按钮，就可以进入扫描篇。完整收发要用第二台手机或支持教学协议的外设。
+
+1. **拿到工程。** 在公开仓库点 **Code → Download ZIP**，解压后找到 `examples/android/bthome-mvp`。如果你在本地课程仓库，直接用 `courses/android-bluetooth/code/bthome-mvp`。要打开的那层目录里有 `settings.gradle` 和 `app`。[下载示例所在的仓库](https://github.com/qingzhu-ai-public/qingzhu-blue)
+2. **用 Android Studio 打开这个目录。** 在欢迎页点 **Open**，选择 `bthome-mvp`，等首次同步。Gradle 会读取工程配置并准备构建。缺 Android SDK Platform 36 时，打开 **Tools → SDK Manager → SDK Platforms** 安装。Gradle JDK 使用 JDK 17 或更新版本。
+3. **让电脑识别真机。** 在手机设置里找到「版本号」，连续点按直至开启开发者选项，再启用「USB 调试」。用可传数据的 USB 线连接电脑，解锁手机并同意该电脑的调试授权。菜单名称可能因手机而异。[Android 官方真机调试步骤](https://developer.android.com/studio/run/device)
+4. **安装并启动。** 在 Android Studio 顶部把运行配置选为 `app`，设备下拉框选手机，再点三角形 **Run**。等手机上出现「附近设备」页面。蓝牙权限在后面点「开始扫描」时处理。
+
+手机没出现在设备下拉框时，先换到能传数据的线，再检查 USB 调试和授权弹窗。用 `adb devices` 辅助查看时，`unauthorized` 表示手机还没授权，`device` 表示电脑已识别它。
+
+用两台手机练习时，给两台装同一个示例 App。手机 B 点「模拟温湿度计」并启动广播，手机 A 留在「附近设备」准备扫描。两台都保持 App 在前台。至少有一台要支持 BLE 外设广播，手机 B 启动失败时可以交换两台手机的角色。只有一台手机时，可以先体验原型，或者用附近的明文 BTHome 设备练习扫描。[示例工程与命令行安装步骤](https://github.com/qingzhu-ai-public/qingzhu-blue/tree/main/examples/android/bthome-mvp)
+
 ## 工程里该打开哪些文件
 
-在 Android Studio 打开 bthome-mvp 目录，等 Gradle 同步完成，运行 app。构建需要 JDK 17+ 和 Android SDK Platform 36，手机最低 Android 8.0。
+App 支持 Android 8.0 及更新版本。先对照下面这张表，知道工程里的代码各管哪一步。
 
 | 文件 | 它在这个功能里做什么 |
 | --- | --- |
@@ -44,12 +57,6 @@ summary: 在线体验扫描、连接和读数，再运行 Android 工程。
 | BthomeDecoder.java | 按字节解释温湿度 |
 
 后面的 Android 实现篇开头列出本篇涉及的完整文件，后面按点击顺序解释关键方法。在完整代码中遇到下一篇的功能，可以等用到时再读它的讲解。
-
-## 先让 App 跑在手机上
-
-按[安装步骤](https://github.com/qingzhu-ai-public/qingzhu-blue/tree/main/examples/android/bthome-mvp)把同一个 APK 装到两台手机。手机 B 开模拟外设并启动广播，手机 A 开始扫描。至少一台手机要支持 BLE 外设广播，扫描不到时可以交换角色。两台先保持前台。
-
-普通明文 BTHome 设备也能用来观察广播。主动连接与请求使用教学服务，手机 B 的模拟外设实现了它。
 
 **一句话记住**　先把每次点击后应该出现的结果想清楚，再用真实蓝牙回调实现这些变化。
 

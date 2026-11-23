@@ -7,22 +7,16 @@ summary: 申请权限、扫描设备并显示广播温度。
 
 # 扫描篇　点一下按钮，让附近设备出现在列表
 
-点「开始扫描」，允许权限后，在列表看到广播温度。下面先列出本篇使用的完整文件，再从按钮点击开始讲解。
+手机 B 启动广播后，在手机 A 点「开始扫描」。这一次只看手机 A 的设备列表，出现「教学温湿度计」和 25.00 °C 就算完成。
 
 ## 本篇完整代码
 
-以下文件取自同一个 Android Studio 工程，包含各自的 import、成员变量和全部方法。按标出的路径对照项目，配套文件已在工程中提供。后面的讲解按本篇功能顺序展开。
+按文件名展开。每个文件都可以完整查看。 [跳到讲解](#walkthrough)
 
-先找到这些文件的位置。
-
-- [SensorActivity.java](#activity)
-- [SensorClient.java](#client)
-- [DemoProtocol.java](#protocol)
-- [BthomeDecoder.java](#decoder)
+<details>
+<summary>AndroidManifest.xml · 声明系统权限</summary>
 
 <a id="manifest"></a>
-
-### AndroidManifest.xml
 
 路径 `app/src/main/AndroidManifest.xml`。
 
@@ -49,9 +43,12 @@ summary: 申请权限、扫描设备并显示广播温度。
 </manifest>
 ```
 
-<a id="activity"></a>
+</details>
 
-### SensorActivity.java
+<details>
+<summary>SensorActivity.java · 处理点击、权限和界面</summary>
+
+<a id="activity"></a>
 
 路径 `app/src/main/java/guide/bluetooth/bthome/SensorActivity.java`。
 
@@ -480,9 +477,12 @@ public final class SensorActivity extends Activity implements SensorClient.View 
 }
 ```
 
-<a id="client"></a>
+</details>
 
-### SensorClient.java
+<details>
+<summary>SensorClient.java · 扫描、连接和读写</summary>
+
+<a id="client"></a>
 
 路径 `app/src/main/java/guide/bluetooth/bthome/SensorClient.java`。
 
@@ -788,9 +788,12 @@ final class SensorClient {
 }
 ```
 
-<a id="protocol"></a>
+</details>
 
-### DemoProtocol.java
+<details>
+<summary>DemoProtocol.java · 两端约定的编号与指令</summary>
+
+<a id="protocol"></a>
 
 路径 `app/src/main/java/guide/bluetooth/bthome/DemoProtocol.java`。
 
@@ -828,9 +831,12 @@ final class DemoProtocol {
 }
 ```
 
-<a id="decoder"></a>
+</details>
 
-### BthomeDecoder.java
+<details>
+<summary>BthomeDecoder.java · 把原始字节换算成读数</summary>
+
+<a id="decoder"></a>
 
 路径 `app/src/main/java/guide/bluetooth/bthome/BthomeDecoder.java`。
 
@@ -911,15 +917,15 @@ final class BthomeDecoder {
 }
 ```
 
+</details>
+
+<a id="walkthrough"></a>
+
 ## 对着代码讲重点
 
-现在沿着一次操作读下面的几个关键位置。需要查看上下文时，回到本篇前面的完整文件。
+点扫描 → 检查并申请权限 → startScan → onScanResult → 列表出现设备。
 
-## 先知道这几个写法
-
-`client.start()` 表示让 client 这个对象执行 start 方法。对象可以先理解成一个负责某件事的工具，方法就是它能做的动作。`if` 表示满足条件才执行，`return` 表示到这里结束本次方法。
-
-代码里经常出现「回调」。例如你请蓝牙系统查找设备，它需要一些时间。你先把一个接收结果的方法交给系统，系统找到设备后调用它，把结果送回来。这就是后面要读的 onScanResult。
+点扫描以后，系统需要一段时间才能找到设备。App 把接收结果的方法先交给系统，找到设备后，系统会调用它。这就是回调。你可以先记住两个名字，startScan 负责发起扫描，onScanResult 负责接收结果。
 
 ## 按钮先调用 startRole
 
@@ -1062,6 +1068,10 @@ finishScan 调用 stopScan，并把阶段改成 PICK，表示等用户选设备�
 ## 动手验证
 
 先拒绝权限，看提示是否停在缺少权限。允许权限后重新扫描，确认列表显示温度。停止扫描后，已发现的设备应保留。Android 11 及以下还要手动检查系统位置开关。
+
+## 自己试一次
+
+把 SensorClient.start() 中 enter 的 12_000 改成 5_000。重新运行后留意扫描按钮何时变成「重新扫描」。已经找到的设备还在列表里。
 
 **一句话记住**　先问用户能不能找，再请系统开始找，找到一台就往列表放一台。
 

@@ -86,6 +86,14 @@
       }
 
 
+      // 只接受固定形式的折叠块标签，标题仍然转义。
+      var summary = line.match(/^<summary>([^<>]+)<\/summary>$/);
+      if (line === '<details>' || line === '</details>' || summary) {
+        out.push(summary ? '<summary>' + esc(summary[1]) + '</summary>' : line);
+        i++;
+        continue;
+      }
+
       // --- 分隔线 ---
       if (RE_HR.test(line)) { out.push('<hr>'); i++; continue; }
 

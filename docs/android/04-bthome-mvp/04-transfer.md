@@ -7,23 +7,16 @@ summary: 写入指令，读回数据并解析温湿度。
 
 # 传输篇　写一个字节，再读一组温湿度
 
-点「请求新读数」，手机 A 写入指令，手机 B 准备数据，手机 A 读回并显示温湿度。下面先列出这次收发涉及的完整文件，再逐步解释。
+在手机 A 点「请求新读数」，观察温度、湿度和原始字节。第一次预期是 26.50 °C 和 50.55% RH。
 
 ## 本篇完整代码
 
-以下文件取自同一个 Android Studio 工程，包含各自的 import、成员变量和全部方法。按标出的路径对照项目，配套文件已在工程中提供。后面的讲解按本篇功能顺序展开。
+按文件名展开。每个文件都可以完整查看。 [跳到讲解](#walkthrough)
 
-先找到这些文件的位置。
-
-- [SensorClient.java](#client)
-- [SensorPeripheral.java](#peripheral)
-- [DemoProtocol.java](#protocol)
-- [BthomeDecoder.java](#decoder)
-- [SensorActivity.java](#activity)
+<details>
+<summary>AndroidManifest.xml · 声明系统权限</summary>
 
 <a id="manifest"></a>
-
-### AndroidManifest.xml
 
 路径 `app/src/main/AndroidManifest.xml`。
 
@@ -50,9 +43,12 @@ summary: 写入指令，读回数据并解析温湿度。
 </manifest>
 ```
 
-<a id="client"></a>
+</details>
 
-### SensorClient.java
+<details>
+<summary>SensorClient.java · 扫描、连接和读写</summary>
+
+<a id="client"></a>
 
 路径 `app/src/main/java/guide/bluetooth/bthome/SensorClient.java`。
 
@@ -358,9 +354,12 @@ final class SensorClient {
 }
 ```
 
-<a id="peripheral"></a>
+</details>
 
-### SensorPeripheral.java
+<details>
+<summary>SensorPeripheral.java · 模拟设备并应答</summary>
+
+<a id="peripheral"></a>
 
 路径 `app/src/main/java/guide/bluetooth/bthome/SensorPeripheral.java`。
 
@@ -599,9 +598,12 @@ final class SensorPeripheral {
 }
 ```
 
-<a id="protocol"></a>
+</details>
 
-### DemoProtocol.java
+<details>
+<summary>DemoProtocol.java · 两端约定的编号与指令</summary>
+
+<a id="protocol"></a>
 
 路径 `app/src/main/java/guide/bluetooth/bthome/DemoProtocol.java`。
 
@@ -639,9 +641,12 @@ final class DemoProtocol {
 }
 ```
 
-<a id="decoder"></a>
+</details>
 
-### BthomeDecoder.java
+<details>
+<summary>BthomeDecoder.java · 把原始字节换算成读数</summary>
+
+<a id="decoder"></a>
 
 路径 `app/src/main/java/guide/bluetooth/bthome/BthomeDecoder.java`。
 
@@ -722,9 +727,12 @@ final class BthomeDecoder {
 }
 ```
 
-<a id="activity"></a>
+</details>
 
-### SensorActivity.java
+<details>
+<summary>SensorActivity.java · 处理点击、权限和界面</summary>
+
+<a id="activity"></a>
 
 路径 `app/src/main/java/guide/bluetooth/bthome/SensorActivity.java`。
 
@@ -1153,9 +1161,13 @@ public final class SensorActivity extends Activity implements SensorClient.View 
 }
 ```
 
+</details>
+
+<a id="walkthrough"></a>
+
 ## 对着代码讲重点
 
-现在沿着一次操作读下面的几个关键位置。需要查看上下文时，回到本篇前面的完整文件。
+点请求 → 手机 A 写 01 → 手机 B 应答 → 手机 A 发起读取 → 回调拿到字节 → 解析并更新页面。
 
 ## 点击按钮，手机 A 写入 01
 
@@ -1247,6 +1259,10 @@ public void showSample(String reading, String bytes) {
 ```
 
 setText 更新屏幕上的两个文本区域。客户端随后回到 READY，按钮重新可点。这样一次点击有明确的开始和结束。
+
+## 自己试一次
+
+先在纸上把回包里的 5A 0A 算成温度。然后把手机 B 的 SensorPeripheral 中模拟温度分支的 2650 改为 2700，重新运行手机 B。再次请求时对照手机 A 显示的 27.00 °C 和原始字节。
 
 **一句话记住**　先按约定发指令，再读返回值，最后把字节翻成数字。
 

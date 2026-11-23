@@ -366,6 +366,8 @@
       var target = document.getElementById(href.slice(1));
       if (target && target.closest('.doc-body')) {
         e.preventDefault();
+        var section = target.closest('details');
+        if (section) section.open = true;
         target.scrollIntoView({ block: 'center' });
         return;
       }

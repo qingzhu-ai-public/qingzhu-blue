@@ -7,21 +7,16 @@ summary: 用一台手机模拟外设，另一台走完整个通信流程。
 
 # 双机验收篇　先写出一个能被连接的模拟温湿度计
 
-手机 B 模拟温湿度计，手机 A 负责扫描、连接和请求。下面先列出外设实现涉及的完整文件，再讲服务注册、广播和应答。
+在手机 B 点「启动广播」，然后用手机 A 跑一遍扫描、连接、请求。两台手机各自都有状态提示。
 
 ## 本篇完整代码
 
-以下文件取自同一个 Android Studio 工程，包含各自的 import、成员变量和全部方法。按标出的路径对照项目，配套文件已在工程中提供。后面的讲解按本篇功能顺序展开。
+按文件名展开。每个文件都可以完整查看。 [跳到讲解](#walkthrough)
 
-先找到这些文件的位置。
-
-- [SensorPeripheral.java](#peripheral)
-- [SensorActivity.java](#activity)
-- [DemoProtocol.java](#protocol)
+<details>
+<summary>AndroidManifest.xml · 声明系统权限</summary>
 
 <a id="manifest"></a>
-
-### AndroidManifest.xml
 
 路径 `app/src/main/AndroidManifest.xml`。
 
@@ -48,9 +43,12 @@ summary: 用一台手机模拟外设，另一台走完整个通信流程。
 </manifest>
 ```
 
-<a id="peripheral"></a>
+</details>
 
-### SensorPeripheral.java
+<details>
+<summary>SensorPeripheral.java · 模拟设备并应答</summary>
+
+<a id="peripheral"></a>
 
 路径 `app/src/main/java/guide/bluetooth/bthome/SensorPeripheral.java`。
 
@@ -289,9 +287,12 @@ final class SensorPeripheral {
 }
 ```
 
-<a id="activity"></a>
+</details>
 
-### SensorActivity.java
+<details>
+<summary>SensorActivity.java · 处理点击、权限和界面</summary>
+
+<a id="activity"></a>
 
 路径 `app/src/main/java/guide/bluetooth/bthome/SensorActivity.java`。
 
@@ -720,9 +721,12 @@ public final class SensorActivity extends Activity implements SensorClient.View 
 }
 ```
 
-<a id="protocol"></a>
+</details>
 
-### DemoProtocol.java
+<details>
+<summary>DemoProtocol.java · 两端约定的编号与指令</summary>
+
+<a id="protocol"></a>
 
 路径 `app/src/main/java/guide/bluetooth/bthome/DemoProtocol.java`。
 
@@ -760,9 +764,13 @@ final class DemoProtocol {
 }
 ```
 
+</details>
+
+<a id="walkthrough"></a>
+
 ## 对着代码讲重点
 
-现在沿着一次操作读下面的几个关键位置。需要查看上下文时，回到本篇前面的完整文件。
+手机 B 注册服务 → 收到注册成功回调 → 开始广播 → 手机 A 连接和读写 → 停止并清理。
 
 ## 先向系统注册服务
 
@@ -832,6 +840,10 @@ adb -s <序列号> logcat -s GuideBthome
 广播启动失败先查外设端权限和广播能力。手机 A 能看到温度却找不到特征时，查教学服务 UUID 和服务注册日志。写入成功却读不到时，依次看 B 是否收到 01、A 是否进入 READ、B 是否返回字节以及 A 是否解析失败。
 
 再故意关闭手机 B 的蓝牙或退出页面，确认手机 A 能结束当前操作。没有错误回调的情况下，客户端的连接、发现、写、读各阶段计时也会结束等待。记录故障时写下两端手机、Android 版本、最后成功阶段和原始错误码。
+
+## 自己试一次
+
+跑通一遍后，在手机 B 点「停止广播」。留意手机 A 的状态提示和请求按钮，再从设备列表重新扫描。
 
 **一句话记住**　先让模拟设备准备好柜台和告示，再从另一台手机检查一问一答的每一步。
 
