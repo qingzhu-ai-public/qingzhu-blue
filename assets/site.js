@@ -262,12 +262,18 @@
     var foot = [];
     if (d.updated) foot.push('更新于 ' + d.updated);
     foot.push(d.file);
+    var body = D.src[d.id] || '';
+    var article = d.id === 'android/bthome-mvp/prototype'
+      ? body.split(/\r?\n<!-- bthome-prototype -->\r?\n/).map(md.render).join(
+          '<iframe class="doc-prototype" src="examples/android/bthome-mvp/prototype/index.html?embed=1"' +
+          ' title="蓝牙温湿度计交互原型" sandbox="allow-scripts" width="440" height="540"></iframe>')
+      : md.render(body);
     return '<div class="doc-crumb">' +
       '<a href="#' + esc(d.platform) + '">' + esc(p ? p.name : d.platform) + '</a>' +
       '<span class="doc-crumb-sep">/</span>' +
       '<a href="#' + esc(d.platform + '/' + d.category) + '">' + esc(c ? c.name : d.category) + '</a>' +
       '<span class="doc-crumb-sep">/</span><b>' + esc(d.title) + '</b></div>' +
-      '<article class="doc-body">' + md.render(D.src[d.id] || '') + '</article>' +
+      '<article class="doc-body">' + article + '</article>' +
       '<div class="doc-foot"><span>' + esc(foot.join(' · ')) + '</span>' +
       '<a href="' + REPO_URL + '/blob/main/' + esc(d.file) + '" target="_blank" rel="noopener">' +
       '在 GitHub 上编辑 →</a></div>';

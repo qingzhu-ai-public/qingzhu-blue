@@ -3,6 +3,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>蓝牙温湿度计 · 交互原型</title>
+<script>
+if (new URLSearchParams(location.search).get('embed') === '1') {
+  document.documentElement.classList.add('embedded');
+}
+</script>
 <style>
 :root{color-scheme:light;font-family:Inter,"Microsoft YaHei",sans-serif;color:#182b24;background:#e4ede7}
 *{box-sizing:border-box}body{margin:0;padding:32px 16px}
@@ -20,6 +25,11 @@ code{font-family:"IBM Plex Mono",monospace;color:#3a6250;line-height:1.5}
 .label{color:#476355;font-size:14px}nav{margin-top:auto;padding-top:24px}
 nav button{width:100%}[hidden]{display:none!important}
 @media(max-width:740px){main{grid-template-columns:minmax(0,400px);gap:20px;min-height:auto}h1{font-size:26px}.phone{min-height:520px;padding:20px}body{padding-top:20px}}
+html.embedded{background:transparent}
+.embedded body{padding:10px}
+.embedded main{display:block;min-height:0}
+.embedded aside{display:none}
+.embedded .phone{min-height:510px;padding:18px;border-radius:22px;box-shadow:none}
 </style>
 <main>
   <aside>
