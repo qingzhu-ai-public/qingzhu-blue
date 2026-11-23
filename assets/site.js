@@ -263,9 +263,13 @@
     if (d.updated) foot.push('更新于 ' + d.updated);
     foot.push(d.file);
     var body = D.src[d.id] || '';
-    var article = d.id === 'android/bthome-mvp/prototype'
+    var prototypePath = {
+      'android/bthome-mvp/prototype': 'examples/android/bthome-mvp/prototype/index.html',
+      'ios/thermometer-mvp/prototype': 'examples/ios/thermometer-mvp/prototype/index.html'
+    }[d.id];
+    var article = prototypePath
       ? body.split(/\r?\n<!-- bthome-prototype -->\r?\n/).map(md.render).join(
-          '<iframe class="doc-prototype" src="examples/android/bthome-mvp/prototype/index.html?embed=1"' +
+          '<iframe class="doc-prototype" src="' + prototypePath + '?embed=1"' +
           ' title="蓝牙温湿度计交互原型" sandbox="allow-scripts" width="440" height="540"></iframe>')
       : md.render(body);
     return '<div class="doc-crumb">' +

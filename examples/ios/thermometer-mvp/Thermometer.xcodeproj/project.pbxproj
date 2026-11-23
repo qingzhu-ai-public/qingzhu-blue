@@ -1,0 +1,69 @@
+// !$*UTF8*$!
+{
+    archiveVersion = 1;
+    classes = {};
+    objectVersion = 56;
+    objects = {
+        000000000000000000000011 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThermometerApp.swift; sourceTree = "<group>"; };
+000000000000000000000015 = {isa = PBXBuildFile; fileRef = 000000000000000000000011; };
+        000000000000000000000012 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorCentral.swift; sourceTree = "<group>"; };
+000000000000000000000016 = {isa = PBXBuildFile; fileRef = 000000000000000000000012; };
+        000000000000000000000013 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorPeripheral.swift; sourceTree = "<group>"; };
+000000000000000000000017 = {isa = PBXBuildFile; fileRef = 000000000000000000000013; };
+        000000000000000000000014 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoProtocol.swift; sourceTree = "<group>"; };
+0000000000000000000000FF = {isa = PBXBuildFile; fileRef = 000000000000000000000014; };
+        000000000000000000000010 = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+        000000000000000000000005 = {isa = PBXFileReference; explicitFileType = wrapper.application; path = Thermometer.app; sourceTree = BUILT_PRODUCTS_DIR; };
+        000000000000000000000002 = {isa = PBXGroup; children = (000000000000000000000003, 000000000000000000000004); sourceTree = "<group>"; };
+        000000000000000000000003 = {isa = PBXGroup; children = (000000000000000000000011, 000000000000000000000012, 000000000000000000000013, 000000000000000000000014, 000000000000000000000010); path = Thermometer; sourceTree = "<group>"; };
+        000000000000000000000004 = {isa = PBXGroup; children = (000000000000000000000005); name = Products; sourceTree = "<group>"; };
+        000000000000000000000007 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (000000000000000000000015, 000000000000000000000016, 000000000000000000000017, 0000000000000000000000FF); runOnlyForDeploymentPostprocessing = 0; };
+        000000000000000000000008 = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+        000000000000000000000009 = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+        000000000000000000000006 = {isa = PBXNativeTarget; buildConfigurationList = 00000000000000000000000B; buildPhases = (000000000000000000000007, 000000000000000000000009, 000000000000000000000008); buildRules = (); dependencies = (); name = Thermometer; productName = Thermometer; productReference = 000000000000000000000005; productType = "com.apple.product-type.application"; };
+        000000000000000000000001 = {
+            isa = PBXProject;
+            attributes = {LastUpgradeCheck = 1600; TargetAttributes = {000000000000000000000006 = {CreatedOnToolsVersion = 16.0; };};};
+            buildConfigurationList = 00000000000000000000000A;
+            compatibilityVersion = "Xcode 14.0";
+            developmentRegion = en;
+            hasScannedForEncodings = 0;
+            knownRegions = (en, Base);
+            mainGroup = 000000000000000000000002;
+            productRefGroup = 000000000000000000000004;
+            projectDirPath = "";
+            targets = (000000000000000000000006);
+        };
+        00000000000000000000000A = {isa = XCConfigurationList; buildConfigurations = (00000000000000000000000C, 00000000000000000000000D); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+        00000000000000000000000B = {isa = XCConfigurationList; buildConfigurations = (00000000000000000000000E, 00000000000000000000000F); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+        00000000000000000000000C = {isa = XCBuildConfiguration; name = Debug; buildSettings = {SDKROOT = iphoneos; IPHONEOS_DEPLOYMENT_TARGET = 16.0; SWIFT_OPTIMIZATION_LEVEL = "-Onone";};};
+        00000000000000000000000D = {isa = XCBuildConfiguration; name = Release; buildSettings = {SDKROOT = iphoneos; IPHONEOS_DEPLOYMENT_TARGET = 16.0; SWIFT_COMPILATION_MODE = wholemodule;};};
+        00000000000000000000000E = {
+            isa = XCBuildConfiguration; name = Debug;
+            buildSettings = {
+                CODE_SIGN_STYLE = Automatic;
+                GENERATE_INFOPLIST_FILE = NO;
+                INFOPLIST_FILE = Thermometer/Info.plist;
+                PRODUCT_BUNDLE_IDENTIFIER = guide.bluetooth.thermometer;
+                PRODUCT_NAME = "$(TARGET_NAME)";
+                SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+                SWIFT_VERSION = 5.0;
+                TARGETED_DEVICE_FAMILY = 1;
+            };
+        };
+        00000000000000000000000F = {
+            isa = XCBuildConfiguration; name = Release;
+            buildSettings = {
+                CODE_SIGN_STYLE = Automatic;
+                GENERATE_INFOPLIST_FILE = NO;
+                INFOPLIST_FILE = Thermometer/Info.plist;
+                PRODUCT_BUNDLE_IDENTIFIER = guide.bluetooth.thermometer;
+                PRODUCT_NAME = "$(TARGET_NAME)";
+                SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+                SWIFT_VERSION = 5.0;
+                TARGETED_DEVICE_FAMILY = 1;
+            };
+        };
+    };
+    rootObject = 000000000000000000000001;
+}

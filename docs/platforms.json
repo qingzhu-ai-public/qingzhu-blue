@@ -18,8 +18,7 @@
       "id": "ios",
       "name": "iOS",
       "title": "iOS BLE 开发",
-      "summary": "按 Android 的同一套结构写：CoreBluetooth 的模型、后台模式与权限限制，以及青竹 BLE SDK 的接入方式。",
-      "plan": ["CoreBluetooth", "CBCentralManager", "CBPeripheral", "Service", "Characteristic", "Background Mode", "Permission", "Common Issues", "Qingzhu BLE SDK"]
+      "summary": "24 章 iOS 蓝牙开发指南、Core Bluetooth API 速查，以及 SwiftUI 温湿度计综合实战。"
     },
     {
       "id": "harmonyos",

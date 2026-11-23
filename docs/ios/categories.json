@@ -1,0 +1,14 @@
+{
+  "categories": [
+    {
+      "id": "development-guide",
+      "name": "开发指南",
+      "summary": "24 章，从真机运行到权限、扫描、连接、订阅和排错，并附 API 速查。"
+    },
+    {
+      "id": "thermometer-mvp",
+      "name": "综合实战 · 温湿度计",
+      "summary": "点通原型，用 SwiftUI 示例完成扫描、连接、收发、解析和双机验收。"
+    }
+  ]
+}
