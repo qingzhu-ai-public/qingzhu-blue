@@ -47,6 +47,7 @@ const CATS = [
   { id: 'development-guide', name: '开发指南', n: 37 },
   { id: 'sdk-guide', name: 'SDK 使用指南', n: 5 },
   { id: 'experience', name: '工程实践', n: 2 },
+  { id: 'bthome-mvp', name: '综合实战 · 温湿度计', n: 6 },
 ];
 const BLUETOOTH_CATS = [
   { id: 'fundamentals', name: '蓝牙入门与连接', n: 4 },
@@ -102,7 +103,8 @@ const ALL_DOCS = [
   'android/development-guide/appendix-e-labs',
   'android/development-guide/appendix-f-faq',
   D_SDK_OVERVIEW, D_SDK_QUICKSTART, D_SDK_TASK, D_SDK_MULTI, D_SDK_PROTOCOL,
-  D_PRACTICE, D_ISSUE
+  D_PRACTICE, D_ISSUE,
+  ...["overview", "prototype", "scanning", "connection", "transfer", "two-device-check"].map((slug) => "android/bthome-mvp/" + slug)
 ];
 
 function httpJson(p) {
@@ -257,8 +259,8 @@ const STATE = `({
     });
     return o;
   })()`);
-  chk('Android 卡自动显示「44 篇文档」',
-      /44 篇文档/.test(cards.android?.text || '') && cards.android?.soon === false, cards.android?.text);
+  chk('Android 卡自动显示「50 篇文档」',
+      /50 篇文档/.test(cards.android?.text || '') && cards.android?.soon === false, cards.android?.text);
   chk('Android 卡副标题列出类目名（不再是平台首篇标题）',
       CATS.slice(0, 3).every((k) => (cards.android?.text || '').includes(k.name)), cards.android?.text);
   chk('Bluetooth 卡自动显示「8 篇文档」',
@@ -376,7 +378,8 @@ const STATE = `({
   chk('🔴 全页无残留蓝色', color.blueCount === 0, '命中 ' + color.blueCount + ' ' + JSON.stringify(color.blues));
 
   // ---------- 3. 左栏：只列有内容的平台，一级是类目 ----------
-  console.log('\n【3】左栏列出 Bluetooth 和 Android 的类目及文档');
+  console.log('\n【3】左栏随当前 Tab 更新');
+  await clickNav(ANDROID);
   const side = await c.ev(`(() => {
     const heads = [...document.querySelectorAll('#docsSide .ds-head')];
     return {
@@ -398,11 +401,11 @@ const STATE = `({
       txt: document.querySelector('#docsSide').innerText.replace(/\\s+/g,' ')
     };
   })()`);
-  const allCats = [...BLUETOOTH_CATS, ...CATS];
+  const allCats = CATS;
   const androidHeads = side.heads.filter((h) => h.cat.startsWith('android/'));
   const androidItems = side.items.filter((i) => i.doc.startsWith('android/'));
-  chk('左栏标题为「技术文档」', side.title === '技术文档', side.title);
-  chk('左栏有 5 个类目分组', side.groups === allCats.length && side.heads.length === allCats.length,
+  chk('左栏标题为「Android 文档」', side.title === 'Android 文档', side.title);
+  chk('左栏有 4 个 Android 类目分组', side.groups === allCats.length && side.heads.length === allCats.length,
       'groups=' + side.groups + ' heads=' + side.heads.length);
   chk('类目顺序 = categories.json 顺序',
       JSON.stringify(side.heads.map((h) => h.name)) === JSON.stringify(allCats.map((k) => k.name)),
@@ -416,13 +419,12 @@ const STATE = `({
   const sdkHead = androidHeads.find((h) => h.cat === 'android/sdk-guide');
   chk('SDK 使用指南已展开且无「待补」',
       sdkHead?.pending === false && sdkHead.hasList === true, sdkHead?.tag || sdkHead?.count);
-  chk('左栏列出 8 篇 Bluetooth 文档和 44 篇 Android 文档',
-      side.items.length === 52 && side.items.filter((i) => i.doc.startsWith('bluetooth/')).length === 8
-      && androidItems.length === 44, String(side.items.length));
+  chk('左栏仅列 50 篇 Android 文档',
+      side.items.length === 50 && androidItems.length === 50, String(side.items.length));
   chk('文档 id 带类目段（android/<类目>/<slug>）',
       JSON.stringify(androidItems.map((i) => i.doc)) === JSON.stringify(ALL_DOCS),
       JSON.stringify(androidItems.map((i) => i.doc)));
-  chk('五个有内容的类目都有折叠按钮',
+  chk('Android 的四个类目都有折叠按钮',
       side.carets === allCats.length && side.ph === 0, 'carets=' + side.carets + ' ph=' + side.ph);
 
   // 类目折叠
@@ -466,6 +468,15 @@ const STATE = `({
     chk('  回到顶部（scrollY<2）', st.scrollY < 2, String(st.scrollY));
 
     if (name === FIRST_LIVE) {
+      const sidebar = await c.ev(`({
+        title: document.querySelector('#docsSide .ds-title').textContent,
+        groups: [...document.querySelectorAll('#docsSide .ds-group')].map(g => g.dataset.cat),
+        items: document.querySelectorAll('#docsSide .ds-item').length
+      })`);
+      chk('Bluetooth 左栏仅显示本 Tab 的类目和八篇文章',
+          sidebar.title === 'Bluetooth 文档' && sidebar.items === 8 &&
+          JSON.stringify(sidebar.groups) === JSON.stringify(BLUETOOTH_CATS.map(k => 'bluetooth/' + k.id)),
+          JSON.stringify(sidebar));
       const categories = await c.ev(`[...document.querySelectorAll('#docsMain .cat-card')].map(card => ({
         href: card.getAttribute('href'),
         name: card.querySelector('.cat-card-head b').textContent,
@@ -498,7 +509,7 @@ const STATE = `({
         noSide: document.querySelector('.docs-shell').classList.contains('no-side')
       })`);
       chk('  右栏是平台页（不是 Coming soon）', main.soon === false && main.h1.indexOf('Android') === 0, main.h1);
-      chk('  平台页 = 3 张类目卡（文件夹即类目）', main.cards === 3, String(main.cards));
+      chk('  平台页 = 4 张类目卡（文件夹即类目）', main.cards === CATS.length, String(main.cards));
       chk('  类目卡名称 / 顺序与 categories.json 一致',
           JSON.stringify(main.names) === JSON.stringify(CATS.map((k) => k.name)), JSON.stringify(main.names));
       chk('  类目卡标篇数：开发指南 37 / SDK 指南 5 / 工程实践 2',
@@ -617,7 +628,7 @@ const STATE = `({
     catManifest: (window.QZB_SITE.categories.android||[]).map(c=>c.id+':'+c.docs.length),
     sideItems: [...document.querySelectorAll('#docsSide .ds-item[data-doc^="android/"]')].map(a=>a.getAttribute('data-doc'))
   })`);
-  chk('清单里 Android 44 篇的 order 顺序正确',
+  chk('清单里 Android 50 篇的 order 顺序正确',
       JSON.stringify(order.manifest) === JSON.stringify([
         'development-guide/guide#10',
         'development-guide/overview#20',
@@ -663,10 +674,16 @@ const STATE = `({
         'sdk-guide/protocol-plugin#50',
         'experience/from-runnable-to-production#10',
         'experience/common-issues#30',
+        'bthome-mvp/overview#0',
+        'bthome-mvp/prototype#10',
+        'bthome-mvp/scanning#20',
+        'bthome-mvp/connection#30',
+        'bthome-mvp/transfer#40',
+        'bthome-mvp/two-device-check#50',
       ]),
       JSON.stringify(order.manifest));
-  chk('清单里类目顺序与篇数 = development-guide:37 / sdk-guide:5 / experience:2',
-      JSON.stringify(order.catManifest) === JSON.stringify(['development-guide:37', 'sdk-guide:5', 'experience:2']),
+  chk('清单里类目顺序与篇数 = development-guide:37 / sdk-guide:5 / experience:2 / bthome-mvp:6',
+      JSON.stringify(order.catManifest) === JSON.stringify(['development-guide:37', 'sdk-guide:5', 'experience:2', 'bthome-mvp:6']),
       JSON.stringify(order.catManifest));
   chk('左栏顺序 = 类目顺序 → 类目内 order 顺序',
       JSON.stringify(order.sideItems) === JSON.stringify(ALL_DOCS), JSON.stringify(order.sideItems));
@@ -809,7 +826,7 @@ const STATE = `({
   chk('非法类目深链 → 回落平台页（不空白）', s.active[0] === 'page-docs' && s.hash === '#android/not-exist-cat',
       JSON.stringify(s.active));
   const fb = await c.ev(`document.querySelectorAll('#docsMain .cat-card').length`);
-  chk('  回落时确实渲染了平台页的类目卡', fb === 3, String(fb));
+  chk('  回落时确实渲染了平台页的类目卡', fb === CATS.length, String(fb));
 
   await goto(SITE + '#android/development-guide/not-exist-doc');
   const fb2 = await c.ev(`({

@@ -53,7 +53,6 @@
   }
   function itemsOfCat(pid, cid) { return docsOfCat[pid + '/' + cid] || []; }
   function countOf(p) { return p ? (docsOfPlat[p.id] || []).length : 0; }
-  // 左栏只列有内容的平台 —— 当前只有 Android，其余平台走 Coming soon
   function livePlatforms() { return platforms.filter(function (p) { return countOf(p) > 0; }); }
   function firstLive() {
     var live = livePlatforms();
@@ -116,42 +115,52 @@
 
   /* --------------------------------------------- 左栏：类目树（文件夹即类目） */
 
-  function buildSidebar() {
-    var live = livePlatforms();
-    var title = live.length === 1 ? live[0].name + ' 文档' : '技术文档';
-    var h = '<div class="ds-title">' + esc(title) + '</div><nav class="ds-nav">';
+  var sidebarPlatform = '';
+  var collapsedCategories = Object.create(null);
 
-    live.forEach(function (p) {
-      cats(p.id).forEach(function (c) {
-        var items = itemsOfCat(p.id, c.id);
-        var key = p.id + '/' + c.id;
-        var count = items.length
-          ? '<span class="ds-count">' + items.length + '</span>'
-          : '<span class="ds-tag">待补</span>';
-        var caret = items.length
-          ? '<button class="ds-caret" type="button" aria-expanded="true" aria-label="折叠或展开 ' +
-            esc(c.name) + '">▾</button>'
-          : '<span class="ds-caret ds-caret-ph" aria-hidden="true"></span>';
-        h += '<div class="ds-group" data-cat="' + esc(key) + '">' +
-          '<div class="ds-headrow">' + caret +
-          '<a class="ds-head' + (items.length ? '' : ' ds-pending') +
-          '" href="#' + esc(key) + '" data-cat="' + esc(key) + '">' +
-          '<span class="ds-name">' + esc(c.name) + '</span>' + count + '</a></div>' +
-          (items.length
-            ? '<div class="ds-list">' + items.map(function (d) {
-                return '<a class="ds-item" href="#' + esc(d.id) + '" data-doc="' + esc(d.id) + '">' +
-                  esc(d.title) + '</a>';
-              }).join('') + '</div>'
-            : '') +
-          '</div>';
-      });
+  function buildSidebar(p) {
+    var id = countOf(p) ? p.id : '';
+    if (sidebarPlatform === id) return;
+    sidebarPlatform = id;
+    if (!id) {
+      sideEl.innerHTML = '';
+      return;
+    }
+    var h = '<div class="ds-title">' + esc(p.name + ' 文档') + '</div><nav class="ds-nav">';
+    cats(p.id).forEach(function (c) {
+      var items = itemsOfCat(p.id, c.id);
+      var key = p.id + '/' + c.id;
+      var count = items.length
+        ? '<span class="ds-count">' + items.length + '</span>'
+        : '<span class="ds-tag">待补</span>';
+      var caret = items.length
+        ? '<button class="ds-caret" type="button" aria-expanded="true" aria-label="折叠或展开 ' +
+          esc(c.name) + '">▾</button>'
+        : '<span class="ds-caret ds-caret-ph" aria-hidden="true"></span>';
+      h += '<div class="ds-group" data-cat="' + esc(key) + '">' +
+        '<div class="ds-headrow">' + caret +
+        '<a class="ds-head' + (items.length ? '' : ' ds-pending') +
+        '" href="#' + esc(key) + '" data-cat="' + esc(key) + '">' +
+        '<span class="ds-name">' + esc(c.name) + '</span>' + count + '</a></div>' +
+        (items.length
+          ? '<div class="ds-list">' + items.map(function (d) {
+              return '<a class="ds-item" href="#' + esc(d.id) + '" data-doc="' + esc(d.id) + '">' +
+                esc(d.title) + '</a>';
+            }).join('') + '</div>'
+          : '') +
+        '</div>';
     });
     h += '</nav>';
     sideEl.innerHTML = h;
+    sideEl.scrollTop = 0;
+    Array.prototype.forEach.call(sideEl.querySelectorAll('.ds-group'), function (group) {
+      if (collapsedCategories[group.getAttribute('data-cat')]) setCollapsed(group, true);
+    });
   }
 
   // 🔴 只找 <button>：空类目里放的是 <span class="ds-caret">，别把 ▾ 写进占位符
   function setCollapsed(group, collapsed) {
+    collapsedCategories[group.getAttribute('data-cat')] = !!collapsed;
     group.classList.toggle('collapsed', !!collapsed);
     var btn = group.querySelector('button.ds-caret');
     if (btn) {
@@ -300,6 +309,7 @@
 
     // 非法平台 → 首页
     if (!plat) {
+      buildSidebar(null);
       show(document.getElementById('page-home'));
       highlightNav('home');
       document.title = BASE_TITLE;
@@ -312,6 +322,7 @@
     // 没有文档的平台只有一张 Coming soon 面板，不占左栏（左栏只放有内容的平台）
     if (shellEl) shellEl.classList.toggle('no-side', !live);
 
+    buildSidebar(plat);
     show(docsPageEl);
     if (doc) mainEl.innerHTML = docMain(doc);
     else if (cat) mainEl.innerHTML = catMain(plat, cat);
@@ -345,6 +356,15 @@
     if (!a) return;
     var href = a.getAttribute('href');
     if (!href || href === '#') return;
+    if (a.closest('.doc-body')) {
+      var target = document.getElementById(href.slice(1));
+      if (target && target.closest('.doc-body')) {
+        e.preventDefault();
+        target.scrollIntoView({ block: 'center' });
+        return;
+      }
+    }
+
     e.preventDefault();
     if (location.hash === href) activate(href);
     else location.hash = href;            // 交给 hashchange
@@ -362,7 +382,6 @@
   buildNav();
   buildPlatformCards();
   wireHeroCta();
-  buildSidebar();
 
   window.addEventListener('hashchange', function () { activate(); });
   activate();

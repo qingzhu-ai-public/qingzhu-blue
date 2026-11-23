@@ -1,0 +1,4 @@
+<resources>
+    <string name="connectable_device">%1$s · 可连接</string>
+    <string name="broadcast_device">%1$s · 广播</string>
+</resources>

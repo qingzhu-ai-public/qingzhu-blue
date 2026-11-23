@@ -77,6 +77,15 @@
 
       if (!line.trim()) { i++; continue; }
 
+      // 仅识别文档显式声明的短锚点，其他 HTML 继续按文本显示。
+      var anchor = line.match(/^<a id="([a-z][a-z0-9-]*)"><\/a>$/);
+      if (anchor) {
+        out.push('<span id="' + anchor[1] + '"></span>');
+        i++;
+        continue;
+      }
+
+
       // --- 分隔线 ---
       if (RE_HR.test(line)) { out.push('<hr>'); i++; continue; }
 

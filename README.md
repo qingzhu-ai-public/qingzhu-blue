@@ -6,7 +6,9 @@
 
 未来还会有《青竹AI应用开发指南》，各指南分支共用同一套「知识讲全、工程做实、工具交到手里」的方法。
 
-> **当前内容**：[Bluetooth 通用知识](https://qingzhu-ai-public.github.io/qingzhu-blue/#bluetooth) 8 篇，覆盖选型、发现与连接、数据收发、安全和排障。Android 有 44 篇文档，包含《Android 蓝牙指南》30 章书系。SDK 和试玩 App 见 [青竹 Android BLE SDK](https://github.com/qingzhu-ai-public/qingzhu-ble-android)。
+> **当前内容**：[Bluetooth 通用知识](https://qingzhu-ai-public.github.io/qingzhu-blue/#bluetooth) 8 篇，覆盖选型、发现与连接、数据收发、安全和排障。Android 有 50 篇文档，包含《Android 蓝牙指南》30 章书系。SDK 和试玩 App 见 [青竹 Android BLE SDK](https://github.com/qingzhu-ai-public/qingzhu-ble-android)。
+
+**Android 综合实战**：[温湿度计教程](https://qingzhu-ai-public.github.io/qingzhu-blue/#android/bthome-mvp/overview) · [Android Studio 示例](examples/android/bthome-mvp/README.md)
 
 **线上地址**：<https://qingzhu-ai-public.github.io/qingzhu-blue/>　（Pages 源 = 本仓 `main` 根目录）
 
@@ -131,7 +133,7 @@ order: 15          ← 插到 10 和 20 之间，不用重命名任何文件
 
 ```
 $ node tools/build-docs.js
-  44 篇  android      3 个类目
+  50 篇  android      4 个类目
         37 篇  开发指南   #android/development-guide
                10  order 导读 先接通一台设备      ← docs/android/01-development-guide/00-guide.md
                20  order Android 蓝牙全景        ← docs/android/01-development-guide/01-overview.md
@@ -231,7 +233,7 @@ node _e2e_site.js
 
 ```
 ┌──────────────────────┬────────────────────────────────────────┐
-│ 技术文档             │                                        │
+│ Android 文档             │                                        │
 │ ▾ 蓝牙入门与连接   4 │  #bluetooth                     平台页 │
 │    导读              │  #bluetooth/fundamentals         类目页 │
 │    …                 │  #bluetooth/fundamentals/reading-guide  │
