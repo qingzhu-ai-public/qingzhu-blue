@@ -12,6 +12,8 @@
 
 **iOS**：[24 章开发指南](https://qingzhu-ai-public.github.io/qingzhu-blue/#ios/development-guide/overview) · [API 速查](https://qingzhu-ai-public.github.io/qingzhu-blue/#ios/development-guide/api-reference) · [温湿度计实战](https://qingzhu-ai-public.github.io/qingzhu-blue/#ios/thermometer-mvp/overview) · [Xcode 示例](examples/ios/thermometer-mvp/README.md)
 
+**HarmonyOS**：[12 章开发指南](https://qingzhu-ai-public.github.io/qingzhu-blue/#harmonyos/development-guide/overview) · [API 速查](https://qingzhu-ai-public.github.io/qingzhu-blue/#harmonyos/development-guide/api-reference) · [温湿度计实战](https://qingzhu-ai-public.github.io/qingzhu-blue/#harmonyos/thermometer-mvp/overview) · [ArkTS 示例](examples/harmonyos/thermometer-mvp/README.md)
+
 **线上地址**：<https://qingzhu-ai-public.github.io/qingzhu-blue/>　（Pages 源 = 本仓 `main` 根目录）
 
 ## 目录结构

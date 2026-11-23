@@ -24,8 +24,7 @@
       "id": "harmonyos",
       "name": "HarmonyOS",
       "title": "HarmonyOS BLE 开发",
-      "summary": "目录结构还没定——接口能力、系统限制和权限模型需要先摸一遍，再决定按什么粒度拆。下面的目录只是草稿。",
-      "plan": ["Overview", "BLE API", "扫描与广播", "连接与 GATT", "权限模型", "常见问题"]
+      "summary": "12 章 HarmonyOS 蓝牙开发指南、ArkTS 蓝牙 API 速查，以及温湿度计综合实战。"
     },
     {
       "id": "flutter",

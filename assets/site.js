@@ -265,7 +265,8 @@
     var body = D.src[d.id] || '';
     var prototypePath = {
       'android/bthome-mvp/prototype': 'examples/android/bthome-mvp/prototype/index.html',
-      'ios/thermometer-mvp/prototype': 'examples/ios/thermometer-mvp/prototype/index.html'
+      'ios/thermometer-mvp/prototype': 'examples/ios/thermometer-mvp/prototype/index.html',
+      'harmonyos/thermometer-mvp/prototype': 'examples/harmonyos/thermometer-mvp/prototype/index.html'
     }[d.id];
     var article = prototypePath
       ? body.split(/\r?\n<!-- bthome-prototype -->\r?\n/).map(md.render).join(

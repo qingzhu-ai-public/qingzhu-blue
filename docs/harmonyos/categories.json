@@ -1,0 +1,14 @@
+{
+  "categories": [
+    {
+      "id": "development-guide",
+      "name": "开发指南",
+      "summary": "12 章，从 DevEco 真机运行到权限、扫描、连接、订阅、外设和排错，并附 API 速查。"
+    },
+    {
+      "id": "thermometer-mvp",
+      "name": "综合实战 · 温湿度计",
+      "summary": "先点通原型，再用 ArkTS 做扫描、连接、收发和解析，最后用两台手机验收。"
+    }
+  ]
+}

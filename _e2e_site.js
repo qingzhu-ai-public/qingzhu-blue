@@ -38,8 +38,8 @@ const PLATFORMS = ['bluetooth', 'android', 'ios', 'harmonyos', 'flutter', 'react
 const NAV = ['首页', 'Bluetooth', 'Android', 'iOS', 'HarmonyOS', 'Flutter', 'React Native'];
 const FIRST_LIVE = 'bluetooth';
 const ANDROID = 'android';
-const EMPTY = PLATFORMS.filter((p) => p !== FIRST_LIVE && p !== ANDROID && p !== 'ios');
-const EMPTY_PLATFORM_NAMES = ['HarmonyOS', 'Flutter', 'React Native'];
+const EMPTY = PLATFORMS.filter((p) => p !== FIRST_LIVE && p !== ANDROID && p !== 'ios' && p !== 'harmonyos');
+const EMPTY_PLATFORM_NAMES = ['Flutter', 'React Native'];
 const TOTAL_PAGES = 2;                                     // 首页 + 文档页
 
 // Android 的类目（= docs/android/ 下的文件夹，顺序 = categories.json 顺序）
@@ -266,7 +266,8 @@ const STATE = `({
   chk('Bluetooth 卡自动显示「8 篇文档」',
       /8 篇文档/.test(cards.bluetooth?.text || '') && cards.bluetooth?.soon === false, cards.bluetooth?.text);
   chk('iOS 卡显示「32 篇文档」', /32 篇文档/.test(cards.ios?.text || '') && cards.ios?.soon === false);
-  chk('其余 3 张卡显示「整理中」',
+  chk('HarmonyOS 卡显示「20 篇文档」', /20 篇文档/.test(cards.harmonyos?.text || '') && cards.harmonyos?.soon === false);
+  chk('其余 2 张卡显示「整理中」',
       EMPTY.every((p) => /整理中/.test(cards[p]?.text || '') && cards[p].soon === true),
       EMPTY.map((p) => p + '=' + cards[p]?.text.slice(0, 10)).join(' | '));
   await c.shot('01_home.png');
@@ -548,15 +549,16 @@ const STATE = `({
         items: document.querySelectorAll('#docsMain .cat-item').length
       })`);
       chk('  SDK 使用指南列出 5 篇文档', guide.note === false && guide.items === 5, JSON.stringify(guide));
-    } else if (name === 'ios') {
-      const ios = await c.ev(`({
+    } else if (name === 'ios' || name === 'harmonyos') {
+      const sidebar = await c.ev(`({
         sidebar: document.querySelector('#docsSide .ds-title').textContent,
         items: [...document.querySelectorAll('#docsSide .ds-item')].map(item => item.dataset.doc),
         cards: document.querySelectorAll('#docsMain .cat-card').length
       })`);
-      chk('iOS 只显示自己的两个类目和 32 篇文档',
-          ios.sidebar === 'iOS 文档' && ios.cards === 2 && ios.items.length === 32 &&
-          ios.items.every(id => id.startsWith('ios/')), JSON.stringify(ios.items));
+      const platform = name === 'ios' ? { title: 'iOS', count: 32 } : { title: 'HarmonyOS', count: 20 };
+      chk(platform.title + ' 只显示自己的两个类目和 ' + platform.count + ' 篇文档',
+          sidebar.sidebar === platform.title + ' 文档' && sidebar.cards === 2 && sidebar.items.length === platform.count &&
+          sidebar.items.every(id => id.startsWith(name + '/')), JSON.stringify(sidebar.items));
     } else {
       const soon = await c.ev(`({
         soon: !!document.querySelector('#docsMain .soon'),
@@ -954,7 +956,7 @@ const STATE = `({
 
   // ---------- 12. 文档即插即用 ----------
   console.log('\n【12】🔴 新建类目文件夹 + 丢一篇 .md 就自动上线');
-  const probeDir = path.join(ROOT, 'docs', 'harmonyos', '01-probe');
+  const probeDir = path.join(ROOT, 'docs', 'flutter', '01-probe');
   const probeFile = path.join(probeDir, '99-probe.md');
   const build = () => execFileSync(process.execPath, ['tools/build-docs.js'], { cwd: ROOT, stdio: 'pipe' });
   let step = '写入';
@@ -967,27 +969,27 @@ const STATE = `({
     ].join('\n'), 'utf8');
     step = '构建';
     build();
-    chk('新建 docs/harmonyos/01-probe/99-probe.md 后构建成功', true, 'HarmonyOS 此前零文档');
+    chk('新建 docs/flutter/01-probe/99-probe.md 后构建成功', true, 'Flutter 此前零文档');
 
     step = '重载';
-    await goto(SITE + '#harmonyos');
+    await goto(SITE + '#flutter');
     const live = await c.ev(`({
       soon: !!document.querySelector('#docsMain .soon'),
       cards: document.querySelectorAll('#docsMain .cat-card').length,
       cardName: (document.querySelector('#docsMain .cat-card-head b')||{}).textContent || '',
-      sideHead: (document.querySelector('#docsSide .ds-head[data-cat="harmonyos/probe"]')||{}).textContent || '',
-      sideItem: (document.querySelector('#docsSide .ds-item[data-doc="harmonyos/probe/probe"]')||{}).textContent || '',
+      sideHead: (document.querySelector('#docsSide .ds-head[data-cat="flutter/probe"]')||{}).textContent || '',
+      sideItem: (document.querySelector('#docsSide .ds-item[data-doc="flutter/probe/probe"]')||{}).textContent || '',
       noSide: document.querySelector('.docs-shell').classList.contains('no-side'),
-      card: (document.querySelector('#page-home .platform[data-page="harmonyos"]')||{}).textContent || ''
+      card: (document.querySelector('#page-home .platform[data-page="flutter"]')||{}).textContent || ''
     })`);
-    chk('HarmonyOS 右栏 Coming soon 自动消失', live.soon === false);
-    chk('HarmonyOS 自动出现 1 张类目卡', live.cards === 1, 'name=' + live.cardName);
+    chk('Flutter 右栏 Coming soon 自动消失', live.soon === false);
+    chk('Flutter 自动出现 1 张类目卡', live.cards === 1, 'name=' + live.cardName);
     chk('🔴 左栏自动多出该类目与该文档',
         live.sideHead.indexOf('probe') >= 0 && live.sideItem.indexOf('Probe 探针文档') >= 0,
         left( live.sideHead) + ' | ' + left(live.sideItem));
     chk('🟢 有内容后左栏自动出现（no-side 撤掉）', live.noSide === false);
-    chk('首页 HarmonyOS 卡自动变「1 篇文档」', live.card.indexOf('1 篇文档') >= 0, live.card.replace(/\s+/g, ' ').trim());
-    await c.shot('07_probe_harmonyos_live.png');
+    chk('首页 Flutter 卡自动变「1 篇文档」', live.card.indexOf('1 篇文档') >= 0, live.card.replace(/\s+/g, ' ').trim());
+    await c.shot('07_probe_flutter_live.png');
   } catch (e) {
     chk('探针：' + step + ' 阶段', false, String(e.message).slice(0, 140));
   }
@@ -996,18 +998,18 @@ const STATE = `({
   try {
     if (fs.existsSync(probeFile)) fs.unlinkSync(probeFile);
     try { fs.rmdirSync(probeDir); } catch {}
-    try { fs.rmdirSync(path.join(ROOT, 'docs', 'harmonyos')); } catch {}
+    try { fs.rmdirSync(path.join(ROOT, 'docs', 'flutter')); } catch {}
     build();
-    await goto(SITE + '#harmonyos');
+    await goto(SITE + '#flutter');
     const back = await c.ev(`({
       soon: !!document.querySelector('#docsMain .soon'),
       cards: document.querySelectorAll('#docsMain .cat-card').length,
-      sideHead: document.querySelectorAll('#docsSide .ds-head[data-cat="harmonyos/probe"]').length,
+      sideHead: document.querySelectorAll('#docsSide .ds-head[data-cat="flutter/probe"]').length,
       noSide: document.querySelector('.docs-shell').classList.contains('no-side')
     })`);
     chk('删除后自动回到 Coming soon（无残留）',
         back.soon === true && back.cards === 0 && back.sideHead === 0 && back.noSide === true, JSON.stringify(back));
-    chk('探针目录已从磁盘删除', !fs.existsSync(path.join(ROOT, 'docs', 'harmonyos')));
+    chk('探针目录已从磁盘删除', !fs.existsSync(path.join(ROOT, 'docs', 'flutter')));
   } catch (e) {
     chk('探针还原', false, String(e.message).slice(0, 140));
   }
