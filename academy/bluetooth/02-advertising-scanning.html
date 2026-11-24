@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>蓝牙小课堂 · 第二课：广播与扫描，设备怎么被看见 · 青竹蓝牙学堂</title>
+<style>
+  :root{
+    --bg:#F7F6F2; --card:#FFFFFF; --ink:#2B2620; --muted:#7A7267; --faint:#A39B8E;
+    --line:#E8E4DC; --line-soft:#F1EEE7;
+    --coral:#D95B43; --coral-soft:#FBEDE9; --coral-line:#F0CFC6;
+    --teal:#2A9D8F; --teal-soft:#E9F4F2; --teal-line:#BFE0DB;
+    --amber:#C07A1E; --amber-soft:#FBF3E4; --amber-line:#EDD9B4;
+    --blue:#3B6FD4; --blue-soft:#ECF1FB; --blue-line:#C9D8F2;
+    --code-bg:#26221C; --code-ink:#EDE7DC; --code-cm:#8D8577; --code-kw:#8FC7E8; --code-str:#A8D5A2; --code-num:#E8C07D;
+    --radius:12px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html{scroll-behavior:smooth;}
+  body{background:var(--bg);color:var(--ink);font-size:16.5px;line-height:1.9;
+    font-family:"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",system-ui,sans-serif;}
+  a{color:var(--blue);text-decoration:none;} a:hover{text-decoration:underline;}
+  code{font-family:ui-monospace,"SF Mono",Consolas,monospace;font-size:.87em;
+    background:#F0EDE6;border:1px solid var(--line);border-radius:5px;padding:1px 6px;color:#5B4A2F;}
+  .topbar{background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:50;}
+  .topbar-in{max-width:1080px;margin:0 auto;padding:0 20px;height:56px;display:flex;align-items:center;gap:14px;}
+  .logo{font-weight:800;font-size:16px;white-space:nowrap;}
+  .logo span{color:var(--coral);}
+  .topnav{margin-left:auto;display:flex;gap:18px;font-size:14px;}
+  .topnav a{color:var(--muted);} .topnav a:hover{color:var(--coral);text-decoration:none;}
+  .layout{max-width:1080px;margin:0 auto;padding:32px 20px 80px;display:grid;grid-template-columns:200px minmax(0,1fr);gap:40px;}
+  .toc{position:sticky;top:84px;align-self:start;font-size:14px;}
+  .toc-title{font-size:12px;font-weight:700;color:var(--faint);letter-spacing:2px;margin-bottom:10px;}
+  .toc a{display:block;color:var(--muted);padding:5px 12px;border-left:2px solid var(--line);line-height:1.5;}
+  .toc a:hover{color:var(--coral);text-decoration:none;}
+  .toc a.on{color:var(--coral);border-left-color:var(--coral);font-weight:600;background:linear-gradient(90deg,var(--coral-soft),transparent);}
+  main{min-width:0;}
+  .crumb{font-size:13.5px;color:var(--faint);margin-bottom:14px;}
+  h1{font-size:30px;line-height:1.4;letter-spacing:.5px;margin-bottom:10px;}
+  h1 em{font-style:normal;color:var(--coral);}
+  .lead{font-size:16.5px;color:var(--muted);margin-bottom:16px;}
+  .meta{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px;}
+  .meta span{font-size:12.5px;color:var(--muted);background:var(--card);border:1px solid var(--line);border-radius:999px;padding:3px 12px;}
+  .journey{display:flex;flex-wrap:wrap;gap:0;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px 10px;margin:0 0 8px;}
+  .j-step{flex:1 1 120px;text-align:center;padding:4px 8px;position:relative;}
+  .j-step .n{display:inline-flex;width:26px;height:26px;border-radius:50%;background:var(--coral-soft);color:var(--coral);font-weight:800;font-size:13px;align-items:center;justify-content:center;border:1px solid var(--coral-line);}
+  .j-step .t{display:block;font-weight:700;font-size:14px;margin-top:4px;}
+  .j-step .s{display:block;font-size:12px;color:var(--faint);}
+  .j-step:not(:last-child)::after{content:"→";position:absolute;right:-7px;top:12px;color:var(--faint);font-size:14px;}
+  section{margin-top:44px;}
+  h2{font-size:22px;padding-bottom:10px;border-bottom:1px solid var(--line);margin-bottom:16px;scroll-margin-top:80px;}
+  h2 .no{display:inline-block;font-size:12.5px;font-weight:700;color:var(--coral);background:var(--coral-soft);
+    border:1px solid var(--coral-line);border-radius:999px;padding:1px 12px;margin-right:10px;vertical-align:3px;}
+  h3{font-size:17px;margin:20px 0 8px;}
+  p{margin:10px 0;}
+  ul{margin:10px 0 10px 24px;} li{margin:5px 0;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:22px 24px;margin:16px 0;}
+  .term{background:var(--teal-soft);color:#1E7268;border:1px solid var(--teal-line);border-radius:6px;padding:0 7px;font-weight:700;white-space:nowrap;font-size:.93em;}
+  .term2{background:var(--blue-soft);color:#2F58A8;border:1px solid var(--blue-line);border-radius:6px;padding:0 7px;font-weight:700;white-space:nowrap;font-size:.93em;}
+  .key{background:var(--amber-soft);border:1px solid var(--amber-line);border-left:4px solid var(--amber);
+    border-radius:8px;padding:12px 18px;margin:16px 0;font-size:15.5px;}
+  .key .tag,.note .tag{display:block;font-size:12px;font-weight:800;letter-spacing:2px;margin-bottom:3px;}
+  .key .tag{color:var(--amber);}
+  .key b{color:#8A5510;}
+  .note{background:#F4F2EC;border:1px solid var(--line);border-left:4px solid var(--faint);
+    border-radius:8px;padding:11px 16px;margin:16px 0;font-size:14px;color:var(--muted);}
+  .note .tag{color:var(--faint);}
+  .note code{font-size:.9em;}
+  .recap{margin:18px 0 4px;padding:10px 16px;background:var(--teal-soft);border:1px solid var(--teal-line);border-radius:8px;font-size:15px;}
+  .recap b{color:#1E7268;}
+  figure{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px;margin:16px 0;text-align:center;}
+  figcaption{font-size:13px;color:var(--faint);margin-top:8px;}
+  svg{max-width:100%;height:auto;}
+  .row{display:flex;gap:18px;flex-wrap:wrap;align-items:center;justify-content:center;}
+  .wave{transform-origin:center;animation:pop 2.4s ease-out infinite;opacity:0;}
+  .wave.w2{animation-delay:.8s;} .wave.w3{animation-delay:1.6s;}
+  @keyframes pop{0%{opacity:.7;transform:scale(.4);}80%{opacity:0;transform:scale(1.2);}100%{opacity:0;}}
+  table{width:100%;border-collapse:collapse;font-size:14.5px;margin:14px 0;background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden;}
+  th{background:#F4F2EC;text-align:left;padding:9px 14px;font-size:13px;color:var(--muted);border-bottom:1px solid var(--line);}
+  td{padding:9px 14px;border-bottom:1px solid var(--line-soft);vertical-align:top;}
+  tr:last-child td{border-bottom:none;}
+  pre{background:var(--code-bg);color:var(--code-ink);border-radius:10px;padding:14px 18px;margin:14px 0;
+    font:13.5px/1.85 ui-monospace,"SF Mono",Consolas,monospace;overflow-x:auto;}
+  pre .cm{color:var(--code-cm);} pre .num{color:var(--code-num);} pre .str{color:var(--code-str);}
+  .lab{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;margin:16px 0;}
+  .lab-head{padding:12px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  .lab-head b{font-size:15px;}
+  .hint{font-size:13px;color:var(--faint);}
+  .lab-body{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:18px;padding:16px 20px 20px;}
+  .controls{padding:0 20px 6px;display:flex;flex-wrap:wrap;gap:18px;align-items:center;}
+  .ctl{display:flex;align-items:center;gap:10px;font-size:13.5px;}
+  .ctl label{color:var(--muted);font-weight:600;}
+  .ctl input[type=range]{width:150px;accent-color:var(--coral);}
+  .ctl .val{font-family:ui-monospace,Consolas,monospace;font-weight:700;color:var(--coral);min-width:64px;}
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;}
+  .seg button{font-family:inherit;font-size:13px;font-weight:600;border:none;background:#F4F2EC;color:var(--muted);padding:6px 14px;cursor:pointer;}
+  .seg button.on{background:var(--teal);color:#fff;}
+  .timeline{border:1px solid var(--line);border-radius:14px;background:#FBFAF7;padding:14px;}
+  .tl-title{font-size:12.5px;color:var(--muted);font-weight:700;margin-bottom:6px;display:flex;justify-content:space-between;}
+  .stats{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;}
+  .stat-box{flex:1;min-width:90px;border:1px solid var(--line);border-radius:9px;padding:9px 12px;background:#fff;text-align:center;}
+  .stat-box b{display:block;font:700 19px/1.2 ui-monospace,Consolas,monospace;color:var(--ink);}
+  .stat-box small{font-size:11px;color:var(--faint);}
+  .stat-box.good b{color:#1E7268;} .stat-box.bad b{color:var(--coral);}
+  .logcat{background:var(--code-bg);border-radius:10px;overflow:hidden;display:flex;flex-direction:column;}
+  .logcat-head{padding:7px 14px;font-size:12px;color:var(--code-cm);border-bottom:1px solid #3A352C;font-family:ui-monospace,Consolas,monospace;display:flex;justify-content:space-between;}
+  .logcat-body{padding:12px 14px;font-size:12.5px;line-height:1.95;font-family:ui-monospace,Consolas,monospace;color:#D6CFC2;overflow-y:auto;max-height:300px;min-height:300px;}
+  .logcat-body .t{color:#6B6455;} .logcat-body .api{color:var(--code-kw);} .logcat-body .ok{color:var(--code-str);} .logcat-body .c{color:var(--code-cm);} .logcat-body .warn{color:var(--code-num);}
+  .lab-foot{padding:0 20px 20px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+  .btn{font-family:inherit;font-size:14.5px;font-weight:600;cursor:pointer;border-radius:8px;padding:9px 22px;border:1px solid var(--coral);background:var(--coral);color:#fff;transition:background .15s;}
+  .btn:hover{background:#C24E38;}
+  .btn.ghost{background:var(--card);color:var(--muted);border-color:var(--line);}
+  .btn.ghost:hover{color:var(--ink);border-color:var(--faint);}
+  .btn:disabled{opacity:.5;cursor:default;}
+  @keyframes fadein{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
+  .quiz-q{font-weight:700;font-size:16px;margin:20px 0 10px;}
+  .opt{display:block;width:100%;text-align:left;font-family:inherit;font-size:14.5px;cursor:pointer;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px 16px;margin:7px 0;color:var(--ink);transition:border-color .15s;}
+  .opt:hover{border-color:var(--teal);}
+  .opt.right{background:var(--teal-soft);border-color:var(--teal);font-weight:600;}
+  .opt.wrong{background:var(--coral-soft);border-color:var(--coral);}
+  .opt:disabled{cursor:default;}
+  .explain{display:none;font-size:14px;border-radius:8px;padding:10px 14px;margin:6px 0;}
+  .explain.show{display:block;animation:fadein .25s;}
+  .explain.good{background:var(--teal-soft);border:1px solid var(--teal-line);}
+  .explain.bad{background:var(--coral-soft);border:1px solid var(--coral-line);}
+  .next-links{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0;}
+  .next-links a{display:inline-block;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:9px 18px;font-size:14px;font-weight:600;}
+  .next-links a:hover{border-color:var(--coral);text-decoration:none;}
+  footer{border-top:1px solid var(--line);margin-top:56px;padding-top:20px;font-size:13px;color:var(--faint);}
+  @media (max-width:900px){
+    .layout{grid-template-columns:1fr;gap:0;}
+    .toc{display:none;}
+    .lab-body{grid-template-columns:1fr;}
+    h1{font-size:25px;}
+    .j-step:not(:last-child)::after{display:none;}
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar"><div class="topbar-in">
+  <div class="logo">青竹<span>蓝牙学堂</span></div>
+  <nav class="topnav">
+    <a href="../">学堂首页</a>
+    <a href="../../lessons/ble-visual-guide.html">第一课</a>
+    <a href="../../#bluetooth">通用知识</a>
+  </nav>
+</div></div>
+
+<div class="layout">
+<aside class="toc" id="toc">
+  <div class="toc-title">本课目录</div>
+  <a href="#intro">开场 · 没连线怎么知道它在</a>
+  <a href="#adv">第 1 步 · 广播：设备主动喊话</a>
+  <a href="#rhythm">第 2 步 · 节奏：间隔与窗口</a>
+  <a href="#payload">第 3 步 · 31 字节怎么装</a>
+  <a href="#filter">第 4 步 · 为什么漏掉设备</a>
+  <a href="#lab">第 5 步 · 动手调节奏</a>
+  <a href="#quiz">本课自测</a>
+  <a href="#map">全程回顾与速查</a>
+</aside>
+
+<main>
+  <div class="crumb">蓝牙小课堂 / 第二课 · A2</div>
+  <h1>广播与扫描：设备怎么被手机<em>「看见」</em></h1>
+  <p class="lead">上一课我们走通了整条链路。这一课把第一步掰开讲：温度计还没连上手机，两者之间没有任何线，手机凭什么知道「附近有一台温度计」？答案就两个字——<b>广播</b>。这一课讲清谁在喊、喊什么、手机怎么听，以及为什么有时候明明在喊却听不见。</p>
+  <div class="meta"><span>难度：零基础</span><span>约 15 分钟</span><span>含交互演练</span><span>前置：第一课</span></div>
+  <div class="journey">
+    <div class="j-step"><span class="n">1</span><span class="t">广播</span><span class="s">主动喊话</span></div>
+    <div class="j-step"><span class="n">2</span><span class="t">节奏</span><span class="s">间隔与窗口</span></div>
+    <div class="j-step"><span class="n">3</span><span class="t">内容</span><span class="s">31 字节</span></div>
+    <div class="j-step"><span class="n">4</span><span class="t">筛选</span><span class="s">为何漏掉</span></div>
+    <div class="j-step"><span class="n">5</span><span class="t">动手</span><span class="s">调节奏</span></div>
+  </div>
+
+  <!-- ===== 开场 ===== -->
+  <section id="intro">
+    <h2><span class="no">开场</span>没连线，手机怎么知道它在？</h2>
+    <div class="card">
+      <div class="row">
+        <svg viewBox="0 0 200 170" width="170" aria-label="蓝牙温度计">
+          <ellipse cx="100" cy="152" rx="52" ry="8" fill="#EFEAE0"/>
+          <rect x="76" y="20" width="48" height="112" rx="24" fill="#FFF" stroke="#D95B43" stroke-width="4"/>
+          <circle cx="100" cy="118" r="20" fill="#D95B43"/>
+          <rect x="93" y="58" width="14" height="62" rx="7" fill="#D95B43"/>
+          <rect x="86" y="34" width="28" height="14" rx="4" fill="#FBEDE9"/>
+          <text x="100" y="45" text-anchor="middle" font-size="9.5" fill="#B04A35" font-weight="bold">24.5</text>
+          <circle class="wave" cx="100" cy="76" r="50" fill="none" stroke="#D95B43" stroke-width="2"/>
+          <circle class="wave w2" cx="100" cy="76" r="50" fill="none" stroke="#EBA79A" stroke-width="2"/>
+          <text x="100" y="14" text-anchor="middle" font-size="13" fill="#D95B43" font-weight="bold">温度计</text>
+        </svg>
+        <svg viewBox="0 0 200 170" width="170" aria-label="手机">
+          <ellipse cx="100" cy="152" rx="52" ry="8" fill="#EFEAE0"/>
+          <rect x="62" y="18" width="76" height="130" rx="16" fill="#2A9D8F"/>
+          <rect x="70" y="30" width="60" height="98" rx="8" fill="#FFFDF8"/>
+          <text x="100" y="60" text-anchor="middle" font-size="10" fill="#7A7267">附近设备</text>
+          <text x="100" y="88" text-anchor="middle" font-size="15" fill="#1E7268" font-weight="bold">？</text>
+          <rect x="80" y="102" width="40" height="12" rx="6" fill="#E9F4F2"/>
+          <text x="100" y="14" text-anchor="middle" font-size="13" fill="#1E7268" font-weight="bold">手机（扫描中）</text>
+        </svg>
+      </div>
+      <p>温度计不能等手机来问——手机根本不知道它存在，没法问。所以办法是反过来的：<b>温度计自己周期性地向外喊话</b>，喊的内容里带着「我叫什么、我提供什么」。手机只要在旁边听着，就能把它列出来。这节课我们就看这一喊一听里藏着多少门道。</p>
+    </div>
+  </section>
+
+  <!-- ===== 第 1 步 ===== -->
+  <section id="adv">
+    <h2><span class="no">第 1 步</span>广播：设备主动喊话</h2>
+    <p>设备向外发的那一小段无线电信号，叫<span class="term">广播 Advertising</span>。它不针对谁，附近任何在监听的设备都能收到。手机监听广播的动作叫<span class="term2">扫描 Scanning</span>。先认清四种角色：</p>
+    <table>
+      <tr><th>角色</th><th>做什么</th><th>例子</th></tr>
+      <tr><td><b>Peripheral</b></td><td>发可连接广播，等别人来连</td><td>温度传感器</td></tr>
+      <tr><td><b>Central</b></td><td>扫描并发起连接</td><td>手机</td></tr>
+      <tr><td><b>Broadcaster</b></td><td>只发广播，不接受连接</td><td>温度信标、电子价签</td></tr>
+      <tr><td><b>Observer</b></td><td>只收广播，不发起连接</td><td>商场接收网关</td></tr>
+    </table>
+    <p>广播还分类型，决定了扫描端能做什么。<b>能被扫到 ≠ 能连接</b>——有的设备从头到尾就不接受连接：</p>
+    <table>
+      <tr><th>广播类型</th><th>允许连接</th><th>典型用途</th></tr>
+      <tr><td><code>ADV_IND</code></td><td>是</td><td>最常见的可连接广播</td></tr>
+      <tr><td><code>ADV_DIRECT_IND</code></td><td>是（定向）</td><td>只向指定设备快速重连</td></tr>
+      <tr><td><code>ADV_NONCONN_IND</code></td><td>否</td><td>纯信标</td></tr>
+      <tr><td><code>ADV_SCAN_IND</code></td><td>否</td><td>可扫描但不可连接的信标</td></tr>
+    </table>
+    <div class="key"><span class="tag">重点 · 高频困惑</span>设备名经常不放在广播包里，而放在<b>扫描响应</b>里。手机用<b>被动扫描</b>只收广播包，拿不到名字；用<b>主动扫描</b>才会追问一句「还有更多数据吗」，设备再回一份扫描响应。这就是「列表里有的设备没名字、换台手机又有了」的常见原因。</div>
+    <div class="recap"><b>本步收束：</b>广播 = 设备主动喊话；扫描 = 手机监听。角色决定能不能连，主动/被动扫描决定拿不拿得到名字。</div>
+  </section>
+
+  <!-- ===== 第 2 步 ===== -->
+  <section id="rhythm">
+    <h2><span class="no">第 2 步</span>节奏：广播间隔与扫描窗口</h2>
+    <p>设备不是连续不断地喊。它按<b>广播间隔</b>醒来，在 <code>37 / 38 / 39</code> 三个信道上各喊一次，然后睡觉。间隔从 <b>20 ms 到 10.24 s</b> 可配：</p>
+    <ul>
+      <li><b>间隔短</b>：很快被扫到，连接建立快，但费电。</li>
+      <li><b>间隔长</b>：省电，但手机可能要等几秒才第一次看见它。</li>
+    </ul>
+    <p>手机这边也有节奏：<b>扫描窗口</b>（每次听多久）和<b>扫描间隔</b>（多久听一次）。窗口等于间隔就是连续扫描，最费电；窗口远小于间隔时，手机大部分时间没在听，能不能扫到靠双方时序对齐。</p>
+    <figure>
+      <svg viewBox="0 0 560 180" width="560" aria-label="广播与扫描时序">
+        <text x="20" y="40" font-size="12.5" fill="#B04A35" font-weight="bold">设备广播</text>
+        <line x1="110" y1="36" x2="540" y2="36" stroke="#E8E4DC" stroke-width="2"/>
+        <rect x="150" y="24" width="10" height="24" rx="2" fill="#D95B43"/>
+        <rect x="270" y="24" width="10" height="24" rx="2" fill="#D95B43"/>
+        <rect x="390" y="24" width="10" height="24" rx="2" fill="#D95B43"/>
+        <rect x="510" y="24" width="10" height="24" rx="2" fill="#D95B43"/>
+        <line x1="160" y1="60" x2="270" y2="60" stroke="#C07A1E" stroke-width="1.5"/>
+        <text x="215" y="74" text-anchor="middle" font-size="11" fill="#C07A1E">广播间隔</text>
+        <text x="20" y="120" font-size="12.5" fill="#1E7268" font-weight="bold">手机收听</text>
+        <line x1="110" y1="116" x2="540" y2="116" stroke="#E8E4DC" stroke-width="2"/>
+        <rect x="140" y="104" width="90" height="24" rx="4" fill="#BFE0DB"/>
+        <rect x="320" y="104" width="90" height="24" rx="4" fill="#BFE0DB"/>
+        <rect x="500" y="104" width="40" height="24" rx="4" fill="#BFE0DB"/>
+        <text x="185" y="146" text-anchor="middle" font-size="11" fill="#1E7268">扫描窗口</text>
+        <circle cx="155" cy="36" r="13" fill="none" stroke="#2A9D8F" stroke-width="2"/>
+        <text x="155" y="170" text-anchor="middle" font-size="11" fill="#1E7268">✓ 这一次喊话正好落在收听窗口里 → 被发现</text>
+        <text x="395" y="170" text-anchor="middle" font-size="11" fill="#A39B8E">✗ 这一次喊话时手机没在听 → 错过</text>
+      </svg>
+      <figcaption>设备按间隔喊话，手机按窗口收听；喊话落进窗口才被发现</figcaption>
+    </figure>
+    <div class="key"><span class="tag">重点</span><b>「设备明明在广播却扫不到」，多半是双方节奏没对齐。</b>排查时先把手机调到连续扫描、设备调到短广播间隔，排除时序因素，再看别的。下面动手环节就能亲手调这两个节奏。</div>
+    <div class="note"><span class="tag">代码入口</span>Android：<code>BluetoothLeScanner.startScan()</code> 开始扫描，每个广播回调一次 <code>onScanResult()</code>。注意 Android 7.0 起 30 秒内启停扫描超 5 次会被限流；8.1 起熄屏时不带过滤器的扫描会暂停。详见 <a href="../../#android/development-guide/scan-filter">扫描与过滤</a>。</div>
+    <div class="recap"><b>本步收束：</b>广播间隔决定设备喊得多勤，扫描窗口决定手机听得多勤。两边对得上，才看得见。</div>
+  </section>
+
+  <!-- ===== 第 3 步 ===== -->
+  <section id="payload">
+    <h2><span class="no">第 3 步</span>31 字节：广播里到底装了什么</h2>
+    <p>传统广播的载荷<b>最多 31 字节</b>，由若干 <span class="term">AD Structure</span> 拼成，每项结构是「<b>长度 + 类型 + 数据</b>」。长度字节计入后面的类型和数据，自身不算。看一段真实字节：</p>
+    <pre><span class="num">02 01 06</span>  <span class="num">05 09</span> <span class="str">54 65 6D 70</span>
+<span class="cm">└─┬─┘└┬┘  └─┬─┘└────┬────┘</span>
+<span class="cm"> 长度 类型  长度 类型   "Temp" 的 ASCII</span></pre>
+    <table>
+      <tr><th>字节</th><th>含义</th></tr>
+      <tr><td><code>02 01 06</code></td><td>后面 2 字节；类型 <code>0x01</code> 是 Flags，值 <code>0x06</code> = 一般可发现 + 不支持经典蓝牙</td></tr>
+      <tr><td><code>05 09 54 65 6D 70</code></td><td>后面 5 字节；类型 <code>0x09</code> 是完整本地名，随后 4 字节是 <code>Temp</code></td></tr>
+    </table>
+    <p>再看一条厂商自定义数据。类型 <code>0xFF</code> 是厂商数据，开头 2 字节是<b>小端的公司标识符</b>（SIG 分配，Nordic 是 <code>0x0059</code>），剩下的由厂商自己定义：</p>
+    <pre><span class="num">06 FF</span> <span class="num">59 00</span> <span class="str">01 02 03</span>
+<span class="cm"> 长度 类型  Nordic公司ID  厂商自定义（温度?电量?查协议文档）</span></pre>
+    <p>31 字节要精打细算：Flags 3 字节 + 全名 7 字节就用掉 10 字节，再放一个 16 位服务 UUID 列表要 4 字节，留给厂商数据的就不多了。常用类型记这几个就够起步：</p>
+    <table>
+      <tr><th>类型</th><th>含义</th><th>类型</th><th>含义</th></tr>
+      <tr><td><code>0x01</code></td><td>Flags</td><td><code>0x08 / 0x09</code></td><td>短名 / 全名</td></tr>
+      <tr><td><code>0x02 / 0x03</code></td><td>16 位服务 UUID 列表</td><td><code>0x16</code></td><td>服务数据</td></tr>
+      <tr><td><code>0xFF</code></td><td>厂商自定义数据</td><td></td><td></td></tr>
+    </table>
+    <div class="key"><span class="tag">重点</span>解析的通用步骤：<b>先读长度、验证边界，再按类型分发</b>。长度和实际剩余字节对不上，说明抓包截断或固件拼错了包——这本身就是有价值的线索。厂商数据没有通用解析法，必须查厂商协议文档。</div>
+    <div class="note"><span class="tag">放不下怎么办</span>5.0 起的<b>扩展广播</b>把数据挪到数据信道，载荷大得多；<b>周期广播</b>让接收端同步时序按时收听。两者都要接收端支持，手机侧支持度参差，选用前先在目标机型验证。完整数据类型清单见 <a href="https://www.bluetooth.com/specifications/specs/core-specification-supplement-14/" target="_blank" rel="noopener">Core Specification Supplement</a>。</div>
+    <div class="recap"><b>本步收束：</b>广播 = 31 字节里按「长度+类型+数据」装字段。先读长度验边界，再按类型解析；厂商数据查文档。</div>
+  </section>
+
+  <!-- ===== 第 4 步 ===== -->
+  <section id="filter">
+    <h2><span class="no">第 4 步</span>筛选：为什么加了过滤设备就消失</h2>
+    <p>联调时最常见的坑：加了过滤条件后设备不见了。按这个顺序查：</p>
+    <ul>
+      <li><b>先去掉全部过滤</b>，记录设备实际发出的字段。用 nRF Connect 看原始字节最直接。</li>
+      <li><b>服务 UUID 过滤失效</b>：多半是 UUID 根本没写进广播——设备可以在连接后才暴露服务，广播里不放。</li>
+      <li><b>名称过滤失效</b>：名字可能在扫描响应里而平台没交付，或者设备名带不可见字符。</li>
+      <li><b>RSSI 过滤要慎用</b>：RSSI 随遮挡、天线姿态、环境变化，同一台设备转个方向能差 20 dBm，适合辅助排序，不适合当硬条件。</li>
+    </ul>
+    <div class="key"><span class="tag">重点</span>需要稳定识别设备时，<b>别依赖地址和名字</b>——地址会轮换、名字会变。按稳定身份（stableId）设计，详见 <a href="../../#bluetooth/fundamentals/privacy">地址隐私篇</a>。</div>
+    <div class="recap"><b>本步收束：</b>扫不到先对齐节奏，筛不到先去掉过滤看原始字节。RSSI 只配排序，不配硬筛。</div>
+  </section>
+
+  <!-- ===== 第 5 步 ===== -->
+  <section id="lab">
+    <h2><span class="no">第 5 步 · 动手</span>调一调节奏，看发现率怎么变</h2>
+    <p>下面这台「模拟器」让你亲手调<b>广播间隔</b>和<b>扫描模式</b>。上图是 2 秒内设备喊话（红）和手机收听（绿）的时间轴，喊话落进绿窗口才被发现。点「运行」看手机实际扫到了几次、第一次用了多久。</p>
+    <div class="lab">
+      <div class="lab-head"><b>广播 / 扫描节奏演练</b><span class="hint">时间轴长 2000 ms</span></div>
+      <div class="controls">
+        <div class="ctl"><label>广播间隔</label><input type="range" id="advInt" min="40" max="800" step="20" value="200"><span class="val" id="advVal">200 ms</span></div>
+        <div class="ctl"><label>扫描模式</label>
+          <span class="seg"><button id="modeCont" class="on" type="button">连续扫描</button><button id="modeDuty" type="button">间歇扫描</button></span>
+        </div>
+      </div>
+      <div class="lab-body">
+        <div>
+          <div class="timeline">
+            <div class="tl-title"><span>设备广播（红）/ 手机收听（绿）</span><span id="cursorT">0 ms</span></div>
+            <svg id="tl" viewBox="0 0 520 150" width="100%" aria-label="节奏时间轴"></svg>
+          </div>
+          <div class="stats">
+            <div class="stat-box good"><b id="firstT">–</b><small>首次发现</small></div>
+            <div class="stat-box"><b id="hitRate">–</b><small>命中 / 喊话</small></div>
+            <div class="stat-box bad"><b id="missN">–</b><small>错过次数</small></div>
+          </div>
+        </div>
+        <div class="logcat">
+          <div class="logcat-head"><span>logcat · BluetoothLeScanner</span><span>verbose</span></div>
+          <div class="logcat-body" id="log"><span class="c">// 点「运行」看扫描回调</span></div>
+        </div>
+      </div>
+      <div class="lab-foot">
+        <button class="btn" id="run" type="button">运行</button>
+        <button class="btn ghost" id="reset" type="button">重置</button>
+        <span class="hint" id="labHint">试试：广播间隔拉到 800ms + 间歇扫描，看首次发现要多久</span>
+      </div>
+    </div>
+    <div class="key"><span class="tag">看懂这场演练</span>广播间隔越大、扫描窗口越窄，喊话落进窗口的概率越低，<b>首次发现就越慢、漏扫越多</b>。这不是设备坏了，是节奏没对齐。真实排查的第一步，就是把手机调成连续扫描、设备调成短间隔，先排除时序因素。</div>
+  </section>
+
+  <!-- ===== 自测 ===== -->
+  <section id="quiz">
+    <h2><span class="no">自测</span>三个问题</h2>
+    <div class="card" id="quiz-box"></div>
+    <p id="quiz-done" style="display:none;font-weight:700;color:#1E7268;">全对。广播这件事你已经清楚了，下一课讲<b>连接与参数</b>——看见之后，怎么建立专属通道。</p>
+  </section>
+
+  <!-- ===== 回顾 ===== -->
+  <section id="map">
+    <h2><span class="no">回顾</span>全程一图 + 速查</h2>
+    <figure>
+      <svg viewBox="0 0 560 230" width="560" aria-label="广播扫描时序">
+        <rect x="70" y="10" width="120" height="32" rx="8" fill="#FBEDE9" stroke="#F0CFC6" stroke-width="2"/>
+        <text x="130" y="31" text-anchor="middle" font-size="13" fill="#B04A35" font-weight="bold">温度计</text>
+        <rect x="370" y="10" width="120" height="32" rx="8" fill="#E9F4F2" stroke="#BFE0DB" stroke-width="2"/>
+        <text x="430" y="31" text-anchor="middle" font-size="13" fill="#1E7268" font-weight="bold">手机</text>
+        <line x1="130" y1="42" x2="130" y2="220" stroke="#D8D2C6" stroke-width="2" stroke-dasharray="4 4"/>
+        <line x1="430" y1="42" x2="430" y2="220" stroke="#D8D2C6" stroke-width="2" stroke-dasharray="4 4"/>
+        <defs><marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#7A7267"/></marker></defs>
+        <line x1="130" y1="72" x2="424" y2="72" stroke="#D95B43" stroke-width="2" marker-end="url(#ar)"/>
+        <text x="280" y="64" text-anchor="middle" font-size="12" fill="#B04A35">广播包（31 字节，37/38/39 信道）</text>
+        <line x1="430" y1="112" x2="136" y2="112" stroke="#7A7267" stroke-width="2" marker-end="url(#ar)"/>
+        <text x="280" y="104" text-anchor="middle" font-size="12" fill="#2B2620">扫描请求（主动扫描才有）</text>
+        <line x1="130" y1="152" x2="424" y2="152" stroke="#7A7267" stroke-width="2" marker-end="url(#ar)"/>
+        <text x="280" y="144" text-anchor="middle" font-size="12" fill="#2B2620">扫描响应（名字常在这里）</text>
+        <line x1="130" y1="192" x2="424" y2="192" stroke="#2A9D8F" stroke-width="2" marker-end="url(#ar)"/>
+        <text x="280" y="184" text-anchor="middle" font-size="12" fill="#1E7268">下一轮广播…（按间隔周期性重复）</text>
+      </svg>
+      <figcaption>广播是周期性单向喊话；主动扫描多一来一回拿扫描响应。此时双方还没有连接</figcaption>
+    </figure>
+    <table>
+      <tr><th>要点</th><th>记住什么</th><th>Android API</th></tr>
+      <tr><td>广播</td><td>设备按间隔在 37/38/39 信道喊话，31 字节</td><td>—（设备侧）</td></tr>
+      <tr><td>扫描</td><td>手机监听，每个广播回调一次</td><td><code>startScan</code> / <code>onScanResult</code></td></tr>
+      <tr><td>主动 / 被动</td><td>主动扫描才拿得到扫描响应（名字）</td><td><code>ScanSettings</code> / <code>SCAN_MODE_*</code></td></tr>
+      <tr><td>节奏</td><td>广播间隔 20ms～10.24s；窗口=间隔即连续扫描</td><td><code>ScanSettings.Builder</code></td></tr>
+      <tr><td>限流</td><td>7.0 起 30 秒启停超 5 次限流；8.1 熄屏无过滤暂停</td><td>—（系统行为）</td></tr>
+      <tr><td>解析</td><td>长度+类型+数据；先验边界再按类型分发</td><td><code>ScanRecord</code></td></tr>
+    </table>
+    <h3>接下来读什么</h3>
+    <div class="next-links">
+      <a href="../../lessons/ble-visual-guide.html">← 第一课：完整链路</a>
+      <a href="../">学堂首页 · 课程地图</a>
+      <a href="../../#bluetooth/fundamentals/advertising">广播篇正文（深入）</a>
+    </div>
+    <div class="note"><span class="tag">说明</span>本页为教学简化，工程细节以正文与官方规范为准；演练为模拟时序，非真实设备通信。技术底稿对照《GAP 广播、扫描与设备发现》。</div>
+    <footer>青竹蓝牙学堂 · 蓝牙小课堂第二课 · A2 · <a href="../">回到学堂</a></footer>
+  </section>
+</main>
+</div>
+
+<script>
+const tocLinks=[...document.querySelectorAll('.toc a')];
+const secs=tocLinks.map(a=>document.querySelector(a.getAttribute('href')));
+const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){tocLinks.forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+e.target.id));}});},{rootMargin:'-20% 0px -70% 0px'});
+secs.forEach(s=>s&&io.observe(s));
+
+/* ===== 节奏演练 ===== */
+const WINDOW=2000, X0=40, X1=510;
+const advInt=document.getElementById('advInt'), advVal=document.getElementById('advVal');
+const modeCont=document.getElementById('modeCont'), modeDuty=document.getElementById('modeDuty');
+const tl=document.getElementById('tl'), logEl=document.getElementById('log');
+const runBtn=document.getElementById('run'), resetBtn=document.getElementById('reset');
+const firstT=document.getElementById('firstT'), hitRate=document.getElementById('hitRate'), missN=document.getElementById('missN'), cursorT=document.getElementById('cursorT');
+let mode='cont', running=false, raf=null;
+const sx=t=>X0+(X1-X0)*t/WINDOW;
+function scanWindows(){ return mode==='cont'?[[0,WINDOW]]:[[0,150],[600,750],[1200,1350],[1800,1950]]; }
+function advTimes(){ const iv=+advInt.value; const a=[]; for(let t=iv;t<=WINDOW;t+=iv)a.push(t); return a; }
+function inWindow(t){ return scanWindows().some(([a,b])=>t>=a&&t<=b); }
+function draw(cursor){
+  const wins=scanWindows(), advs=advTimes();
+  let s=`<line x1="${X0}" y1="45" x2="${X1}" y2="45" stroke="#E8E4DC" stroke-width="2"/>`;
+  s+=`<text x="8" y="49" font-size="11" fill="#B04A35" font-weight="bold">广播</text>`;
+  advs.forEach(t=>{ const hit=inWindow(t); s+=`<rect x="${sx(t)-3}" y="30" width="6" height="30" rx="2" fill="${hit?'#2A9D8F':'#D95B43'}"/>`; });
+  s+=`<line x1="${X0}" y1="105" x2="${X1}" y2="105" stroke="#E8E4DC" stroke-width="2"/>`;
+  s+=`<text x="8" y="109" font-size="11" fill="#1E7268" font-weight="bold">收听</text>`;
+  wins.forEach(([a,b])=>{ s+=`<rect x="${sx(a)}" y="90" width="${sx(b)-sx(a)}" height="30" rx="4" fill="#BFE0DB"/>`; });
+  [0,500,1000,1500,2000].forEach(t=>{ s+=`<text x="${sx(t)}" y="140" text-anchor="middle" font-size="10" fill="#A39B8E">${t}</text>`; });
+  if(cursor!=null){ s+=`<line x1="${sx(cursor)}" y1="22" x2="${sx(cursor)}" y2="125" stroke="#3B6FD4" stroke-width="2"/>`; }
+  tl.innerHTML=s;
+}
+function setMode(m){ mode=m; modeCont.classList.toggle('on',m==='cont'); modeDuty.classList.toggle('on',m==='duty'); if(!running){draw(null);} }
+modeCont.addEventListener('click',()=>setMode('cont'));
+modeDuty.addEventListener('click',()=>setMode('duty'));
+advInt.addEventListener('input',()=>{ advVal.textContent=advInt.value+' ms'; if(!running)draw(null); });
+function reset(){ if(raf)cancelAnimationFrame(raf); running=false; runBtn.disabled=false; runBtn.textContent='运行';
+  logEl.innerHTML='<span class="c">// 点「运行」看扫描回调</span>'; firstT.textContent='–'; hitRate.textContent='–'; missN.textContent='–'; cursorT.textContent='0 ms'; draw(null); }
+resetBtn.addEventListener('click',reset);
+runBtn.addEventListener('click',()=>{
+  if(running)return; running=true; runBtn.disabled=true; runBtn.textContent='运行中…';
+  logEl.innerHTML=''; const advs=advTimes(); let hits=0,miss=0,first=null,logged=0;
+  logEl.innerHTML+=`<div><span class="api">startScan</span>(mode=${mode==='cont'?'LOW_LATENCY':'BALANCED'}) <span class="c">// 广播间隔 ${advInt.value}ms</span></div>`;
+  const start=performance.now(), DUR=2200;
+  function frame(now){
+    const t=Math.min(WINDOW,(now-start)/DUR*WINDOW);
+    draw(t); cursorT.textContent=Math.round(t)+' ms';
+    while(logged<advs.length && advs[logged]<=t){
+      const at=advs[logged]; const hit=inWindow(at);
+      if(hit){ hits++; if(first==null)first=at;
+        logEl.innerHTML+='<div><span class="t">['+(at/1000).toFixed(2)+'s]</span> <span class="ok">onScanResult</span>: XiaoWen-T rssi=-52 <span class="c">// 命中</span></div>';
+      } else { miss++;
+        logEl.innerHTML+=`<div><span class="t">[${(at/1000).toFixed(2)}s]</span> <span class="warn">广播发出</span> <span class="c">// 此刻手机没在听，错过</span></div>`;
+      }
+      logged++; logEl.scrollTop=logEl.scrollHeight;
+    }
+    if(t<WINDOW){ raf=requestAnimationFrame(frame); }
+    else { running=false; runBtn.disabled=false; runBtn.textContent='再跑一遍';
+      firstT.textContent=first!=null?first+' ms':'未扫到';
+      hitRate.textContent=hits+' / '+advs.length; missN.textContent=miss;
+      logEl.innerHTML+=`<div><span class="c">// 结束：首次发现 ${first!=null?first+'ms':'整段都没扫到'}，命中 ${hits}/${advs.length}</span></div>`;
+      logEl.scrollTop=logEl.scrollHeight; draw(null);
+    }
+  }
+  raf=requestAnimationFrame(frame);
+});
+draw(null);
+
+/* ===== 自测 ===== */
+const QUIZ=[
+  { q:'1. 设备能被扫到，但连接按钮是灰的，最可能因为？', opts:[
+      ['它发的是不可连接广播（如 ADV_NONCONN_IND）',true,'对。能被扫到 ≠ 能连接，先看广播类型再下结论。'],
+      ['手机蓝牙坏了',false,'能扫到说明蓝牙正常，问题在广播类型。'],
+      ['距离太远',false,'距离远会扫不到，而不是扫到却连不上。']]},
+  { q:'2. 解析广播字节 02 01 06，每个字节是什么？', opts:[
+      ['02 长度、01 类型 Flags、06 值（一般可发现+不支持经典）',true,'对。先读长度验边界，再按类型分发。'],
+      ['三个都是设备名',false,'设备名是 0x08/0x09 类型，不是 Flags。'],
+      ['02 温度、01 电量、06 信号',false,'这是 Flags 结构，不是传感器数值。']]},
+  { q:'3. 用 RSSI 大于 -60 dBm 做硬过滤，有什么问题？', opts:[
+      ['RSSI 受遮挡/姿态/环境影响大，硬阈值会随机漏扫',true,'对。RSSI 适合排序参考，不适合硬性过滤。'],
+      ['RSSI 永远不变，过滤很稳定',false,'恰恰相反，同一设备转个方向能差 20 dBm。'],
+      ['RSSI 越大设备越远',false,'RSSI 越接近 0 表示越近，且波动大。']]},
+];
+let solved=0; const box=document.getElementById('quiz-box');
+QUIZ.forEach((item,qi)=>{
+  const h=document.createElement('div'); h.className='quiz-q'; h.textContent=item.q; box.appendChild(h);
+  const ex=document.createElement('div'); ex.className='explain';
+  item.opts.forEach(([text,ok,why])=>{
+    const b=document.createElement('button'); b.className='opt'; b.textContent=text; b.dataset.q=qi;
+    b.addEventListener('click',()=>{
+      const sib=[...box.querySelectorAll(`[data-q="${qi}"]`)];
+      if(sib.some(s=>s.disabled))return;
+      sib.forEach(s=>s.disabled=true);
+      b.classList.add(ok?'right':'wrong');
+      ex.className='explain show '+(ok?'good':'bad'); ex.textContent=(ok?'✓ ':'✗ ')+why;
+      if(ok){ solved++; if(solved===QUIZ.length)document.getElementById('quiz-done').style.display='block'; }
+      else setTimeout(()=>{ sib.forEach(s=>{s.disabled=false;s.classList.remove('wrong');}); ex.className='explain'; },2000);
+    });
+    box.appendChild(b);
+  });
+  box.appendChild(ex);
+});
+</script>
+</body>
+</html>
