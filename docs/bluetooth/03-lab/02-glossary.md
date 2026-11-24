@@ -98,6 +98,9 @@ updated: 2026-11-24
 | PAwR | Periodic Advertising with Responses | 5.4 的无连接双向一对多通信，电子价签场景。 |
 | Channel Sounding | — | 6.0 的厘米级安全测距，相位测距 + 往返时间。 |
 | BTHome | — | 传感器广播数据的开放标准，Home Assistant 生态开箱即用。[07](#bluetooth/communication/uuid-services) |
+| Bluetooth Mesh | — | 独立的组网规范，架在 BLE 广播上做管理型泛洪，灯控和楼宇网络用，不属于 Core 版本号。[02](#bluetooth/fundamentals/versions) |
+| Web Bluetooth | — | 浏览器直连 BLE 设备的 API，Chrome/Edge 系支持，iOS 不支持。[14](#bluetooth/lab/platform-map) |
+| Robust Caching | — | 5.1 的 GATT 缓存机制，配合 Service Changed 处理固件升级后的服务表变化。 |
 
 ## 工具
 
@@ -106,3 +109,6 @@ updated: 2026-11-24
 | nRF Connect | — | Nordic 的免费调试 App，扫描/连接/读写/订阅/模拟外设。[11](#bluetooth/lab/nrf-connect-lab) |
 | HCI Snoop | — | Android 开发者选项里的 HCI 日志开关。 |
 | Sniffer | — | 空口抓包器，如 nRF Sniffer、Ellisys，看实际发射的包。 |
+| bleak | — | Python 跨平台 BLE 客户端库，写验证脚本和固件测试的顺手工具。[14](#bluetooth/lab/platform-map) |
+| NimBLE | — | 轻量开源 BLE 主机栈，ESP32 和 Arduino 生态常用。[15](#bluetooth/lab/resources) |
+| BlueZ | — | Linux 官方蓝牙协议栈，桌面 BLE 库的底层。 |

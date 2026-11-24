@@ -6,7 +6,7 @@
 
 未来还会有《青竹AI应用开发指南》，各指南分支共用同一套「知识讲全、工程做实、工具交到手里」的方法。
 
-> **当前内容**：[Bluetooth 通用知识](https://qingzhu-ai-public.github.io/qingzhu-blue/#bluetooth) 14 篇，覆盖协议栈全景、版本能力演进、选型、广播与连接、数据收发、标准服务、安全排障，另有 nRF Connect 无代码实验、术语表与新手 FAQ。Android 有 50 篇文档，包含《Android 蓝牙指南》30 章书系。SDK 和试玩 App 见 [青竹 Android BLE SDK](https://github.com/qingzhu-ai-public/qingzhu-ble-android)。
+> **当前内容**：[Bluetooth 通用知识](https://qingzhu-ai-public.github.io/qingzhu-blue/#bluetooth) 16 篇，覆盖协议栈全景、版本能力演进、选型、广播与连接、数据收发、标准服务、安全排障，另有 nRF Connect 无代码实验、平台接口地图、术语表、新手 FAQ 与学习资源索引。Android 有 50 篇文档，包含《Android 蓝牙指南》30 章书系。SDK 和试玩 App 见 [青竹 Android BLE SDK](https://github.com/qingzhu-ai-public/qingzhu-ble-android)。
 
 **Android 综合实战**：[温湿度计教程](https://qingzhu-ai-public.github.io/qingzhu-blue/#android/bthome-mvp/overview) · [Android Studio 示例](examples/android/bthome-mvp/README.md)
 

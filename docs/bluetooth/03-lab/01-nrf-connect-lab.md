@@ -78,6 +78,10 @@ updated: 2026-11-24
 
 下一步选平台写代码：[Android 导读](#android/development-guide/guide) · [iOS 第一篇](#ios/development-guide/first-app) · [HarmonyOS 第一篇](#harmonyos/development-guide/first-app)。
 
+## 换个实验台也行
+
+手机不是唯一的实验台。电脑上装 Python 和 [bleak](https://github.com/hbldh/bleak)，几十行脚本就能扫描、连接、读写、订阅，适合给外设固件当自动化测试客户端；桌面 Chrome/Edge 打开支持 Web Bluetooth 的页面，也能直接连设备（iOS 浏览器不支持）。各实验台的能力边界见[平台接口地图](#bluetooth/lab/platform-map)。
+
 ## 一句话总结
 
 **nRF Connect 是一台不用写代码的通用客户端，扫描、连接、读写、订阅、日志全都有；先用它把链路走通，正文的每个概念就都有了实物。**
