@@ -3,7 +3,7 @@ title: 测试实验室与自动化
 order: 280
 summary: 把「偶尔失败」变成一组能反复触发、能判定通过的操作，再用真实设备验证系统行为。
 tags: SDK,工程实践
-updated: 2026-11-19
+updated: 2026-11-24
 ---
 
 # 第 27 章　测试实验室与自动化
@@ -34,6 +34,59 @@ updated: 2026-11-19
 - Server 断开一个客户端后按协议保留绑定配置，释放其当前在途数据。
 - 锁屏与切后台、普通进程回收、强行停止、系统或设备重启。
 - 同一手机固件组合连续运行，统计完成数、错误分布和资源回收。
+
+## 把第一批测试写出来
+
+[第 21 章](#android/development-guide/fragmentation-flow)的 `Reassembler` 是纯逻辑，不碰蓝牙，最适合先测。三个用例对应三条规则：
+
+```kotlin
+class ReassemblerTest {
+    private val image = ByteArray(35) { it.toByte() }   // 故意不是 chunkSize 的整数倍
+    private val frames = chunkImage(messageId = 7, image = image, chunkSize = 14)
+
+    @Test fun `乱序到达也能重组`() {
+        val r = Reassembler()
+        assertNull(r.accept(frames[2], now = 0))
+        assertNull(r.accept(frames[0], now = 1))
+        assertArrayEquals(image, r.accept(frames[1], now = 2))
+    }
+
+    @Test fun `重复片不产生重复数据`() {
+        val r = Reassembler()
+        r.accept(frames[0], now = 0)
+        assertNull(r.accept(frames[0], now = 1))          // 同片重发
+        r.accept(frames[1], now = 2)
+        assertArrayEquals(image, r.accept(frames[2], now = 3))
+    }
+
+    @Test fun `超时的半条消息被丢弃`() {
+        val r = Reassembler(timeoutMs = 10_000)
+        r.accept(frames[0], now = 0)
+        assertNull(r.accept(frames[1], now = 20_000))     // 触发清理，重新开始
+        assertNull(r.accept(frames[0], now = 20_001))
+        assertNull(r.accept(frames[1], now = 20_002))
+        assertArrayEquals(image, r.accept(frames[2], now = 20_003))
+    }
+}
+```
+
+注意 `now` 是参数而不是内部取系统时间——这就是「可控时钟」：测试不用真的等 10 秒。命令队列同理，把蓝牙接口抽成一个可替换的传输接口，测试里用假实现：
+
+```kotlin
+interface Transport {
+    fun write(bytes: ByteArray): Boolean          // 对应立即结果
+    // 完成回调由测试代码决定什么时候、以什么状态触发
+}
+
+class FakeTransport : Transport {
+    var nextResult = true
+    val written = mutableListOf<ByteArray>()
+    override fun write(bytes: ByteArray): Boolean { written += bytes; return nextResult }
+    // 测试里手动调 listener.onWriteDone(...)，想让它迟到就晚点调
+}
+```
+
+用它能安排「写立即拒绝」「回调在取消之后才到」「旧代次回调迟到」这些真机上靠运气的场景，断言每条命令只终结一次。真机双机实验仍然要做，但回归靠这批秒级跑完的测试守住。
 
 [实验手册](#android/development-guide/appendix-e-labs) · [机型矩阵](#android/development-guide/vendor-compat)
 

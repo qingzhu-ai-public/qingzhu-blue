@@ -3,7 +3,7 @@ title: 从原生 API 到 SDK 架构
 order: 300
 summary: 让业务说它要完成什么，让 SDK 负责每一步和资源的归属，失败时还能找到原始证据。
 tags: SDK,架构
-updated: 2026-11-19
+updated: 2026-11-24
 ---
 
 # 第 29 章　从原生 API 到 SDK 架构
@@ -29,6 +29,43 @@ updated: 2026-11-19
 业务结果应有足够精度。例如 `ConnectFailed(status=133)` 和 `TransferAckTimedOut(messageId=17)` 给调用方的信息不同。向调试人员提供原始阶段和状态码，向用户界面提供对应的动作提示。返回忙、接受排队、已满足、完成、失败和取消时，用类型和文档定义状态能否重复、何时发最后一条事件。
 
 应用已有业务协议时，接入 SDK 先做一个可追踪的最小命令。对照原生实现的时间线，确认 SDK 没吞掉立即错误或必需回调。随后再加批量调度和重试。这个顺序能让每一层出错时找到对应负责的代码。
+
+## 任务接口最小长什么样
+
+把上面的分层落成一个调用方能看懂的接口，核心是「提交意图、观察进度、拿到带阶段的终态」：
+
+```kotlin
+interface DeviceTasks {
+    /** 提交一个业务任务，立即返回句柄；不阻塞调用线程。 */
+    fun submit(task: TaskRequest): TaskHandle
+}
+
+data class TaskRequest(
+    val deviceId: String,          // 业务身份，不是广播地址
+    val operation: Operation,      // 例如 ReplaceImage(bytes, idempotencyKey)
+    val timeoutMs: Long,
+)
+
+interface TaskHandle {
+    val id: Long
+    fun progress(): Flow<TaskProgress>   // Found / Connecting / Transferring(sent, total)
+    suspend fun await(): TaskResult
+    fun cancel()
+}
+
+sealed interface TaskResult {
+    data class Completed(val deviceReply: ByteArray) : TaskResult
+    data class Failed(val stage: Stage, val rawStatus: Int, val detail: String) : TaskResult
+    data object Cancelled : TaskResult
+    data object Busy : TaskResult        // 队列满，未受理
+}
+```
+
+三个设计决定值得注意。`deviceId` 用业务身份，寻设备和地址轮换由 SDK 内部处理（[第 20 章](#android/development-guide/address-privacy)）。`Failed` 同时带 `stage` 和 `rawStatus`，页面据此提示用户，排查的人据此查日志，一份结果两种读法。`Busy` 是独立终态而不是失败——调用方可以稍后重提，不会和「设备拒绝」混在一起。
+
+`Operation` 里带幂等键，重试时 SDK 复用同一个键，设备按[第 21 章](#android/development-guide/fragmentation-flow)的规则识别重复任务。会话和命令队列（[第 23 章](#android/development-guide/thread-state-machine)）藏在 `TaskHandle` 后面，调用方不需要知道 GATT。
+
+本站的 SDK 指南就是按这个结构展开的：[青竹蓝牙 SDK 总览](https://qingzhu-ai-public.github.io/qingzhu-blue/#android/sdk-guide/overview)到[协议插件](https://qingzhu-ai-public.github.io/qingzhu-blue/#android/sdk-guide/protocol-plugin)，每篇对应一层职责。
 
 [线程与命令队列](#android/development-guide/thread-state-machine)
 

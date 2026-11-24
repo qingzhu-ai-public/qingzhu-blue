@@ -3,7 +3,7 @@ title: 分包、重组、确认与流控
 order: 220
 summary: 给每一片标上属于哪张图和排第几片，让标签收得下，也能在重发时认出已经收过的内容。
 tags: SDK,安全,协议
-updated: 2026-11-19
+updated: 2026-11-24
 ---
 
 # 第 21 章　分包、重组、确认与流控
@@ -33,6 +33,61 @@ messageId:u16 | index:u16 | count:u16 | chunk:bytes
 ACK 丢失时，接收端可能已经持久化文件。重发要带同一个传输标识，设备按已提交状态返回结果。涉及换图、开关设备等有副作用的操作，优先提供幂等键或状态查询。连接重建后是否能续传由设备协议明确。应用在确认对端支持前，从安全的边界重新开始。
 
 一次有效实验包含完整发送、重复片、缺片、对端处理后 ACK 丢失以及中途断连。把每条消息的两端状态和次数记下来，确认超时后不会重复提交业务动作。
+
+## 把切片和重组写成代码
+
+发送端按协商好的预算切片。`chunkSize` 由实测 MTU 减去 ATT 和业务头得出，不要写死：
+
+```kotlin
+fun chunkImage(messageId: Int, image: ByteArray, chunkSize: Int): List<ByteArray> {
+    require(chunkSize > 0 && image.size <= 0xFFFF * chunkSize)
+    val count = (image.size + chunkSize - 1) / chunkSize
+    return (0 until count).map { i ->
+        val from = i * chunkSize
+        val part = image.copyOfRange(from, minOf(from + chunkSize, image.size))
+        ByteBuffer.allocate(6 + part.size).order(ByteOrder.LITTLE_ENDIAN)
+            .putShort(messageId.toShort())
+            .putShort(i.toShort())
+            .putShort(count.toShort())
+            .put(part).array()
+    }
+}
+```
+
+接收端的骨架如下。它处理乱序、重复和超时；同序号不同内容的恶意帧在生产代码里应中止本次传输并记录，这里简化为保留首片：
+
+```kotlin
+class Reassembler(private val timeoutMs: Long = 10_000) {
+    private class Pending(val count: Int, val parts: Array<ByteArray?>, var lastAt: Long)
+    private val pending = HashMap<Int, Pending>()
+
+    /** 收齐返回完整图片；未收齐或帧非法返回 null。now 用单调时钟。 */
+    fun accept(frame: ByteArray, now: Long): ByteArray? {
+        pending.entries.removeAll { now - it.value.lastAt > timeoutMs }  // 先清过期
+        if (frame.size < 6) return null
+        val buf = ByteBuffer.wrap(frame).order(ByteOrder.LITTLE_ENDIAN)
+        val id = buf.short.toInt() and 0xFFFF
+        val index = buf.short.toInt() and 0xFFFF
+        val count = buf.short.toInt() and 0xFFFF
+        if (count == 0 || index >= count) return null          // 偏移越界
+        val p = pending.getOrPut(id) { Pending(count, arrayOfNulls(count), now) }
+        if (p.count != count) { pending.remove(id); return null }  // 同 ID 换了总数
+        p.lastAt = now
+        if (p.parts[index] == null) {
+            val part = ByteArray(frame.size - 6)
+            buf.get(part)
+            p.parts[index] = part
+        }
+        if (p.parts.all { it != null }) {
+            pending.remove(id)
+            return p.parts.fold(ByteArray(0)) { acc, part -> acc + part!! }
+        }
+        return null
+    }
+}
+```
+
+这段代码值得逐行对着上面的规则读：`index >= count` 挡住越界，`count` 不一致丢弃整条消息，重复片只认第一次，超时清理防止半条消息占着内存。[第 27 章](#android/development-guide/test-lab)会给它补上单元测试。发送节奏仍由 GATT 队列和业务窗口控制，这个类只负责拼，不负责发。
 
 ## 一句话总结
 

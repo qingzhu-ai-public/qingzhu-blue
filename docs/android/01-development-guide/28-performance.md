@@ -3,7 +3,7 @@ title: 性能、功耗与稳定性
 order: 290
 summary: 拿用户实际等了多久做总账，再用每一步的时间和成功率判断优化有没有帮上忙。
 tags: SDK,工程实践
-updated: 2026-11-19
+updated: 2026-11-24
 ---
 
 # 第 28 章　性能、功耗与稳定性
@@ -31,6 +31,39 @@ updated: 2026-11-19
 可将用户触发的低延迟扫描限定在短窗口，常驻搜寻采用有效过滤、低功耗模式和必要的批量报告。按用户意图和设备属性选择是否保持连接，限制重连频率。广播端根据产品发现延迟预算设置间隔并验证。
 
 对外发布配置时带上实验条件、样本数、失败和耗时，再和旧配置对照。若全量放开成本高，按机型/固件组合逐步验证。配置的默认并发、重试和超时应该可回退，能通过日志看出这次用的是哪个参数组合。
+
+## 打点代码和实验记录长什么样
+
+打点用单调时钟，一次任务一个时间线对象，各阶段回调只记相对时间：
+
+```kotlin
+class TransferTimeline(val taskId: Long) {
+    private val t0 = SystemClock.elapsedRealtime()
+    private val marks = LinkedHashMap<String, Long>()
+    fun mark(stage: String) { marks.putIfAbsent(stage, SystemClock.elapsedRealtime() - t0) }
+    fun dump(): String = marks.entries.joinToString(" ") { "${it.key}=${it.value}ms" }
+}
+
+// 各回调里：
+// 首次匹配扫描结果 → timeline.mark("found")
+// STATE_CONNECTED   → timeline.mark("connected")
+// 服务发现完成      → timeline.mark("discovered")
+// MTU/CCCD 就绪     → timeline.mark("ready")
+// 设备业务确认      → timeline.mark("acked")
+// 输出示例：found=820ms connected=1410ms discovered=1980ms ready=2260ms acked=9740ms
+```
+
+`putIfAbsent` 保证重试不覆盖首次时间；失败的样本也要输出已到达的阶段，否则统计只剩成功者。上面那行示例输出里，`ready` 到 `acked` 占了 7.5 秒——瓶颈在传输和设备处理，不在连接，优化就该从 MTU、窗口或固件写闪存入手。
+
+实验记录用固定格式，每轮只改一个参数。下面是记录格式示例（数字是演示用的假数据，不是实测结论）：
+
+| 轮次 | 改动 | 样本 | 成功率 | acked P50 | acked P95 | 备注 |
+| --- | --- | --- | --- | --- | --- | --- |
+| 基线 | MTU 23，窗口 1 | 50 | 48/50 | 31.2s | 44.0s | 两次失败均为链路超时 |
+| A | 仅 MTU 247 | 50 | 49/50 | 9.8s | 15.1s | 其余参数不动 |
+| B | A 基础上窗口 4 | 50 | 45/50 | 8.9s | 21.3s | P95 变差、失败增多，回退 |
+
+B 轮说明窗口不是越大越好：设备忙着写闪存时，加大窗口只是把排队挪进设备。每轮的结论连同手机、固件、距离一起归档，进[机型矩阵](#android/development-guide/vendor-compat)。
 
 [链路参数](#android/development-guide/mtu-phy-dle) · [机型矩阵](#android/development-guide/vendor-compat)
 

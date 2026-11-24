@@ -3,7 +3,7 @@ title: GATT 错误码与真机故障
 order: 230
 summary: 错误码要和它出现的阶段一起读，最后一项成功证据会告诉你下一步该查哪里。
 tags: SDK,工程实践
-updated: 2026-11-19
+updated: 2026-11-24
 ---
 
 # 第 22 章　GATT 错误码与真机故障
@@ -23,6 +23,32 @@ updated: 2026-11-19
 | 连接成功但服务为空 | 发现发起的布尔值、`onServicesDiscovered`、服务枚举、固件变更 | 是发现没完成、UUID 写错，还是使用了过期的服务表 |
 | 写失败 | API 的立即拒绝、完成回调、特征实例、写类型和长度 | 判断被 Android 拒绝，还是对端给了 ATT Error Response |
 | 写成功，业务超时 | 会话就绪状态、CCCD、业务序号、HCI 和设备日志 | 是否发通知、数据是否到手机、应用是否正确重组 |
+
+## 常用状态码，先分清来源再查含义
+
+同一个数字在不同回调里含义不同。下面这张表把最常见的值按来源分开，完整对照在[状态码速查](#android/development-guide/appendix-c-codes)：
+
+| 值 | 出现在哪个回调 | 含义 | 第一步 |
+| --- | --- | --- | --- |
+| 8（0x08） | `onConnectionStateChange` | HCI 连接超时（链路监督超时） | 查距离、干扰、连接参数和设备是否还在广播/连接 |
+| 19（0x13） | `onConnectionStateChange` | 对端主动断开 | 查设备端日志：它为什么断（省电、任务完成、异常） |
+| 22（0x16） | `onConnectionStateChange` | 本机 Host 主动断开 | 查自己是否调了 `disconnect()`，或系统回收 |
+| 62（0x3E） | `onConnectionStateChange` | 连接建立失败 | 查设备句柄是否新鲜、设备是否可连接 |
+| 133（0x85） | 任何 GATT 回调 | 通用内部错误，见下节 | 先定位阶段，再找紧邻系统事件 |
+| 5（0x05） | 读写/订阅回调 | ATT 认证不足 | 走配对/绑定流程，见[第 19 章](#android/development-guide/pairing-security) |
+| 15（0x0F） | 读写/订阅回调 | ATT 加密不足 | 同上，确认链路已加密 |
+| 1 | `onScanFailed` | 同一 callback 已注册 | 检查是否重复 `startScan` |
+| 2 | `onScanFailed` | 应用注册失败 | 常见于频繁启停被限流，稍后再试 |
+| 6 | `onScanFailed` | 扫描过于频繁 | 见[第 25 章](#android/development-guide/vendor-compat)的平台行为清单 |
+
+日志里把来源写全，查表就不会串。对比这两条：
+
+```text
+坏：BLE error 8
+好：op=connect gen=3 cb=onConnectionStateChange status=8(0x08) newState=DISCONNECTED elapsed=30012ms
+```
+
+第二条一眼能看出：这是第 3 代会话在建连 30 秒后收到链路超时，接下来该查设备侧和无线环境，而不是去翻 ATT 错误表。
 
 ## 看到 133 时，从哪里开始查
 

@@ -3,7 +3,7 @@ title: 线程、状态机、命令队列与取消
 order: 240
 summary: 一条连接交给一个地方管，按钮、回调和超时都来报消息，每个命令只结一次账。
 tags: SDK,工程实践
-updated: 2026-11-19
+updated: 2026-11-24
 ---
 
 # 第 23 章　线程、状态机、命令队列与取消
@@ -37,6 +37,38 @@ submit → validate → enqueue
 连接会话之间可并发。全局连接数量、同时建连数量和同时传输数量各有预算。先把扫描、建连和传输分阶段记录，资源紧张时限制占用最重的阶段。业务解码、磁盘 I/O 和大文件校验放到工作线程，结果再带代次回到会话。在 Android 26+ 可通过 Handler 指定旧式 GATT 回调线程，API 37+ 通过 Executor，其他版本在回调入口复制必要数据再投递。
 
 测试时构造迟到回调、重复回调、同步拒绝、取消正在写的操作、连接失败后旧回调到达。检查每条命令只完成一次，旧代次没有推进新连接。[BLE 连接生命周期](#android/development-guide/connection-lifecycle) · [GATT 读写](#android/development-guide/characteristic-rw)
+
+## 把串行环境落到代码
+
+骨架不大，关键在「所有入口只投递，不直接改状态」：
+
+```kotlin
+private val worker = Handler(
+    HandlerThread("ble-session").apply { start() }.looper
+)
+
+// 按钮、定时器、蓝牙回调都只做一件事：把事件投进同一个队列
+fun onUserCancel() { worker.post { handle(Event.Cancel) } }
+fun onWriteTimeout(opId: Long) { worker.post { handle(Event.Timeout(opId)) } }
+override fun onCharacteristicWrite(gatt: BluetoothGatt, c: BluetoothGattCharacteristic, status: Int) {
+    worker.post { handle(Event.WriteDone(gatt, c.uuid, status)) }
+}
+
+private var state = State.CONNECTING
+private var generation = 0L          // 每次新建 GATT 递增
+private var inflight: Command? = null
+private val queue = ArrayDeque<Command>()
+
+private fun handle(e: Event) {
+    // 1. 先验代次：旧 GATT 的迟到事件直接丢弃并记日志
+    // 2. 已进 CLOSING 的事件只走清理路径，不再推进状态
+    // 3. WriteDone 要同时匹配 GATT 实例、操作类型、特征 UUID 才算 inflight 的终态
+    // 4. 每条命令 complete 恰好一次：成功回调、同步拒绝、超时、取消四选一
+    // 5. 完成后从 queue 取下一条；队列满时 submit 直接返回忙
+}
+```
+
+`Command` 里带上不可变的输入字节、会话代次、截止时间和一个只允许调用一次的完成回调。`handle` 的五条注释就是实现清单，[第 27 章](#android/development-guide/test-lab)的模拟传输测试逐条验收它们。注意 `HandlerThread` 只是让事件串行，真正的等待仍靠系统回调；不要用 `Thread.sleep` 在队列里等结果，那会把后面所有事件堵住。
 
 ## 一句话总结
 

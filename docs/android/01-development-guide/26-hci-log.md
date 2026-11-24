@@ -3,7 +3,7 @@ title: 抓包、HCI Snoop 与日志诊断
 order: 270
 summary: 从 App 按下按钮开始，沿着手机、控制器和设备日志找同一条消息停在哪一步。
 tags: SDK,工程实践
-updated: 2026-11-19
+updated: 2026-11-24
 ---
 
 # 第 26 章　抓包、HCI Snoop 与日志诊断
@@ -39,6 +39,25 @@ adb bugreport bluetooth-bugreport.zip
 从应用日志找到 CCCD 的写入时间。在 Wireshark 展开 ATT，核对写的是哪个句柄和值，随后有没有收到设备的 Write Response。找不到写请求时回到 App 的立即结果和队列。看到 Error Response 就读它的错误码。设备应答成功后，再找它发来的 Handle Value Notification。抓包里已经进了手机，App 却没报告数据，就查本地登记、回调所属的会话和解析过程。
 
 HCI 看的是主机和控制器之间的通信。要解释空中丢包、干扰、重传和具体广播窗口，使用合适的空口抓包设备，或结合控制器与远端日志。
+
+## 常用 Wireshark 过滤器
+
+打开 btsnoop 文件后，先用过滤器把几千条记录缩到几十条：
+
+| 想看什么 | 过滤器 |
+| --- | --- |
+| 只看 ATT 报文 | `btatt` |
+| 写请求（含 CCCD 写入） | `btatt.opcode == 0x12` |
+| 写响应 | `btatt.opcode == 0x13` |
+| 通知 | `btatt.opcode == 0x1b` |
+| 某个句柄上的全部 ATT 操作 | `btatt.handle == 0x0013`（换成你的句柄） |
+| 错误响应 | `btatt.opcode == 0x01` |
+| 配对过程 | `btsmp` |
+| 断连完成事件 | `bthci_evt.code == 0x05` |
+
+句柄从服务发现阶段的 ATT 读响应里找，或先按 UUID 过滤 `btatt` 再展开报文看 Handle 字段。断连事件的 Reason 字段对照[状态码速查](#android/development-guide/appendix-c-codes)，能直接回答「是谁先断的」。
+
+btsnoop 文件的位置随构建不同：有的机型在开发者选项里直接导出，有的要 root 或从 Bugreport 的 `FS/data/misc/bluetooth/logs/` 目录里取。拿到文件先看开头几条的时间戳，确认它覆盖你复现的那几秒，再开始过滤。
 
 ## 一句话总结
 
