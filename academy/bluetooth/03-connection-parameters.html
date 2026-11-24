@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>蓝牙小课堂 · A3 连接与参数 · 青竹蓝牙学堂</title>
+<style>
+  :root{
+    --bg:#F7F6F2; --card:#FFFFFF; --ink:#2B2620; --muted:#7A7267; --faint:#A39B8E;
+    --line:#E8E4DC; --line-soft:#F1EEE7;
+    --coral:#D95B43; --coral-soft:#FBEDE9; --coral-line:#F0CFC6;
+    --teal:#2A9D8F; --teal-soft:#E9F4F2; --teal-line:#BFE0DB;
+    --amber:#C07A1E; --amber-soft:#FBF3E4; --amber-line:#EDD9B4;
+    --blue:#3B6FD4; --blue-soft:#ECF1FB; --blue-line:#C9D8F2;
+    --code-bg:#26221C; --code-ink:#EDE7DC; --code-cm:#8D8577; --code-kw:#8FC7E8; --code-str:#A8D5A2; --code-num:#E8C07D;
+    --radius:12px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html{scroll-behavior:smooth;}
+  body{background:var(--bg);color:var(--ink);font-size:16.5px;line-height:1.9;
+    font-family:"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",system-ui,sans-serif;}
+  a{color:var(--blue);text-decoration:none;} a:hover{text-decoration:underline;}
+  code{font-family:ui-monospace,"SF Mono",Consolas,monospace;font-size:.87em;
+    background:#F0EDE6;border:1px solid var(--line);border-radius:5px;padding:1px 6px;color:#5B4A2F;}
+  .topbar{background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:50;}
+  .topbar-in{max-width:1080px;margin:0 auto;padding:0 20px;height:56px;display:flex;align-items:center;gap:14px;}
+  .logo{font-weight:800;font-size:16px;white-space:nowrap;}
+  .logo span{color:var(--coral);}
+  .topnav{margin-left:auto;display:flex;gap:18px;font-size:14px;}
+  .topnav a{color:var(--muted);} .topnav a:hover{color:var(--coral);text-decoration:none;}
+  .layout{max-width:1080px;margin:0 auto;padding:32px 20px 80px;display:grid;grid-template-columns:200px minmax(0,1fr);gap:40px;}
+  .toc{position:sticky;top:84px;align-self:start;font-size:14px;}
+  .toc-title{font-size:12px;font-weight:700;color:var(--faint);letter-spacing:2px;margin-bottom:10px;}
+  .toc a{display:block;color:var(--muted);padding:5px 12px;border-left:2px solid var(--line);line-height:1.5;}
+  .toc a:hover{color:var(--coral);text-decoration:none;}
+  .toc a.on{color:var(--coral);border-left-color:var(--coral);font-weight:600;background:linear-gradient(90deg,var(--coral-soft),transparent);}
+  main{min-width:0;}
+  .crumb{font-size:13.5px;color:var(--faint);margin-bottom:14px;}
+  h1{font-size:30px;line-height:1.4;letter-spacing:.5px;margin-bottom:10px;}
+  h1 em{font-style:normal;color:var(--coral);}
+  .lead{font-size:16.5px;color:var(--muted);margin-bottom:16px;}
+  .meta{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px;}
+  .meta span{font-size:12.5px;color:var(--muted);background:var(--card);border:1px solid var(--line);border-radius:999px;padding:3px 12px;}
+  .journey{display:flex;flex-wrap:wrap;gap:0;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px 10px;margin:0 0 8px;}
+  .j-step{flex:1 1 110px;text-align:center;padding:4px 8px;position:relative;}
+  .j-step .n{display:inline-flex;width:26px;height:26px;border-radius:50%;background:var(--coral-soft);color:var(--coral);font-weight:800;font-size:13px;align-items:center;justify-content:center;border:1px solid var(--coral-line);}
+  .j-step .t{display:block;font-weight:700;font-size:14px;margin-top:4px;}
+  .j-step .s{display:block;font-size:12px;color:var(--faint);}
+  .j-step:not(:last-child)::after{content:"→";position:absolute;right:-7px;top:12px;color:var(--faint);font-size:14px;}
+  section{margin-top:44px;}
+  h2{font-size:22px;padding-bottom:10px;border-bottom:1px solid var(--line);margin-bottom:16px;scroll-margin-top:80px;}
+  h2 .no{display:inline-block;font-size:12.5px;font-weight:700;color:var(--coral);background:var(--coral-soft);
+    border:1px solid var(--coral-line);border-radius:999px;padding:1px 12px;margin-right:10px;vertical-align:3px;}
+  h3{font-size:17px;margin:20px 0 8px;}
+  p{margin:10px 0;}
+  ul{margin:10px 0 10px 24px;} li{margin:5px 0;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:22px 24px;margin:16px 0;}
+  .term{background:var(--teal-soft);color:#1E7268;border:1px solid var(--teal-line);border-radius:6px;padding:0 7px;font-weight:700;white-space:nowrap;font-size:.93em;}
+  .term2{background:var(--blue-soft);color:#2F58A8;border:1px solid var(--blue-line);border-radius:6px;padding:0 7px;font-weight:700;white-space:nowrap;font-size:.93em;}
+  .key{background:var(--amber-soft);border:1px solid var(--amber-line);border-left:4px solid var(--amber);
+    border-radius:8px;padding:12px 18px;margin:16px 0;font-size:15.5px;}
+  .key .tag,.note .tag{display:block;font-size:12px;font-weight:800;letter-spacing:2px;margin-bottom:3px;}
+  .key .tag{color:var(--amber);}
+  .key b{color:#8A5510;}
+  .note{background:#F4F2EC;border:1px solid var(--line);border-left:4px solid var(--faint);
+    border-radius:8px;padding:11px 16px;margin:16px 0;font-size:14px;color:var(--muted);}
+  .note .tag{color:var(--faint);}
+  .recap{margin:18px 0 4px;padding:10px 16px;background:var(--teal-soft);border:1px solid var(--teal-line);border-radius:8px;font-size:15px;}
+  .recap b{color:#1E7268;}
+  figure{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px;margin:16px 0;text-align:center;}
+  figcaption{font-size:13px;color:var(--faint);margin-top:8px;}
+  svg{max-width:100%;height:auto;}
+  table{width:100%;border-collapse:collapse;font-size:14.5px;margin:14px 0;background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden;}
+  th{background:#F4F2EC;text-align:left;padding:9px 14px;font-size:13px;color:var(--muted);border-bottom:1px solid var(--line);}
+  td{padding:9px 14px;border-bottom:1px solid var(--line-soft);vertical-align:top;}
+  tr:last-child td{border-bottom:none;}
+  pre{background:var(--code-bg);color:var(--code-ink);border-radius:10px;padding:14px 18px;margin:14px 0;
+    font:13.5px/1.85 ui-monospace,"SF Mono",Consolas,monospace;overflow-x:auto;}
+  pre .cm{color:var(--code-cm);} pre .num{color:var(--code-num);} pre .str{color:var(--code-str);}
+  .lab{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;margin:16px 0;}
+  .lab-head{padding:12px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  .lab-head b{font-size:15px;}
+  .hint{font-size:13px;color:var(--faint);}
+  .lab-body{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:18px;padding:16px 20px 20px;}
+  .lab-body.single{grid-template-columns:1fr;}
+  .controls{padding:0 20px 6px;display:flex;flex-wrap:wrap;gap:18px;align-items:center;}
+  .ctl{display:flex;align-items:center;gap:10px;font-size:13.5px;}
+  .ctl label{color:var(--muted);font-weight:600;}
+  .ctl input[type=range]{width:150px;accent-color:var(--coral);}
+  .ctl .val{font-family:ui-monospace,Consolas,monospace;font-weight:700;color:var(--coral);min-width:64px;}
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;flex-wrap:wrap;}
+  .seg button{font-family:inherit;font-size:13px;font-weight:600;border:none;background:#F4F2EC;color:var(--muted);padding:6px 14px;cursor:pointer;}
+  .seg button.on{background:var(--teal);color:#fff;}
+  .timeline{border:1px solid var(--line);border-radius:14px;background:#FBFAF7;padding:14px;}
+  .tl-title{font-size:12.5px;color:var(--muted);font-weight:700;margin-bottom:6px;display:flex;justify-content:space-between;}
+  .stats{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;}
+  .stat-box{flex:1;min-width:90px;border:1px solid var(--line);border-radius:9px;padding:9px 12px;background:#fff;text-align:center;}
+  .stat-box b{display:block;font:700 18px/1.2 ui-monospace,Consolas,monospace;color:var(--ink);}
+  .stat-box small{font-size:11px;color:var(--faint);}
+  .stat-box.good b{color:#1E7268;} .stat-box.bad b{color:var(--coral);}
+  .logcat{background:var(--code-bg);border-radius:10px;overflow:hidden;display:flex;flex-direction:column;}
+  .logcat-head{padding:7px 14px;font-size:12px;color:var(--code-cm);border-bottom:1px solid #3A352C;font-family:ui-monospace,Consolas,monospace;display:flex;justify-content:space-between;}
+  .logcat-body{padding:12px 14px;font-size:12.5px;line-height:1.95;font-family:ui-monospace,Consolas,monospace;color:#D6CFC2;overflow-y:auto;max-height:300px;min-height:220px;}
+  .logcat-body .t{color:#6B6455;} .logcat-body .api{color:var(--code-kw);} .logcat-body .ok{color:var(--code-str);} .logcat-body .c{color:var(--code-cm);} .logcat-body .warn{color:var(--code-num);} .logcat-body .err{color:#E88;}
+  .lab-foot{padding:0 20px 20px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+  .btn{font-family:inherit;font-size:14.5px;font-weight:600;cursor:pointer;border-radius:8px;padding:9px 22px;border:1px solid var(--coral);background:var(--coral);color:#fff;transition:background .15s;}
+  .btn:hover{background:#C24E38;}
+  .btn.ghost{background:var(--card);color:var(--muted);border-color:var(--line);}
+  .btn.ghost:hover{color:var(--ink);border-color:var(--faint);}
+  .btn:disabled{opacity:.5;cursor:default;}
+  .btn.teal{background:var(--teal);border-color:var(--teal);} .btn.teal:hover{background:#23867B;}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0;}
+  .chip{font-size:12.5px;font-weight:700;border-radius:999px;padding:4px 12px;border:1px solid var(--line);background:#F4F2EC;color:var(--faint);}
+  .chip.on{background:var(--teal-soft);color:#1E7268;border-color:var(--teal-line);}
+  .chip.bad{background:var(--coral-soft);color:#B04A35;border-color:var(--coral-line);}
+  .attr{width:100%;border-collapse:collapse;font-size:13.5px;font-family:ui-monospace,Consolas,monospace;}
+  .attr td{padding:7px 10px;border-bottom:1px solid var(--line-soft);cursor:pointer;}
+  .attr tr:hover td{background:var(--teal-soft);}
+  .attr tr.hit td{background:var(--teal-soft);font-weight:700;}
+  .attr tr.miss td{background:var(--coral-soft);}
+  .quiz-q{font-weight:700;font-size:16px;margin:20px 0 10px;}
+  .opt{display:block;width:100%;text-align:left;font-family:inherit;font-size:14.5px;cursor:pointer;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px 16px;margin:7px 0;color:var(--ink);transition:border-color .15s;}
+  .opt:hover{border-color:var(--teal);}
+  .opt.right{background:var(--teal-soft);border-color:var(--teal);font-weight:600;}
+  .opt.wrong{background:var(--coral-soft);border-color:var(--coral);}
+  .opt:disabled{cursor:default;}
+  .explain{display:none;font-size:14px;border-radius:8px;padding:10px 14px;margin:6px 0;}
+  .explain.show{display:block;}
+  .explain.good{background:var(--teal-soft);border:1px solid var(--teal-line);}
+  .explain.bad{background:var(--coral-soft);border:1px solid var(--coral-line);}
+  .next-links{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0;}
+  .next-links a{display:inline-block;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:9px 18px;font-size:14px;font-weight:600;}
+  .next-links a:hover{border-color:var(--coral);text-decoration:none;}
+  footer{border-top:1px solid var(--line);margin-top:56px;padding-top:20px;font-size:13px;color:var(--faint);}
+  @media (max-width:900px){
+    .layout{grid-template-columns:1fr;gap:0;}
+    .toc{display:none;}
+    .lab-body{grid-template-columns:1fr;}
+    h1{font-size:25px;}
+    .j-step:not(:last-child)::after{display:none;}
+  }
+</style>
+</head>
+<body>
+<div class="topbar"><div class="topbar-in">
+  <div class="logo">青竹<span>蓝牙学堂</span></div>
+  <nav class="topnav">
+    <a href="../">学堂首页</a>
+    <a href="02-advertising-scanning.html">上一课</a>
+    <a href="../../#bluetooth">通用知识</a>
+  </nav>
+</div></div>
+<div class="layout">
+<aside class="toc" id="toc">
+  <div class="toc-title">本课目录</div>
+  <a href="#event">连接是按时赴约</a>
+  <a href="#constraint">约束与谁拍板</a>
+  <a href="#drop">就绪与断线</a>
+  <a href="#lab">动手演练</a>
+  <a href="#quiz">本课自测</a>
+  <a href="#map">回顾与速查</a>
+</aside>
+<main>
+  <div class="crumb">蓝牙小课堂 / 第三课 · A3</div>
+  <h1>连接与参数：一条<em>按时赴约</em>的专属通道</h1>
+  <p class="lead">广播让手机看见了设备，这一课讲「连上之后」。BLE 的连接不是一直开着的线，而是两端约定节奏、每隔一段时间同时醒来交换数据。三个参数决定这个节奏，也决定了省电和断线判定。</p>
+  <div class="meta"><span>难度：零基础</span><span>约 15 分钟</span><span>含交互演练</span><span>前置：A2</span></div>
+  <div class="journey">
+    <div class="j-step"><span class="n">1</span><span class="t">赴约</span><span class="s">连接事件</span></div>
+    <div class="j-step"><span class="n">2</span><span class="t">参数</span><span class="s">三个旋钮</span></div>
+    <div class="j-step"><span class="n">3</span><span class="t">约束</span><span class="s">超时公式</span></div>
+    <div class="j-step"><span class="n">4</span><span class="t">断线</span><span class="s">原因码</span></div>
+    <div class="j-step"><span class="n">5</span><span class="t">动手</span><span class="s">调参数</span></div>
+  </div>
+
+  <section id="event">
+    <h2><span class="no">第 1 步</span>连接是一连串按时的约会</h2>
+    
+      <p>链路建立后，两端约定一个节奏，每隔一段时间同时醒来交换数据，这个时刻叫<span class="term">连接事件 Connection Event</span>。事件之间双方都睡觉；没数据时事件可以短到只交换一个空包确认「我还活着」。</p>
+      <figure><svg viewBox="0 0 560 110" width="560" aria-label="连接事件">
+        <line x1="30" y1="60" x2="540" y2="60" stroke="#E8E4DC" stroke-width="2"/>
+        <rect x="70" y="44" width="12" height="32" rx="3" fill="#2A9D8F"/>
+        <rect x="200" y="44" width="12" height="32" rx="3" fill="#2A9D8F"/>
+        <rect x="330" y="44" width="12" height="32" rx="3" fill="#2A9D8F"/>
+        <rect x="460" y="44" width="12" height="32" rx="3" fill="#2A9D8F"/>
+        <line x1="82" y1="92" x2="200" y2="92" stroke="#C07A1E" stroke-width="1.5"/>
+        <text x="141" y="106" text-anchor="middle" font-size="11" fill="#C07A1E">interval</text>
+        <text x="76" y="30" text-anchor="middle" font-size="11" fill="#1E7268">醒来交换</text>
+        <text x="270" y="30" text-anchor="middle" font-size="11" fill="#A39B8E">中间各自睡觉</text>
+      </svg><figcaption>连接事件之间双方休眠，interval 决定多久醒一次</figcaption></figure>
+      <table><tr><th>参数</th><th>范围</th><th>影响</th></tr>
+        <tr><td><b>Connection Interval</b></td><td>7.5 ms – 4 s</td><td>短则交互快、唤醒频繁；长则省电、延迟大</td></tr>
+        <tr><td><b>Peripheral Latency</b></td><td>0 – 499</td><td>外设没数据时可连续跳过的事件数，空闲少唤醒</td></tr>
+        <tr><td><b>Supervision Timeout</b></td><td>100 ms – 32 s</td><td>这段时间收不到有效包就判定连接丢失</td></tr></table>
+      <div class="recap"><b>本步收束：</b>连接 = 按 interval 赴约；latency 让外设空闲时偷懒；timeout 是「多久没见到就认为断了」。</div>
+  </section>
+
+  <section id="constraint">
+    <h2><span class="no">第 2 步</span>超时公式，与「谁说了算」</h2>
+    
+      <div class="key"><span class="tag">重点 · 必须记住</span>超时必须大于 <b>(1 + latency) × interval × 2</b>，否则外设合法地跳过几个事件就会被误判断线。例：interval 50 ms、latency 4，外设最长可 250 ms 不出现，超时至少要 500 ms 以上，实践留更大余量。</div>
+      <p>参数由谁定？外设可以表达偏好，但<b>决定权在 Central（手机）</b>，系统按自己的策略接受或调整。iOS 有明确公式（Interval ≥ 15 ms 且为 15 的倍数、Latency ≤ 30、超时 2–6 s 等），不满足就拒绝。所以同一台传感器在两台手机上实测间隔不同，<b>不是故障，是策略</b>。</p>
+      <div class="note"><span class="tag">代码入口</span>Android 用 <code>requestConnectionPriority()</code> 表达偏好（BALANCED / LOW_LATENCY / LOW_POWER），最终值由系统定。详见 <a href="../../#android/development-guide/connection">连接生命周期</a>。</div>
+      <div class="recap"><b>本步收束：</b>先算 (1+latency)×interval×2 再设超时；参数手机拍板，跨机型差异是策略不是 bug。</div>
+  </section>
+
+  <section id="drop">
+    <h2><span class="no">第 3 步</span>「已连接」≠「可以读」，断了当新会话</h2>
+    
+      <p>「已连接」是链路层的事，「可以读温度」是业务的事，中间还有：找到服务/特征 → 满足安全要求 → 本地启用接收并确认订阅。把这几步混成一个状态，界面就会「连接中」转到天荒地老。</p>
+      <table><tr><th>原因码</th><th>含义</th><th>排查方向</th></tr>
+        <tr><td><code>0x08</code></td><td>Connection Timeout</td><td>链路曾活着后来丢了：距离、干扰、外设死机/休眠过度</td></tr>
+        <tr><td><code>0x13</code></td><td>Remote User Terminated</td><td>对端主动断（关机/固件断链）</td></tr>
+        <tr><td><code>0x16</code></td><td>Terminated by Local Host</td><td>本机 App 调了 disconnect</td></tr>
+        <tr><td><code>0x3E</code></td><td>Failed to be Established</td><td>根本没建立：设备刚被别的手机连走</td></tr></table>
+      <div class="key"><span class="tag">重点</span>重连要当作<b>新会话</b>：旧回调丢弃，订阅重新确认。已绑定设备重连后设备可能还记得旧 CCCD 直接发数据，而手机本地监听没登记，数据就丢了。有副作用的命令没收到回执，先读回状态或靠命令编号去重，别盲目重发。</div>
+      <div class="recap"><b>本步收束：</b>0x08 查「活着后丢了」，0x3E 查「没建立」；重连重新核对订阅与未完成命令。</div>
+  </section>
+
+  <section id="lab">
+    <h2><span class="no">动手</span>调一调三个参数，看省电与断线判定</h2>
+    <p>拖动三个旋钮。左边实时算出「外设最长可多久不出现」「超时至少要多少」「每秒醒几次」，并判定你设的超时是否合法。下面时间轴画出连接事件，灰色是被 latency 跳过的事件。</p>
+    <div class="lab">
+      <div class="lab-head"><b>连接参数演练</b><span class="hint">约束：timeout &gt; (1+latency)×interval×2</span></div>
+      <div class="controls"><div class="ctl"><label>interval</label><input type="range" id="iv" min="10" max="200" step="5" value="50"><span class="val" id="ivV">50 ms</span></div><div class="ctl"><label>latency</label><input type="range" id="lat" min="0" max="20" step="1" value="4"><span class="val" id="latV">4</span></div><div class="ctl"><label>timeout</label><input type="range" id="to" min="100" max="6000" step="100" value="400"><span class="val" id="toV">400 ms</span></div></div>
+      <div class="lab-body"><div><div class="timeline"><div class="tl-title"><span>连接事件（绿=参加，灰=跳过）</span><span id="span3">1000 ms</span></div><svg id="tl3" viewBox="0 0 520 110" width="100%"></svg></div><div class="stats"><div class="stat-box"><b id="silent">–</b><small>最长可沉默</small></div><div class="stat-box"><b id="req">–</b><small>超时至少</small></div><div class="stat-box"><b id="wake">–</b><small>每秒醒来</small></div><div class="stat-box" id="validBox"><b id="valid">–</b><small>超时是否合法</small></div></div></div><div class="logcat"><div class="logcat-head"><span>参数判定</span><span>live</span></div><div class="logcat-body" id="log3"></div></div></div>
+      <div class="lab-foot"><span class="hint">试试 interval 50 + latency 4，把 timeout 从 400 拉到 600 看判定变化</span></div>
+    </div>
+    <div class="key"><span class="tag">看懂这场演练</span>latency 越大外设越省电，但「最长可沉默」随之变长，超时必须跟着放大，否则合法休眠会被误判成断线（0x08）。省电和稳定是一对此消彼长的旋钮。</div>
+  </section>
+
+  <section id="quiz">
+    <h2><span class="no">自测</span>三个问题</h2>
+    <div class="card" id="quiz-box"></div>
+    <p id="quiz-done" style="display:none;font-weight:700;color:#1E7268;">全对。下一课讲 GATT——连上之后，设备的数据是怎么组织的。</p>
+  </section>
+
+  <section id="map">
+    <h2><span class="no">回顾</span>全程一图 + 速查</h2>
+    <table><tr><th>要点</th><th>记住什么</th></tr><tr><td>连接事件</td><td>按 interval 同时醒来交换，中间休眠</td></tr><tr><td>三参数</td><td>interval 7.5ms–4s；latency 0–499；timeout 100ms–32s</td></tr><tr><td>约束</td><td>timeout &gt; (1+latency)×interval×2</td></tr><tr><td>拍板</td><td>决定权在 Central，跨机型差异是策略</td></tr><tr><td>断线</td><td>0x08 活着后丢；0x3E 没建立；重连当新会话</td></tr></table>
+    <h3>接下来读什么</h3>
+    <div class="next-links">
+      <a href="02-advertising-scanning.html">← 上一课</a>
+      <a href="../">学堂首页 · 课程地图</a>
+      <a href="../../#bluetooth">通用知识正文</a>
+    </div>
+    <div class="note"><span class="tag">说明</span>本页为教学简化，工程细节以正文与官方规范为准；演练为模拟，非真实设备通信。</div>
+    <footer>青竹蓝牙学堂 · 蓝牙小课堂第三课 · A3 · <a href="../">回到学堂</a></footer>
+  </section>
+</main>
+</div>
+<script>
+
+(function(){
+  var iv=document.getElementById('iv'),lat=document.getElementById('lat'),to=document.getElementById('to');
+  function draw(){
+    var i=+iv.value,l=+lat.value,t=+to.value;
+    document.getElementById('ivV').textContent=i+' ms';
+    document.getElementById('latV').textContent=l;
+    document.getElementById('toV').textContent=t+' ms';
+    var silent=(1+l)*i, req=2*silent, ok=t>req, wake=(1000/i).toFixed(1);
+    document.getElementById('silent').textContent=silent+' ms';
+    document.getElementById('req').textContent=req+' ms';
+    document.getElementById('wake').textContent=wake+' 次';
+    var vb=document.getElementById('validBox'); vb.className='stat-box '+(ok?'good':'bad');
+    document.getElementById('valid').textContent=ok?'合法':'会误断';
+    var s='<line x1="30" y1="55" x2="510" y2="55" stroke="#E8E4DC" stroke-width="2"/>';
+    var cycle=l+1, n=0;
+    for(var x=40;x<=505;x+=Math.max(8,i*0.9)){ var attend=(n%cycle)===0; s+='<rect x="'+x+'" y="40" width="7" height="30" rx="2" fill="'+(attend?'#2A9D8F':'#D8D2C6')+'"/>'; n++; }
+    s+='<text x="30" y="95" font-size="11" fill="#A39B8E">绿=外设参加的事件，灰=被 latency 跳过（每 '+cycle+' 个醒一次）</text>';
+    document.getElementById('tl3').innerHTML=s;
+    document.getElementById('log3').innerHTML='<div><span class="api">interval</span>='+i+'ms <span class="api">latency</span>='+l+' <span class="api">timeout</span>='+t+'ms</div><div>最长可沉默 = (1+'+l+')×'+i+' = <span class="ok">'+silent+'ms</span></div><div>超时需 &gt; 2×'+silent+' = <span class="ok">'+req+'ms</span></div><div>'+(ok?'<span class="ok">✓ timeout '+t+'ms 合法，外设合法休眠不会被误断</span>':'<span class="err">✗ timeout '+t+'ms 太小，外设跳过 '+l+' 个事件就会被误判 0x08</span>')+'</div><div><span class="c">// 每秒醒来 '+wake+' 次，interval 越大越省电</span></div>';
+  }
+  [iv,lat,to].forEach(function(el){el.addEventListener('input',draw);});
+  draw();
+})();
+
+
+const tocLinks=[...document.querySelectorAll('.toc a')];
+const secs=tocLinks.map(a=>document.querySelector(a.getAttribute('href')));
+const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){tocLinks.forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+e.target.id));}});},{rootMargin:'-20% 0px -70% 0px'});
+secs.forEach(s=>s&&io.observe(s));
+const QUIZ=[{"q":"1. interval 100 ms、latency 9，外设最长多久不出现仍合法？超时至少设多少？","opts":[["最长 1000 ms，超时需 > 2000 ms",true,"对。(1+9)×100=1000，超时>2×1000=2000，实践留更大余量。"],["最长 100 ms，超时 100 ms",false,"没算 latency 跳过的 9 个事件。"],["最长 900 ms，超时 900 ms",false,"公式是 (1+latency)×interval×2。"]]},{"q":"2. 外设请求 interval 15 ms，两台手机实测 15 和 50 ms，是故障吗？","opts":[["不是，参数决定权在 Central，各系统策略不同",true,"对。这是策略差异，不是 bug。"],["是，固件坏了",false,"固件请求只是偏好，手机可调整。"],["是，蓝牙版本不同",false,"与版本无关，是系统接受策略。"]]},{"q":"3. 断开原因 0x08 和 0x3E 分别指向？","opts":[["0x08 链路曾活着后丢了；0x3E 根本没建立",true,"对。前者查距离/干扰/休眠，后者查广播/连接竞争。"],["两者一样",false,"排查方向完全不同。"],["0x08 没建立；0x3E 后来丢了",false,"说反了。"]]}];
+let solved=0; const box=document.getElementById('quiz-box');
+QUIZ.forEach((item,qi)=>{
+  const h=document.createElement('div'); h.className='quiz-q'; h.textContent=item.q; box.appendChild(h);
+  const ex=document.createElement('div'); ex.className='explain';
+  item.opts.forEach(([text,ok,why])=>{
+    const b=document.createElement('button'); b.className='opt'; b.textContent=text; b.dataset.q=qi;
+    b.addEventListener('click',()=>{
+      const sib=[...box.querySelectorAll('[data-q="'+qi+'"]')];
+      if(sib.some(s=>s.disabled))return;
+      sib.forEach(s=>s.disabled=true);
+      b.classList.add(ok?'right':'wrong');
+      ex.className='explain show '+(ok?'good':'bad'); ex.textContent=(ok?'✓ ':'✗ ')+why;
+      if(ok){ solved++; if(solved===QUIZ.length)document.getElementById('quiz-done').style.display='block'; }
+      else setTimeout(()=>{ sib.forEach(s=>{s.disabled=false;s.classList.remove('wrong');}); ex.className='explain'; },2000);
+    });
+    box.appendChild(b);
+  });
+  box.appendChild(ex);
+});
+
+</script>
+</body>
+</html>

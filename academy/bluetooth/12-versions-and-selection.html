@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>蓝牙小课堂 · A12 版本演进与选型 · 青竹蓝牙学堂</title>
+<style>
+  :root{
+    --bg:#F7F6F2; --card:#FFFFFF; --ink:#2B2620; --muted:#7A7267; --faint:#A39B8E;
+    --line:#E8E4DC; --line-soft:#F1EEE7;
+    --coral:#D95B43; --coral-soft:#FBEDE9; --coral-line:#F0CFC6;
+    --teal:#2A9D8F; --teal-soft:#E9F4F2; --teal-line:#BFE0DB;
+    --amber:#C07A1E; --amber-soft:#FBF3E4; --amber-line:#EDD9B4;
+    --blue:#3B6FD4; --blue-soft:#ECF1FB; --blue-line:#C9D8F2;
+    --code-bg:#26221C; --code-ink:#EDE7DC; --code-cm:#8D8577; --code-kw:#8FC7E8; --code-str:#A8D5A2; --code-num:#E8C07D;
+    --radius:12px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html{scroll-behavior:smooth;}
+  body{background:var(--bg);color:var(--ink);font-size:16.5px;line-height:1.9;
+    font-family:"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",system-ui,sans-serif;}
+  a{color:var(--blue);text-decoration:none;} a:hover{text-decoration:underline;}
+  code{font-family:ui-monospace,"SF Mono",Consolas,monospace;font-size:.87em;
+    background:#F0EDE6;border:1px solid var(--line);border-radius:5px;padding:1px 6px;color:#5B4A2F;}
+  .topbar{background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:50;}
+  .topbar-in{max-width:1080px;margin:0 auto;padding:0 20px;height:56px;display:flex;align-items:center;gap:14px;}
+  .logo{font-weight:800;font-size:16px;white-space:nowrap;}
+  .logo span{color:var(--coral);}
+  .topnav{margin-left:auto;display:flex;gap:18px;font-size:14px;}
+  .topnav a{color:var(--muted);} .topnav a:hover{color:var(--coral);text-decoration:none;}
+  .layout{max-width:1080px;margin:0 auto;padding:32px 20px 80px;display:grid;grid-template-columns:200px minmax(0,1fr);gap:40px;}
+  .toc{position:sticky;top:84px;align-self:start;font-size:14px;}
+  .toc-title{font-size:12px;font-weight:700;color:var(--faint);letter-spacing:2px;margin-bottom:10px;}
+  .toc a{display:block;color:var(--muted);padding:5px 12px;border-left:2px solid var(--line);line-height:1.5;}
+  .toc a:hover{color:var(--coral);text-decoration:none;}
+  .toc a.on{color:var(--coral);border-left-color:var(--coral);font-weight:600;background:linear-gradient(90deg,var(--coral-soft),transparent);}
+  main{min-width:0;}
+  .crumb{font-size:13.5px;color:var(--faint);margin-bottom:14px;}
+  h1{font-size:30px;line-height:1.4;letter-spacing:.5px;margin-bottom:10px;}
+  h1 em{font-style:normal;color:var(--coral);}
+  .lead{font-size:16.5px;color:var(--muted);margin-bottom:16px;}
+  .meta{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px;}
+  .meta span{font-size:12.5px;color:var(--muted);background:var(--card);border:1px solid var(--line);border-radius:999px;padding:3px 12px;}
+  .journey{display:flex;flex-wrap:wrap;gap:0;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px 10px;margin:0 0 8px;}
+  .j-step{flex:1 1 110px;text-align:center;padding:4px 8px;position:relative;}
+  .j-step .n{display:inline-flex;width:26px;height:26px;border-radius:50%;background:var(--coral-soft);color:var(--coral);font-weight:800;font-size:13px;align-items:center;justify-content:center;border:1px solid var(--coral-line);}
+  .j-step .t{display:block;font-weight:700;font-size:14px;margin-top:4px;}
+  .j-step .s{display:block;font-size:12px;color:var(--faint);}
+  .j-step:not(:last-child)::after{content:"→";position:absolute;right:-7px;top:12px;color:var(--faint);font-size:14px;}
+  section{margin-top:44px;}
+  h2{font-size:22px;padding-bottom:10px;border-bottom:1px solid var(--line);margin-bottom:16px;scroll-margin-top:80px;}
+  h2 .no{display:inline-block;font-size:12.5px;font-weight:700;color:var(--coral);background:var(--coral-soft);
+    border:1px solid var(--coral-line);border-radius:999px;padding:1px 12px;margin-right:10px;vertical-align:3px;}
+  h3{font-size:17px;margin:20px 0 8px;}
+  p{margin:10px 0;}
+  ul{margin:10px 0 10px 24px;} li{margin:5px 0;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:22px 24px;margin:16px 0;}
+  .term{background:var(--teal-soft);color:#1E7268;border:1px solid var(--teal-line);border-radius:6px;padding:0 7px;font-weight:700;white-space:nowrap;font-size:.93em;}
+  .term2{background:var(--blue-soft);color:#2F58A8;border:1px solid var(--blue-line);border-radius:6px;padding:0 7px;font-weight:700;white-space:nowrap;font-size:.93em;}
+  .key{background:var(--amber-soft);border:1px solid var(--amber-line);border-left:4px solid var(--amber);
+    border-radius:8px;padding:12px 18px;margin:16px 0;font-size:15.5px;}
+  .key .tag,.note .tag{display:block;font-size:12px;font-weight:800;letter-spacing:2px;margin-bottom:3px;}
+  .key .tag{color:var(--amber);}
+  .key b{color:#8A5510;}
+  .note{background:#F4F2EC;border:1px solid var(--line);border-left:4px solid var(--faint);
+    border-radius:8px;padding:11px 16px;margin:16px 0;font-size:14px;color:var(--muted);}
+  .note .tag{color:var(--faint);}
+  .recap{margin:18px 0 4px;padding:10px 16px;background:var(--teal-soft);border:1px solid var(--teal-line);border-radius:8px;font-size:15px;}
+  .recap b{color:#1E7268;}
+  figure{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px;margin:16px 0;text-align:center;}
+  figcaption{font-size:13px;color:var(--faint);margin-top:8px;}
+  svg{max-width:100%;height:auto;}
+  table{width:100%;border-collapse:collapse;font-size:14.5px;margin:14px 0;background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden;}
+  th{background:#F4F2EC;text-align:left;padding:9px 14px;font-size:13px;color:var(--muted);border-bottom:1px solid var(--line);}
+  td{padding:9px 14px;border-bottom:1px solid var(--line-soft);vertical-align:top;}
+  tr:last-child td{border-bottom:none;}
+  pre{background:var(--code-bg);color:var(--code-ink);border-radius:10px;padding:14px 18px;margin:14px 0;
+    font:13.5px/1.85 ui-monospace,"SF Mono",Consolas,monospace;overflow-x:auto;}
+  pre .cm{color:var(--code-cm);} pre .num{color:var(--code-num);} pre .str{color:var(--code-str);}
+  .lab{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;margin:16px 0;}
+  .lab-head{padding:12px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  .lab-head b{font-size:15px;}
+  .hint{font-size:13px;color:var(--faint);}
+  .lab-body{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:18px;padding:16px 20px 20px;}
+  .lab-body.single{grid-template-columns:1fr;}
+  .controls{padding:0 20px 6px;display:flex;flex-wrap:wrap;gap:18px;align-items:center;}
+  .ctl{display:flex;align-items:center;gap:10px;font-size:13.5px;}
+  .ctl label{color:var(--muted);font-weight:600;}
+  .ctl input[type=range]{width:150px;accent-color:var(--coral);}
+  .ctl .val{font-family:ui-monospace,Consolas,monospace;font-weight:700;color:var(--coral);min-width:64px;}
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;flex-wrap:wrap;}
+  .seg button{font-family:inherit;font-size:13px;font-weight:600;border:none;background:#F4F2EC;color:var(--muted);padding:6px 14px;cursor:pointer;}
+  .seg button.on{background:var(--teal);color:#fff;}
+  .timeline{border:1px solid var(--line);border-radius:14px;background:#FBFAF7;padding:14px;}
+  .tl-title{font-size:12.5px;color:var(--muted);font-weight:700;margin-bottom:6px;display:flex;justify-content:space-between;}
+  .stats{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;}
+  .stat-box{flex:1;min-width:90px;border:1px solid var(--line);border-radius:9px;padding:9px 12px;background:#fff;text-align:center;}
+  .stat-box b{display:block;font:700 18px/1.2 ui-monospace,Consolas,monospace;color:var(--ink);}
+  .stat-box small{font-size:11px;color:var(--faint);}
+  .stat-box.good b{color:#1E7268;} .stat-box.bad b{color:var(--coral);}
+  .logcat{background:var(--code-bg);border-radius:10px;overflow:hidden;display:flex;flex-direction:column;}
+  .logcat-head{padding:7px 14px;font-size:12px;color:var(--code-cm);border-bottom:1px solid #3A352C;font-family:ui-monospace,Consolas,monospace;display:flex;justify-content:space-between;}
+  .logcat-body{padding:12px 14px;font-size:12.5px;line-height:1.95;font-family:ui-monospace,Consolas,monospace;color:#D6CFC2;overflow-y:auto;max-height:300px;min-height:220px;}
+  .logcat-body .t{color:#6B6455;} .logcat-body .api{color:var(--code-kw);} .logcat-body .ok{color:var(--code-str);} .logcat-body .c{color:var(--code-cm);} .logcat-body .warn{color:var(--code-num);} .logcat-body .err{color:#E88;}
+  .lab-foot{padding:0 20px 20px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+  .btn{font-family:inherit;font-size:14.5px;font-weight:600;cursor:pointer;border-radius:8px;padding:9px 22px;border:1px solid var(--coral);background:var(--coral);color:#fff;transition:background .15s;}
+  .btn:hover{background:#C24E38;}
+  .btn.ghost{background:var(--card);color:var(--muted);border-color:var(--line);}
+  .btn.ghost:hover{color:var(--ink);border-color:var(--faint);}
+  .btn:disabled{opacity:.5;cursor:default;}
+  .btn.teal{background:var(--teal);border-color:var(--teal);} .btn.teal:hover{background:#23867B;}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0;}
+  .chip{font-size:12.5px;font-weight:700;border-radius:999px;padding:4px 12px;border:1px solid var(--line);background:#F4F2EC;color:var(--faint);}
+  .chip.on{background:var(--teal-soft);color:#1E7268;border-color:var(--teal-line);}
+  .chip.bad{background:var(--coral-soft);color:#B04A35;border-color:var(--coral-line);}
+  .attr{width:100%;border-collapse:collapse;font-size:13.5px;font-family:ui-monospace,Consolas,monospace;}
+  .attr td{padding:7px 10px;border-bottom:1px solid var(--line-soft);cursor:pointer;}
+  .attr tr:hover td{background:var(--teal-soft);}
+  .attr tr.hit td{background:var(--teal-soft);font-weight:700;}
+  .attr tr.miss td{background:var(--coral-soft);}
+  .quiz-q{font-weight:700;font-size:16px;margin:20px 0 10px;}
+  .opt{display:block;width:100%;text-align:left;font-family:inherit;font-size:14.5px;cursor:pointer;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px 16px;margin:7px 0;color:var(--ink);transition:border-color .15s;}
+  .opt:hover{border-color:var(--teal);}
+  .opt.right{background:var(--teal-soft);border-color:var(--teal);font-weight:600;}
+  .opt.wrong{background:var(--coral-soft);border-color:var(--coral);}
+  .opt:disabled{cursor:default;}
+  .explain{display:none;font-size:14px;border-radius:8px;padding:10px 14px;margin:6px 0;}
+  .explain.show{display:block;}
+  .explain.good{background:var(--teal-soft);border:1px solid var(--teal-line);}
+  .explain.bad{background:var(--coral-soft);border:1px solid var(--coral-line);}
+  .next-links{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0;}
+  .next-links a{display:inline-block;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:9px 18px;font-size:14px;font-weight:600;}
+  .next-links a:hover{border-color:var(--coral);text-decoration:none;}
+  footer{border-top:1px solid var(--line);margin-top:56px;padding-top:20px;font-size:13px;color:var(--faint);}
+  @media (max-width:900px){
+    .layout{grid-template-columns:1fr;gap:0;}
+    .toc{display:none;}
+    .lab-body{grid-template-columns:1fr;}
+    h1{font-size:25px;}
+    .j-step:not(:last-child)::after{display:none;}
+  }
+</style>
+</head>
+<body>
+<div class="topbar"><div class="topbar-in">
+  <div class="logo">青竹<span>蓝牙学堂</span></div>
+  <nav class="topnav">
+    <a href="../">学堂首页</a>
+    <a href="02-advertising-scanning.html">上一课</a>
+    <a href="../../#bluetooth">通用知识</a>
+  </nav>
+</div></div>
+<div class="layout">
+<aside class="toc" id="toc">
+  <div class="toc-title">本课目录</div>
+  <a href="#map">演进地图</a>
+  <a href="#nopromise">版本不承诺</a>
+  <a href="#select">选型顺序</a>
+  <a href="#lab">动手演练</a>
+  <a href="#quiz">本课自测</a>
+  <a href="#map">回顾与速查</a>
+</aside>
+<main>
+  <div class="crumb">蓝牙小课堂 / 第十二课 · A12</div>
+  <h1>版本演进与选型：版本号<em>不承诺能力</em></h1>
+  <p class="lead">「蓝牙 5.0 比 4.2 快多少？」这问法本身就掉坑里。版本号标记按哪版规范认证，不承诺任何具体能力。这一课给你一张能力地图，再给一个照着走的选型判断顺序。</p>
+  <div class="meta"><span>难度：进阶</span><span>约 14 分钟</span><span>含交互演练</span><span>前置：A1–A11</span></div>
+  <div class="journey">
+    <div class="j-step"><span class="n">1</span><span class="t">地图</span><span class="s">版本→能力</span></div>
+    <div class="j-step"><span class="n">2</span><span class="t">三变化</span><span class="s">DLE/PHY/Audio</span></div>
+    <div class="j-step"><span class="n">3</span><span class="t">不承诺</span><span class="s">三方点头</span></div>
+    <div class="j-step"><span class="n">4</span><span class="t">选型</span><span class="s">广播vs连接</span></div>
+    <div class="j-step"><span class="n">5</span><span class="t">动手</span><span class="s">查能力</span></div>
+  </div>
+
+  <section id="map">
+    <h2><span class="no">第 1 步</span>一张演进表</h2>
+    
+      <table><tr><th>版本</th><th>关键能力</th><th>对开发者意味着</th></tr>
+        <tr><td>4.0</td><td>引入 BLE / GATT</td><td>传感器起点，纽扣电池可能</td></tr>
+        <tr><td>4.2</td><td>DLE / Secure Connections / 链路层隐私</td><td>吞吐提升、ECDH 配对</td></tr>
+        <tr><td>5.0</td><td>2M/Coded PHY / 扩展广播</td><td>速率翻倍或距离换速率</td></tr>
+        <tr><td>5.2</td><td>LE Audio / EATT</td><td>音频走向 BLE</td></tr>
+        <tr><td>6.0</td><td>Channel Sounding 测距</td><td>厘米级安全测距</td></tr>
+        <tr><td>6.2</td><td>更短连接间隔（375µs）</td><td>高性能 HID 延迟上限打开</td></tr></table>
+      <div class="recap"><b>本步收束：</b>对日常开发影响最大的是 4.2 DLE、5.0 PHY、5.2 LE Audio。</div>
+  </section>
+
+  <section id="nopromise">
+    <h2><span class="no">第 2 步</span>能力要设备、两端、系统三方点头</h2>
+    
+      <div class="key"><span class="tag">重点 · 核心认知</span>标 5.0 的设备完全可以不实现 2M PHY。能力要<b>设备实现 + 两端都支持 + 系统开放接口</b>三方点头才算数。接新设备把版本号换成能力清单：支持哪些 PHY？MTU 多少？DLE？传统还是扩展广播？Legacy 还是 Secure Connections？</div>
+      <p>Bluetooth Mesh 不在这张表里，是 2017 单独的 Mesh Profile，面向几十上百节点组网；标 5.0 不代表支持 Mesh。</p>
+      <div class="recap"><b>本步收束：</b>版本号是认证标签，能力清单才是合同。</div>
+  </section>
+
+  <section id="select">
+    <h2><span class="no">第 3 步</span>经典 vs BLE，广播 vs 连接</h2>
+    
+      <p>先问设备实现了什么，再算<b>数据量、频率、延迟</b>三个数：</p>
+      <ul><li>小数据、低频、多接收方 → <b>广播</b>（一对多无连接数限制、最省电）。</li>
+        <li>双向交互、可靠传输、手机写配置 → <b>BLE 连接 + GATT</b>。</li>
+        <li>音频 → 存量走经典 Profile（A2DP/HFP），新产品评估 LE Audio。</li>
+        <li>存量 SPP 串口 → 经典蓝牙；注意 iOS 普通 App 拿不到 SPP（需 MFi）。</li></ul>
+      <div class="note"><span class="tag">功耗直觉</span>广播设备只在发包瞬间醒；连接设备每个事件都醒，interval 50ms = 每秒醒 20 次。纽扣电池跑一年要拉长间隔、用好 latency，或干脆走广播。吞吐别信规格书，实测。</div>
+      <div class="recap"><b>本步收束：</b>先看设备实现，再算三个数；小数据多听众走广播，双向走连接。</div>
+  </section>
+
+  <section id="lab">
+    <h2><span class="no">动手</span>点版本看能力，再用三个数做选型</h2>
+    <p>上半：点版本看它引入的能力（注意都是「可选」）。下半：选数据量、频率、接收方数量，给出广播/连接/经典的选型建议。</p>
+    <div class="lab">
+      <div class="lab-head"><b>版本 / 选型演练</b><span class="hint">版本号不承诺能力</span></div>
+      <div class="controls"><div class="seg" id="ver12"><button data-v="4.0">4.0</button><button data-v="4.2" class="on">4.2</button><button data-v="5.0">5.0</button><button data-v="5.2">5.2</button><button data-v="6.0">6.0</button></div></div>
+      <div class="lab-body"><div><div class="timeline"><div class="tl-title"><span>版本能力</span></div><div id="ver12out" style="font-size:14px;"></div></div><div class="controls" style="padding:10px 0 0;"><div class="ctl"><label>数据量</label><span class="seg" id="size12"><button data-x="s" class="on">小</button><button data-x="l">大</button></span></div><div class="ctl"><label>频率</label><span class="seg" id="freq12"><button data-x="l" class="on">低</button><button data-x="h">高</button></span></div><div class="ctl"><label>接收方</label><span class="seg" id="aud12"><button data-x="m" class="on">多</button><button data-x="o">单</button></span></div></div><div class="key" id="rec12" style="margin-top:10px;"></div></div><div class="logcat"><div class="logcat-head"><span>选型依据</span><span>live</span></div><div class="logcat-body" id="log12"></div></div></div>
+      <div class="lab-foot"><span class="hint">试试「小+低+多」→ 广播；「大+高+单」→ 连接+GATT</span></div>
+    </div>
+    <div class="key"><span class="tag">看懂这场演练</span>版本号不承诺能力，接设备先问能力清单。选型先看设备实现，再算数据量/频率/延迟：小数据多听众走广播，双向交互走连接，音频看 Profile，吞吐以实测为准。</div>
+  </section>
+
+  <section id="quiz">
+    <h2><span class="no">自测</span>三个问题</h2>
+    <div class="card" id="quiz-box"></div>
+    <p id="quiz-done" style="display:none;font-weight:700;color:#1E7268;">全对。通用基础十二课全部完成。接下来选你的平台实战：Android / iOS / 鸿蒙 / Flutter / RN。</p>
+  </section>
+
+  <section id="map">
+    <h2><span class="no">回顾</span>选型判断顺序</h2>
+    <table><tr><th>情况</th><th>选择</th></tr><tr><td>设备已定型</td><td>按它的 Profile/GATT 来，核对平台接口</td></tr><tr><td>小数据低频多听众</td><td>广播</td></tr><tr><td>双向/可靠/写配置</td><td>BLE 连接 + GATT</td></tr><tr><td>音频</td><td>存量经典 Profile，新品 LE Audio</td></tr><tr><td>持续大流量</td><td>BLE 实测吞吐，不够再考虑经典 SPP</td></tr></table>
+    <h3>接下来读什么</h3>
+    <div class="next-links">
+      <a href="02-advertising-scanning.html">← 上一课</a>
+      <a href="../">学堂首页 · 课程地图</a>
+      <a href="../../#bluetooth">通用知识正文</a>
+    </div>
+    <div class="note"><span class="tag">说明</span>本页为教学简化，工程细节以正文与官方规范为准；演练为模拟，非真实设备通信。</div>
+    <footer>青竹蓝牙学堂 · 蓝牙小课堂第十二课 · A12 · <a href="../">回到学堂</a></footer>
+  </section>
+</main>
+</div>
+<script>
+
+(function(){
+  var V={'4.0':'引入 BLE 与 GATT/ATT 体系。传感器起点，纽扣电池成为可能。','4.2':'DLE（载荷 27→251）、LE Secure Connections（ECDH）、链路层隐私。吞吐与安全分水岭。','5.0':'2M PHY（速率翻倍）、Coded PHY（距离换速率）、扩展广播（突破 31 字节）。均为可选。','5.2':'LE Audio（LC3+等时信道）、EATT 多承载、增强功率控制。音频走向 BLE。','6.0':'Channel Sounding 厘米级安全测距、基于决策的广播过滤。数字钥匙/查找基础。'};
+  function showVer(v){ document.getElementById('ver12out').innerHTML='<p><b>蓝牙 '+v+'</b>：'+V[v]+'</p><p class="hint">注意：这些能力多为可选，标该版本不代表实现。</p>'; }
+  document.querySelectorAll('#ver12 button').forEach(function(b){ b.addEventListener('click',function(){ document.querySelectorAll('#ver12 button').forEach(function(x){x.classList.remove('on');}); b.classList.add('on'); showVer(b.getAttribute('data-v')); }); });
+  var sel={size:'s',freq:'l',aud:'m'};
+  function bind(id,key){ document.querySelectorAll('#'+id+' button').forEach(function(b){ b.addEventListener('click',function(){ document.querySelectorAll('#'+id+' button').forEach(function(x){x.classList.remove('on');}); b.classList.add('on'); sel[key]=b.getAttribute('data-x'); rec(); }); }); }
+  function rec(){
+    var r,why;
+    if(sel.size==='s'&&sel.aud==='m'){ r='广播路线'; why='小数据+多接收方：一对多无连接数限制、设备只发不连最省电，漏收一条等下一条恢复。'; }
+    else if(sel.size==='l'||sel.freq==='h'||sel.aud==='o'){ r='BLE 连接 + GATT'; why='大数据/高频/单接收方或需双向写配置：建连接走 GATT，注意维护连接功耗与单连接限制。'; }
+    else { r='BLE 连接 + GATT'; why='需要可靠双向交互，走连接。'; }
+    document.getElementById('rec12').innerHTML='<span class="tag">建议</span><b>'+r+'</b>。'+why;
+    document.getElementById('log12').innerHTML='<div>数据量='+ (sel.size==='s'?'小':'大') +' 频率='+(sel.freq==='l'?'低':'高')+' 接收方='+(sel.aud==='m'?'多':'单')+'</div><div><span class="ok">→ '+r+'</span></div><div><span class="c">// 音频另看 Profile；存量 SPP 走经典（iOS 需 MFi）</span></div><div><span class="c">// 吞吐别信规格书，实测 MTU/DLE/PHY/interval</span></div>';
+  }
+  bind('size12','size'); bind('freq12','freq'); bind('aud12','aud');
+  showVer('4.2'); rec();
+})();
+
+
+const tocLinks=[...document.querySelectorAll('.toc a')];
+const secs=tocLinks.map(a=>document.querySelector(a.getAttribute('href')));
+const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){tocLinks.forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+e.target.id));}});},{rootMargin:'-20% 0px -70% 0px'});
+secs.forEach(s=>s&&io.observe(s));
+const QUIZ=[{"q":"1. 标称蓝牙 5.0 的传感器，一定能用 2M PHY 吗？","opts":[["不一定，2M 是可选特性",true,"对。要查能力声明且两端+系统都支持。"],["一定",false,"版本号不承诺能力。"],["看电池",false,"与电池无关。"]]},{"q":"2. 温度每分钟发一次、附近十几台手机都要显示，选？","opts":[["广播",true,"对。一对多无连接数限制、最省电、可容忍漏收。"],["连接",false,"十几台连接不现实且费电。"],["经典 SPP",false,"不适合一对多小数据。"]]},{"q":"3. 只开 DLE 不换 MTU，应用每次能发多少值？","opts":[["仍 20 字节（MTU 默认 23）",true,"对。MTU 与 DLE 要配合。"],["251 字节",false,"那是链路层载荷，不是 ATT 值。"],["244 字节",false,"需要 MTU 提到 247。"]]}];
+let solved=0; const box=document.getElementById('quiz-box');
+QUIZ.forEach((item,qi)=>{
+  const h=document.createElement('div'); h.className='quiz-q'; h.textContent=item.q; box.appendChild(h);
+  const ex=document.createElement('div'); ex.className='explain';
+  item.opts.forEach(([text,ok,why])=>{
+    const b=document.createElement('button'); b.className='opt'; b.textContent=text; b.dataset.q=qi;
+    b.addEventListener('click',()=>{
+      const sib=[...box.querySelectorAll('[data-q="'+qi+'"]')];
+      if(sib.some(s=>s.disabled))return;
+      sib.forEach(s=>s.disabled=true);
+      b.classList.add(ok?'right':'wrong');
+      ex.className='explain show '+(ok?'good':'bad'); ex.textContent=(ok?'✓ ':'✗ ')+why;
+      if(ok){ solved++; if(solved===QUIZ.length)document.getElementById('quiz-done').style.display='block'; }
+      else setTimeout(()=>{ sib.forEach(s=>{s.disabled=false;s.classList.remove('wrong');}); ex.className='explain'; },2000);
+    });
+    box.appendChild(b);
+  });
+  box.appendChild(ex);
+});
+
+</script>
+</body>
+</html>
