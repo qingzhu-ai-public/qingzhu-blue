@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>青竹蓝牙学堂 · 看得懂、动得了手的蓝牙课</title>
+<style>
+  :root{
+    --bg:#F7F6F2; --card:#FFFFFF; --ink:#2B2620; --muted:#7A7267; --faint:#A39B8E;
+    --line:#E8E4DC; --line-soft:#F1EEE7;
+    --coral:#D95B43; --coral-soft:#FBEDE9; --coral-line:#F0CFC6;
+    --teal:#2A9D8F; --teal-soft:#E9F4F2; --teal-line:#BFE0DB;
+    --amber:#C07A1E; --amber-soft:#FBF3E4; --amber-line:#EDD9B4;
+    --blue:#3B6FD4; --blue-soft:#ECF1FB; --blue-line:#C9D8F2;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html{scroll-behavior:smooth;}
+  body{background:var(--bg);color:var(--ink);font-size:16px;line-height:1.8;
+    font-family:"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",system-ui,sans-serif;}
+  a{color:var(--blue);text-decoration:none;}
+  .topbar{background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:50;}
+  .topbar-in{max-width:1080px;margin:0 auto;padding:0 20px;height:56px;display:flex;align-items:center;gap:14px;}
+  .logo{font-weight:800;font-size:17px;}
+  .logo span{color:var(--coral);}
+  .topnav{margin-left:auto;display:flex;gap:18px;font-size:14px;}
+  .topnav a{color:var(--muted);} .topnav a:hover{color:var(--coral);}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 20px 80px;}
+  /* hero */
+  .hero{padding:52px 0 30px;text-align:center;}
+  .hero .badge{display:inline-block;font-size:13px;font-weight:700;color:var(--teal);background:var(--teal-soft);border:1px solid var(--teal-line);border-radius:999px;padding:4px 16px;margin-bottom:18px;}
+  .hero h1{font-size:42px;letter-spacing:2px;margin-bottom:14px;}
+  .hero h1 em{font-style:normal;color:var(--coral);}
+  .hero p{font-size:17px;color:var(--muted);max-width:640px;margin:0 auto 22px;}
+  .hero .cta{display:inline-flex;gap:12px;flex-wrap:wrap;justify-content:center;}
+  .btn{display:inline-block;font-size:15px;font-weight:600;border-radius:10px;padding:11px 26px;border:1px solid var(--coral);background:var(--coral);color:#fff;}
+  .btn:hover{background:#C24E38;}
+  .btn.ghost{background:var(--card);color:var(--ink);border-color:var(--line);}
+  .btn.ghost:hover{border-color:var(--faint);}
+  /* 路线 */
+  .path{display:flex;flex-wrap:wrap;gap:14px;justify-content:center;margin:8px 0 10px;}
+  .path .p{flex:1 1 220px;max-width:300px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;text-align:left;}
+  .path .p .n{font-size:12px;font-weight:800;color:var(--coral);letter-spacing:1px;}
+  .path .p b{display:block;font-size:16px;margin:4px 0;}
+  .path .p span{font-size:13.5px;color:var(--muted);}
+  /* 平台区块 */
+  .platform{margin-top:46px;}
+  .p-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;border-bottom:2px solid var(--line);padding-bottom:10px;margin-bottom:18px;}
+  .p-head h2{font-size:22px;}
+  .p-head .cnt{font-size:13px;color:var(--faint);}
+  .p-head .desc{font-size:14px;color:var(--muted);width:100%;margin-top:2px;}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px;}
+  .lesson{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px;position:relative;transition:border-color .15s,transform .15s;}
+  .lesson.live{cursor:pointer;}
+  .lesson.live:hover{border-color:var(--coral);transform:translateY(-2px);}
+  .lesson .code{font-size:12px;font-weight:800;color:var(--faint);font-family:ui-monospace,Consolas,monospace;}
+  .lesson .t{font-size:15.5px;font-weight:700;margin:5px 0 6px;line-height:1.5;}
+  .lesson .d{font-size:13px;color:var(--muted);line-height:1.6;}
+  .lesson .st{position:absolute;top:14px;right:14px;font-size:11px;font-weight:700;border-radius:999px;padding:2px 10px;}
+  .st.live{background:var(--teal-soft);color:#1E7268;border:1px solid var(--teal-line);}
+  .st.plan{background:#F4F2EC;color:var(--faint);border:1px solid var(--line);}
+  .lesson.plan{opacity:.72;}
+  .tag-elective{display:inline-block;font-size:12px;color:var(--amber);background:var(--amber-soft);border:1px solid var(--amber-line);border-radius:8px;padding:6px 12px;margin:14px 0 0;}
+  footer{border-top:1px solid var(--line);margin-top:60px;padding-top:22px;font-size:13px;color:var(--faint);text-align:center;}
+  footer a{color:var(--blue);}
+  .note{font-size:13px;color:var(--faint);text-align:center;margin-top:10px;}
+  @media (max-width:600px){ .hero h1{font-size:32px;} }
+</style>
+</head>
+<body>
+<div class="topbar"><div class="topbar-in">
+  <div class="logo">青竹<span>蓝牙学堂</span></div>
+  <nav class="topnav">
+    <a href="#base">通用基础</a>
+    <a href="#android">Android</a>
+    <a href="#ios">iOS</a>
+    <a href="../">旧版文档</a>
+  </nav>
+</div></div>
+
+<div class="wrap">
+  <div class="hero">
+    <span class="badge">全新改版 · HTML 互动课程</span>
+    <h1>青竹<em>蓝牙学堂</em></h1>
+    <p>不堆术语、不绕弯子。每课摆出真实设备，讲清它们一来一回发生了什么，配流程图、可点击的演练和自测——看得懂，也动得了手。</p>
+    <div class="cta">
+      <a class="btn" href="../lessons/ble-visual-guide.html">从第一课开始 →</a>
+      <a class="btn ghost" href="#base">浏览课程地图</a>
+    </div>
+  </div>
+
+  <div class="path">
+    <div class="p"><span class="n">第一步</span><b>通用基础</b><span>平台无关，先懂蓝牙怎么回事</span></div>
+    <div class="p"><span class="n">第二步</span><b>平台实战</b><span>在你用的端落地：Android / iOS / 鸿蒙 / Flutter / RN</span></div>
+    <div class="p"><span class="n">第三步</span><b>综合实战</b><span>做一个能读温湿度的完整 App</span></div>
+  </div>
+  <p class="note">每课统一模板：实物直讲 · 流程图 · 交互演练 · 自测过关 · 速查表。绿色「已上线」可点，灰色为规划中。</p>
+
+  <div id="courses"></div>
+
+  <footer>
+    青竹蓝牙学堂 · 课程地图原型 · 共约 62 门正课 + 选修，分批制作中<br>
+    技术底稿源自原《青竹蓝牙开发指南》，新版就绪后旧 Markdown 文档站将下线 · <a href="../">查看旧版</a>
+  </footer>
+</div>
+
+<script>
+const DATA=[
+  {id:'base',name:'通用基础',sub:'Bluetooth 通用 · 平台无关',desc:'用温度计 + 手机讲清蓝牙原理，不依赖任何平台。修完再选你的端。',lessons:[
+    ['A1','温度计和手机是怎么说上话的','全景：广播→连接→发现→订阅→通知','live','../lessons/ble-visual-guide.html'],
+    ['A2','广播与扫描：怎么被发现','广播包 31 字节、间隔权衡、扫描限流'],
+    ['A3','连接与参数：专属通道与省电','interval / latency / timeout、断线恢复'],
+    ['A4','GATT：设备的数据清单','服务 / 特征 / 描述符、UUID'],
+    ['A5','读、写、通知：三种操作','Read / Write / Notify / Indicate'],
+    ['A6','订阅与 CCCD：让设备主动上报','0x2902、两步订阅、字节解析'],
+    ['A7','MTU 与分包：长数据怎么发','三层长度、分包重组、流控'],
+    ['A8','配对、绑定与加密','配对方式、密钥、加密'],
+    ['A9','地址轮换与隐私','RPA / IRK、稳定身份'],
+    ['A10','按阶段排障','扫描 / 连接 / 发现 / 写入分段取证'],
+    ['A11','动手：nRF Connect 走通链路','不写代码用手机做一遍'],
+    ['A12','版本演进与经典 / BLE 选型','4.0→6.2 能力地图、选型'],
+  ]},
+  {id:'android',name:'Android 实战',sub:'Kotlin · Android BLE API',desc:'内容最厚的一站。从权限到后台、抓包、厂商兼容，再到完整温湿度计 App。',lessons:[
+    ['B1','Android 蓝牙全景：经典与 BLE','两条路、API 地图'],
+    ['B2','权限、开关与清单','运行时权限、版本差异'],
+    ['B3','扫描与过滤','ScanFilter、后台扫描、限流'],
+    ['B4','连接生命周期','connectGatt、autoConnect、重连'],
+    ['B5','服务发现与读写','discoverServices、读写排队'],
+    ['B6','订阅与通知','CCCD 两步、onCharacteristicChanged'],
+    ['B7','MTU、PHY 与连接参数','requestMtu、PHY、参数请求'],
+    ['B8','分包、重组与流控','业务帧、窗口、幂等'],
+    ['B9','线程、状态机与命令队列','串行会话、一次一操作、取消'],
+    ['B10','后台、前台服务与伴生设备','FGS、CDM、进程恢复'],
+    ['B11','配对与 LE 安全','createBond、加密事件'],
+    ['B12','抓包与错误码排障','HCI snoop、133 / 8 / 19、Wireshark'],
+    ['B13','厂商兼容与机型矩阵','平台行为、可复测矩阵'],
+    ['B14','综合实战：BTHome 温湿度计','扫描→连接→传输→双机验收'],
+  ],elective:'选修：经典蓝牙 RFCOMM · GATT Server 外设 · LE Audio 与测距 · 性能功耗 · 从原生到 SDK'},
+  {id:'ios',name:'iOS 实战',sub:'Swift · CoreBluetooth',desc:'CoreBluetooth 中心设备全流程，含后台与状态恢复等 iOS 特有机制。',lessons:[
+    ['C1','CoreBluetooth 全景','central / peripheral、API 地图'],
+    ['C2','权限与状态','蓝牙权限、状态回调'],
+    ['C3','扫描与过滤','scanForPeripherals、去重'],
+    ['C4','连接与重连','connect、断线恢复'],
+    ['C5','服务与特征','discoverServices / Characteristics'],
+    ['C6','读写','readValue / writeValue'],
+    ['C7','订阅与通知','setNotifyValue、didUpdateValue'],
+    ['C8','分包与流控','maximumWriteValueLength'],
+    ['C9','后台与状态恢复','background modes、state restoration'],
+    ['C10','配对与安全','系统配对、加密'],
+    ['C11','综合实战：温湿度计','双机验收'],
+  ],elective:'选修：外设角色 · 经典蓝牙 · L2CAP · 配件设置弹窗'},
+  {id:'harmonyos',name:'HarmonyOS 实战',sub:'ArkTS · ConnectivityKit',desc:'鸿蒙 BLE 中心与外设角色，API 与 Android 对照着学。',lessons:[
+    ['D1','全景与角色','BLE 中心 / 外设、API 地图'],
+    ['D2','权限与状态','权限、适配器状态'],
+    ['D3','扫描与过滤','startBLEScan、过滤'],
+    ['D4','连接与服务发现','connect、getServices'],
+    ['D5','读写与解析','read / write、字节解析'],
+    ['D6','订阅与通知','setNotify、特征变化'],
+    ['D7','外设角色','广播与 GATT Server'],
+    ['D8','排障','分段定位'],
+    ['D9','综合实战：温湿度计','双机验收'],
+  ]},
+  {id:'flutter',name:'Flutter 实战',sub:'Dart · 跨端蓝牙库',desc:'用跨端库快速落地，再学如何桥接已有原生蓝牙任务。',lessons:[
+    ['E1','跨端蓝牙全景与库选型','flutter_reactive_ble 等'],
+    ['E2','权限与状态','跨端权限处理'],
+    ['E3','扫描','scanForDevices、流'],
+    ['E4','连接与发现','connect、discoverServices'],
+    ['E5','读写与订阅','read / write / subscribe'],
+    ['E6','生命周期与清理','页面退出释放'],
+    ['E7','原生桥接','调用已有原生蓝牙任务'],
+    ['E8','综合实战：温湿度计','双端对照'],
+  ]},
+  {id:'rn',name:'React Native 实战',sub:'TypeScript · 跨端蓝牙库',desc:'RN 蓝牙库全流程与原生模块桥接。',lessons:[
+    ['F1','全景与库选型','react-native-ble-plx 等'],
+    ['F2','权限与状态','权限、适配器状态'],
+    ['F3','扫描与事件','startDeviceScan'],
+    ['F4','连接与发现','connect、discoverAllServices'],
+    ['F5','读写与订阅','read / write / monitor'],
+    ['F6','生命周期','离开页面清理'],
+    ['F7','原生模块桥接','调用原生蓝牙任务'],
+    ['F8','综合实战：温湿度计','双端对照'],
+  ]},
+];
+const root=document.getElementById('courses');
+DATA.forEach(p=>{
+  const sec=document.createElement('section'); sec.className='platform'; sec.id=p.id;
+  const live=p.lessons.filter(l=>l[3]==='live').length;
+  sec.innerHTML=`<div class="p-head"><h2>${p.name}</h2><span class="cnt">${p.lessons.length} 课 · ${p.sub}</span><span class="desc">${p.desc}</span></div>`;
+  const grid=document.createElement('div'); grid.className='grid';
+  p.lessons.forEach(l=>{
+    const [code,title,desc,st,href]=l;
+    const isLive=st==='live';
+    const card=document.createElement(isLive?'a':'div');
+    card.className='lesson '+(isLive?'live':'plan');
+    if(isLive) card.href=href;
+    card.innerHTML=`<span class="st ${isLive?'live':'plan'}">${isLive?'已上线':'规划中'}</span>
+      <div class="code">${code}</div><div class="t">${title}</div><div class="d">${desc}</div>`;
+    grid.appendChild(card);
+  });
+  sec.appendChild(grid);
+  if(p.elective){ const e=document.createElement('div'); e.className='tag-elective'; e.textContent=p.elective; sec.appendChild(e); }
+  root.appendChild(sec);
+});
+</script>
+</body>
+</html>
