@@ -30,15 +30,13 @@
       "id": "flutter",
       "name": "Flutter",
       "title": "Flutter BLE 开发",
-      "summary": "重点在桥接：Dart 侧 API 怎么设计、原生侧怎么复用已有的 Android / iOS 实现，而不是再写一套协议。",
-      "plan": ["Plugin", "Native Bridge", "Usage", "Qingzhu BLE SDK"]
+      "summary": "8 章 Flutter 蓝牙开发指南、flutter_reactive_ble API 速查，以及跨端温湿度计实战。"
     },
     {
       "id": "react-native",
       "name": "React Native",
       "title": "React Native BLE 开发",
-      "summary": "要先回答一个问题：走桥接复用原生 SDK，还是重写一套实现。定了这个，目录结构才有意义。",
-      "plan": ["Overview", "Native Bridge", "Example", "Qingzhu BLE SDK"]
+      "summary": "8 章 React Native 蓝牙开发指南、react-native-ble-manager API 速查，以及跨端温湿度计实战。"
     }
   ]
 }

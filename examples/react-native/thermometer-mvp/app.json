@@ -1,0 +1,22 @@
+{
+  "expo": {
+    "name": "青竹蓝牙温湿度计",
+    "slug": "qingzhu-rn-thermometer",
+    "version": "1.0.0",
+    "android": {
+      "package": "ai.qingzhu.rnthermometer"
+    },
+    "ios": {
+      "bundleIdentifier": "ai.qingzhu.rnthermometer"
+    },
+    "plugins": [
+      [
+        "react-native-ble-manager",
+        {
+          "neverForLocation": true,
+          "bluetoothAlwaysPermission": "用于扫描和连接教学温湿度计。"
+        }
+      ]
+    ]
+  }
+}

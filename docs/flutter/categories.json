@@ -1,0 +1,14 @@
+{
+  "categories": [
+    {
+      "id": "development-guide",
+      "name": "开发指南",
+      "summary": "8 章，从安装、权限和扫描到原生桥接，附 flutter_reactive_ble API 速查。"
+    },
+    {
+      "id": "thermometer-mvp",
+      "name": "综合实战 · 温湿度计",
+      "summary": "先点通原型，再对照源码做扫描、连接、传输和双端验收。"
+    }
+  ]
+}

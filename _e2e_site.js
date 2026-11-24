@@ -38,8 +38,12 @@ const PLATFORMS = ['bluetooth', 'android', 'ios', 'harmonyos', 'flutter', 'react
 const NAV = ['首页', 'Bluetooth', 'Android', 'iOS', 'HarmonyOS', 'Flutter', 'React Native'];
 const FIRST_LIVE = 'bluetooth';
 const ANDROID = 'android';
-const EMPTY = PLATFORMS.filter((p) => p !== FIRST_LIVE && p !== ANDROID && p !== 'ios' && p !== 'harmonyos');
-const EMPTY_PLATFORM_NAMES = ['Flutter', 'React Native'];
+const MORE_PLATFORMS = {
+  ios: { title: 'iOS', count: 32 },
+  harmonyos: { title: 'HarmonyOS', count: 20 },
+  flutter: { title: 'Flutter', count: 16 },
+  'react-native': { title: 'React Native', count: 16 },
+};
 const TOTAL_PAGES = 2;                                     // 首页 + 文档页
 
 // Android 的类目（= docs/android/ 下的文件夹，顺序 = categories.json 顺序）
@@ -265,11 +269,10 @@ const STATE = `({
       CATS.slice(0, 3).every((k) => (cards.android?.text || '').includes(k.name)), cards.android?.text);
   chk('Bluetooth 卡自动显示「8 篇文档」',
       /8 篇文档/.test(cards.bluetooth?.text || '') && cards.bluetooth?.soon === false, cards.bluetooth?.text);
-  chk('iOS 卡显示「32 篇文档」', /32 篇文档/.test(cards.ios?.text || '') && cards.ios?.soon === false);
-  chk('HarmonyOS 卡显示「20 篇文档」', /20 篇文档/.test(cards.harmonyos?.text || '') && cards.harmonyos?.soon === false);
-  chk('其余 2 张卡显示「整理中」',
-      EMPTY.every((p) => /整理中/.test(cards[p]?.text || '') && cards[p].soon === true),
-      EMPTY.map((p) => p + '=' + cards[p]?.text.slice(0, 10)).join(' | '));
+  for (const [id, platform] of Object.entries(MORE_PLATFORMS)) {
+    chk(platform.title + ' 卡显示「' + platform.count + ' 篇文档」',
+        cards[id]?.text.includes(platform.count + ' 篇文档') && cards[id].soon === false);
+  }
   await c.shot('01_home.png');
 
   const hero = await c.ev(`(() => {
@@ -412,9 +415,6 @@ const STATE = `({
   chk('类目顺序 = categories.json 顺序',
       JSON.stringify(side.heads.map((h) => h.name)) === JSON.stringify(allCats.map((k) => k.name)),
       JSON.stringify(side.heads.map((h) => h.name)));
-  chk('左栏只列有内容的平台',
-      EMPTY_PLATFORM_NAMES.every((n) => side.txt.indexOf(n) < 0),
-      'txt=' + side.txt.slice(0, 80));
   chk('有内容的类目标注对应篇数',
       allCats.every((cat, i) => side.heads[i]?.count === String(cat.n)),
       side.heads.map((h) => h.name + '=' + (h.count || h.tag)).join(' | '));
@@ -549,35 +549,16 @@ const STATE = `({
         items: document.querySelectorAll('#docsMain .cat-item').length
       })`);
       chk('  SDK 使用指南列出 5 篇文档', guide.note === false && guide.items === 5, JSON.stringify(guide));
-    } else if (name === 'ios' || name === 'harmonyos') {
+    } else {
       const sidebar = await c.ev(`({
         sidebar: document.querySelector('#docsSide .ds-title').textContent,
         items: [...document.querySelectorAll('#docsSide .ds-item')].map(item => item.dataset.doc),
         cards: document.querySelectorAll('#docsMain .cat-card').length
       })`);
-      const platform = name === 'ios' ? { title: 'iOS', count: 32 } : { title: 'HarmonyOS', count: 20 };
+      const platform = MORE_PLATFORMS[name];
       chk(platform.title + ' 只显示自己的两个类目和 ' + platform.count + ' 篇文档',
           sidebar.sidebar === platform.title + ' 文档' && sidebar.cards === 2 && sidebar.items.length === platform.count &&
           sidebar.items.every(id => id.startsWith(name + '/')), JSON.stringify(sidebar.items));
-    } else {
-      const soon = await c.ev(`({
-        soon: !!document.querySelector('#docsMain .soon'),
-        items: document.querySelectorAll('#docsMain .cat-item').length,
-        chips: document.querySelectorAll('#docsMain .chip').length,
-        btns: [...document.querySelectorAll('#docsMain .actions a')].map(a=>a.textContent.replace(/\\s+/g,' ').trim()),
-        noSide: document.querySelector('.docs-shell').classList.contains('no-side'),
-        sideDisp: getComputedStyle(document.querySelector('.docs-side')).display,
-        mainW: Math.round(document.querySelector('.docs-main').getBoundingClientRect().width)
-      })`);
-      chk('  右栏出 Coming soon 面板', soon.soon === true);
-      chk('  无文档时目录为空', soon.items === 0, String(soon.items));
-      chk('  规划目录 chips 非空', soon.chips >= 4, String(soon.chips));
-      chk('  回退按钮是中性文案',
-          soon.btns.length === 2 && soon.btns[0].indexOf('浏览已有文档') === 0 && soon.btns[1] === '返回首页',
-          JSON.stringify(soon.btns));
-      chk('🔴 无文档的平台：左栏整体收起（左栏只放有内容的平台）',
-          soon.noSide === true && soon.sideDisp === 'none', 'noSide=' + soon.noSide + ' disp=' + soon.sideDisp);
-      chk('  Coming soon 面板撑满右栏宽度', soon.mainW > 700, 'mainW=' + soon.mainW);
     }
   }
 
@@ -859,12 +840,6 @@ const STATE = `({
   chk('点首页「Android」卡 → 进平台页（类目概览）', s.active[0] === 'page-docs' && s.sideCatActive === null,
       s.hash);
 
-  await goto(SITE + '#flutter');
-  await c.ev(`[...document.querySelectorAll('#docsMain .actions a')][0].click();'ok'`);
-  await sleep(320);
-  s = await c.ev(STATE);
-  chk('从 Flutter 页点「浏览已有文档」→ 进首个有文档的平台', s.hash === '#' + FIRST_LIVE, String(s.hash));
-
   // ---------- 11. 几何 ----------
   console.log('\n【11】几何：桌面不溢出 / nav 单行 / 窄屏目录折成可展开一栏');
   await goto(SITE + '#' + D_GEN);
@@ -956,11 +931,28 @@ const STATE = `({
 
   // ---------- 12. 文档即插即用 ----------
   console.log('\n【12】🔴 新建类目文件夹 + 丢一篇 .md 就自动上线');
-  const probeDir = path.join(ROOT, 'docs', 'flutter', '01-probe');
+  const configFile = path.join(ROOT, 'docs', 'platforms.json');
+  const originalConfig = fs.readFileSync(configFile, 'utf8');
+  const probeDir = path.join(ROOT, 'docs', 'docs-probe', '01-probe');
   const probeFile = path.join(probeDir, '99-probe.md');
   const build = () => execFileSync(process.execPath, ['tools/build-docs.js'], { cwd: ROOT, stdio: 'pipe' });
   let step = '写入';
   try {
+    const config = JSON.parse(originalConfig);
+    config.platforms.push({ id: 'docs-probe', name: '临时平台', title: '临时平台', plan: ['API', '扫描', '连接', '收发'] });
+    fs.writeFileSync(configFile, JSON.stringify(config), 'utf8');
+    build();
+    await goto(SITE + '#docs-probe');
+    const empty = await c.ev(`({
+      soon: !!document.querySelector('#docsMain .soon'),
+      noSide: document.querySelector('.docs-shell').classList.contains('no-side'),
+      chipCount: document.querySelectorAll('#docsMain .chip').length
+    })`);
+    chk('无文档时显示 Coming soon 并收起左栏', empty.soon && empty.noSide && empty.chipCount === 4);
+    await c.ev(`document.querySelector('#docsMain .actions a').click()`);
+    await sleep(320);
+    chk('从临时平台点「浏览已有文档」→ 进首个有文档的平台',
+        (await c.ev(STATE)).hash === '#' + FIRST_LIVE);
     fs.mkdirSync(probeDir, { recursive: true });
     fs.writeFileSync(probeFile, [
       '---', 'title: Probe 探针文档', 'order: 5',
@@ -969,27 +961,27 @@ const STATE = `({
     ].join('\n'), 'utf8');
     step = '构建';
     build();
-    chk('新建 docs/flutter/01-probe/99-probe.md 后构建成功', true, 'Flutter 此前零文档');
+    chk('新建 docs/docs-probe/01-probe/99-probe.md 后构建成功', true, '临时平台 此前零文档');
 
     step = '重载';
-    await goto(SITE + '#flutter');
+    await goto(SITE + '#docs-probe');
     const live = await c.ev(`({
       soon: !!document.querySelector('#docsMain .soon'),
       cards: document.querySelectorAll('#docsMain .cat-card').length,
       cardName: (document.querySelector('#docsMain .cat-card-head b')||{}).textContent || '',
-      sideHead: (document.querySelector('#docsSide .ds-head[data-cat="flutter/probe"]')||{}).textContent || '',
-      sideItem: (document.querySelector('#docsSide .ds-item[data-doc="flutter/probe/probe"]')||{}).textContent || '',
+      sideHead: (document.querySelector('#docsSide .ds-head[data-cat="docs-probe/probe"]')||{}).textContent || '',
+      sideItem: (document.querySelector('#docsSide .ds-item[data-doc="docs-probe/probe/probe"]')||{}).textContent || '',
       noSide: document.querySelector('.docs-shell').classList.contains('no-side'),
-      card: (document.querySelector('#page-home .platform[data-page="flutter"]')||{}).textContent || ''
+      card: (document.querySelector('#page-home .platform[data-page="docs-probe"]')||{}).textContent || ''
     })`);
-    chk('Flutter 右栏 Coming soon 自动消失', live.soon === false);
-    chk('Flutter 自动出现 1 张类目卡', live.cards === 1, 'name=' + live.cardName);
+    chk('临时平台 右栏 Coming soon 自动消失', live.soon === false);
+    chk('临时平台 自动出现 1 张类目卡', live.cards === 1, 'name=' + live.cardName);
     chk('🔴 左栏自动多出该类目与该文档',
         live.sideHead.indexOf('probe') >= 0 && live.sideItem.indexOf('Probe 探针文档') >= 0,
         left( live.sideHead) + ' | ' + left(live.sideItem));
     chk('🟢 有内容后左栏自动出现（no-side 撤掉）', live.noSide === false);
-    chk('首页 Flutter 卡自动变「1 篇文档」', live.card.indexOf('1 篇文档') >= 0, live.card.replace(/\s+/g, ' ').trim());
-    await c.shot('07_probe_flutter_live.png');
+    chk('首页 临时平台 卡自动变「1 篇文档」', live.card.indexOf('1 篇文档') >= 0, live.card.replace(/\s+/g, ' ').trim());
+    await c.shot('07_probe_platform_live.png');
   } catch (e) {
     chk('探针：' + step + ' 阶段', false, String(e.message).slice(0, 140));
   }
@@ -998,20 +990,23 @@ const STATE = `({
   try {
     if (fs.existsSync(probeFile)) fs.unlinkSync(probeFile);
     try { fs.rmdirSync(probeDir); } catch {}
-    try { fs.rmdirSync(path.join(ROOT, 'docs', 'flutter')); } catch {}
+    try { fs.rmdirSync(path.join(ROOT, 'docs', 'docs-probe')); } catch {}
     build();
-    await goto(SITE + '#flutter');
+    await goto(SITE + '#docs-probe');
     const back = await c.ev(`({
       soon: !!document.querySelector('#docsMain .soon'),
       cards: document.querySelectorAll('#docsMain .cat-card').length,
-      sideHead: document.querySelectorAll('#docsSide .ds-head[data-cat="flutter/probe"]').length,
+      sideHead: document.querySelectorAll('#docsSide .ds-head[data-cat="docs-probe/probe"]').length,
       noSide: document.querySelector('.docs-shell').classList.contains('no-side')
     })`);
     chk('删除后自动回到 Coming soon（无残留）',
         back.soon === true && back.cards === 0 && back.sideHead === 0 && back.noSide === true, JSON.stringify(back));
-    chk('探针目录已从磁盘删除', !fs.existsSync(path.join(ROOT, 'docs', 'flutter')));
+    chk('探针目录已从磁盘删除', !fs.existsSync(path.join(ROOT, 'docs', 'docs-probe')));
   } catch (e) {
     chk('探针还原', false, String(e.message).slice(0, 140));
+  } finally {
+    fs.writeFileSync(configFile, originalConfig, 'utf8');
+    build();
   }
 
   // ---------- 13. 无 JS 错误 ----------
