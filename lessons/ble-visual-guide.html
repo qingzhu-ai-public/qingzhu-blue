@@ -3,106 +3,113 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>图解 BLE 链路：从扫描到一条温度数据 · 青竹蓝牙开发指南</title>
+<title>蓝牙幼儿园 · 第一课：一条温度数据的旅程 · 青竹蓝牙开发指南</title>
 <style>
   :root{
-    --bg:#F6F7F9; --card:#FFFFFF; --ink:#1F2937; --muted:#6B7280; --faint:#9CA3AF;
-    --line:#E5E7EB; --line-soft:#F0F1F3;
-    --accent:#2563EB; --accent-soft:#EFF4FF; --accent-line:#C7D7FE;
-    --amber:#B45309; --amber-soft:#FFFBEB; --amber-line:#FDE68A;
-    --green:#047857; --green-soft:#ECFDF5; --green-line:#A7F3D0;
-    --red:#B91C1C; --red-soft:#FEF2F2;
-    --code-bg:#0F172A; --code-ink:#E2E8F0; --code-cm:#64748B; --code-kw:#7DD3FC; --code-str:#86EFAC; --code-num:#FBBF24;
+    --bg:#F7F6F2; --card:#FFFFFF; --ink:#2B2620; --muted:#7A7267; --faint:#A39B8E;
+    --line:#E8E4DC; --line-soft:#F1EEE7;
+    --coral:#D95B43; --coral-soft:#FBEDE9; --coral-line:#F0CFC6;
+    --teal:#2A9D8F; --teal-soft:#E9F4F2; --teal-line:#BFE0DB;
+    --amber:#C07A1E; --amber-soft:#FBF3E4; --amber-line:#EDD9B4;
+    --blue:#3B6FD4; --blue-soft:#ECF1FB; --blue-line:#C9D8F2;
+    --code-bg:#26221C; --code-ink:#EDE7DC; --code-cm:#8D8577; --code-kw:#8FC7E8; --code-str:#A8D5A2; --code-num:#E8C07D;
     --radius:12px;
   }
   *{box-sizing:border-box;margin:0;padding:0;}
   html{scroll-behavior:smooth;}
-  body{background:var(--bg);color:var(--ink);font-size:16px;line-height:1.85;
+  body{background:var(--bg);color:var(--ink);font-size:16.5px;line-height:1.9;
     font-family:"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",system-ui,sans-serif;}
-  a{color:var(--accent);text-decoration:none;} a:hover{text-decoration:underline;}
-  code{font-family:ui-monospace,"SF Mono",Consolas,"Cascadia Code",monospace;font-size:.88em;
-    background:#EEF1F5;border:1px solid var(--line);border-radius:5px;padding:1px 6px;color:#0F3060;}
+  a{color:var(--blue);text-decoration:none;} a:hover{text-decoration:underline;}
+  code{font-family:ui-monospace,"SF Mono",Consolas,monospace;font-size:.87em;
+    background:#F0EDE6;border:1px solid var(--line);border-radius:5px;padding:1px 6px;color:#5B4A2F;}
   /* ===== 顶栏 ===== */
   .topbar{background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:50;}
-  .topbar-in{max-width:1120px;margin:0 auto;padding:0 20px;height:56px;display:flex;align-items:center;gap:14px;}
-  .logo{font-weight:800;font-size:16px;color:var(--ink);white-space:nowrap;}
-  .logo span{color:var(--accent);}
+  .topbar-in{max-width:1080px;margin:0 auto;padding:0 20px;height:56px;display:flex;align-items:center;gap:14px;}
+  .logo{font-weight:800;font-size:16px;white-space:nowrap;}
+  .logo span{color:var(--coral);}
   .topnav{margin-left:auto;display:flex;gap:18px;font-size:14px;}
-  .topnav a{color:var(--muted);} .topnav a:hover{color:var(--accent);text-decoration:none;}
+  .topnav a{color:var(--muted);} .topnav a:hover{color:var(--coral);text-decoration:none;}
   /* ===== 布局 ===== */
-  .layout{max-width:1120px;margin:0 auto;padding:32px 20px 80px;display:grid;grid-template-columns:210px minmax(0,1fr);gap:40px;}
+  .layout{max-width:1080px;margin:0 auto;padding:32px 20px 80px;display:grid;grid-template-columns:200px minmax(0,1fr);gap:40px;}
   .toc{position:sticky;top:84px;align-self:start;font-size:14px;}
   .toc-title{font-size:12px;font-weight:700;color:var(--faint);letter-spacing:2px;margin-bottom:10px;}
   .toc a{display:block;color:var(--muted);padding:5px 12px;border-left:2px solid var(--line);line-height:1.5;}
-  .toc a:hover{color:var(--accent);text-decoration:none;}
-  .toc a.on{color:var(--accent);border-left-color:var(--accent);font-weight:600;background:linear-gradient(90deg,var(--accent-soft),transparent);}
+  .toc a:hover{color:var(--coral);text-decoration:none;}
+  .toc a.on{color:var(--coral);border-left-color:var(--coral);font-weight:600;background:linear-gradient(90deg,var(--coral-soft),transparent);}
   main{min-width:0;}
   /* ===== 头部 ===== */
   .crumb{font-size:13.5px;color:var(--faint);margin-bottom:14px;}
-  h1{font-size:32px;line-height:1.4;letter-spacing:.5px;margin-bottom:12px;}
-  .lead{font-size:17px;color:var(--muted);margin-bottom:16px;}
+  h1{font-size:31px;line-height:1.4;letter-spacing:.5px;margin-bottom:10px;}
+  h1 em{font-style:normal;color:var(--coral);}
+  .lead{font-size:16.5px;color:var(--muted);margin-bottom:16px;}
   .meta{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px;}
   .meta span{font-size:12.5px;color:var(--muted);background:var(--card);border:1px solid var(--line);border-radius:999px;padding:3px 12px;}
   /* ===== 章节 ===== */
   section{margin-top:44px;}
-  h2{font-size:23px;padding-bottom:10px;border-bottom:1px solid var(--line);margin-bottom:18px;scroll-margin-top:80px;}
-  h2 .no{color:var(--accent);font-family:ui-monospace,Consolas,monospace;margin-right:10px;font-size:19px;}
-  h3{font-size:17.5px;margin:22px 0 8px;}
+  h2{font-size:22px;padding-bottom:10px;border-bottom:1px solid var(--line);margin-bottom:16px;scroll-margin-top:80px;}
+  h2 .no{display:inline-block;font-size:12.5px;font-weight:700;color:var(--coral);background:var(--coral-soft);
+    border:1px solid var(--coral-line);border-radius:999px;padding:1px 12px;margin-right:10px;vertical-align:3px;}
+  h3{font-size:17px;margin:20px 0 8px;}
   p{margin:10px 0;}
-  ul,ol{margin:10px 0 10px 24px;} li{margin:5px 0;}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:20px 22px;margin:16px 0;}
-  /* ===== 提示框 ===== */
-  .analogy{background:var(--amber-soft);border:1px solid var(--amber-line);border-left:4px solid #F59E0B;border-radius:8px;padding:13px 18px;margin:16px 0;font-size:15.5px;}
-  .analogy .tag,.callout .tag{display:block;font-size:12px;font-weight:800;letter-spacing:2px;margin-bottom:4px;}
-  .analogy .tag{color:var(--amber);}
-  .callout{border-radius:8px;padding:13px 18px;margin:16px 0;font-size:15px;border:1px solid;}
-  .callout.warn{background:var(--red-soft);border-color:#FECACA;border-left:4px solid #EF4444;}
-  .callout.warn .tag{color:var(--red);}
-  .callout.tip{background:var(--green-soft);border-color:var(--green-line);border-left:4px solid #10B981;}
-  .callout.tip .tag{color:var(--green);}
-  /* ===== 代码块 ===== */
-  .codeblock{background:var(--code-bg);border-radius:10px;margin:16px 0;overflow:hidden;}
-  .code-head{display:flex;justify-content:space-between;align-items:center;padding:8px 16px;border-bottom:1px solid #1E293B;font-size:12.5px;color:var(--code-cm);font-family:ui-monospace,Consolas,monospace;}
-  .codeblock pre{padding:14px 18px;overflow-x:auto;font-size:13.5px;line-height:1.8;color:var(--code-ink);font-family:ui-monospace,"SF Mono",Consolas,monospace;}
-  .kw{color:var(--code-kw);} .str{color:var(--code-str);} .num{color:var(--code-num);} .cm{color:var(--code-cm);} .fn{color:#C4B5FD;}
+  ul{margin:10px 0 10px 24px;} li{margin:5px 0;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:22px 24px;margin:16px 0;}
+  b,strong{color:var(--ink);}
+  .term{background:var(--teal-soft);color:#1E7268;border:1px solid var(--teal-line);border-radius:6px;padding:0 7px;font-weight:700;white-space:nowrap;font-size:.93em;}
+  .term2{background:var(--blue-soft);color:#2F58A8;border:1px solid var(--blue-line);border-radius:6px;padding:0 7px;font-weight:700;white-space:nowrap;font-size:.93em;}
+  /* ===== 老师说 / 大人翻译 ===== */
+  .say{background:var(--amber-soft);border:1px solid var(--amber-line);border-left:4px solid var(--amber);
+    border-radius:8px;padding:12px 18px;margin:16px 0;font-size:15.5px;}
+  .say .tag,.note .tag{display:block;font-size:12px;font-weight:800;letter-spacing:2px;margin-bottom:3px;}
+  .say .tag{color:var(--amber);}
+  .say b{color:#8A5510;}
+  .note{background:#F4F2EC;border:1px solid var(--line);border-left:4px solid var(--faint);
+    border-radius:8px;padding:11px 16px;margin:16px 0;font-size:14px;color:var(--muted);}
+  .note .tag{color:var(--faint);}
+  .note code{font-size:.9em;}
   /* ===== 图 ===== */
   figure{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px;margin:16px 0;text-align:center;}
-  figcaption{font-size:13px;color:var(--faint);margin-top:10px;}
+  figcaption{font-size:13px;color:var(--faint);margin-top:8px;}
   svg{max-width:100%;height:auto;}
+  .row{display:flex;gap:18px;flex-wrap:wrap;align-items:center;justify-content:center;}
+  .wave{transform-origin:center;animation:pop 2.4s ease-out infinite;opacity:0;}
+  .wave.w2{animation-delay:.8s;} .wave.w3{animation-delay:1.6s;}
+  @keyframes pop{0%{opacity:.7;transform:scale(.4);}80%{opacity:0;transform:scale(1.2);}100%{opacity:0;}}
+  .hand{animation:raise 1.8s ease-in-out infinite;transform-origin:60px 95px;}
+  @keyframes raise{0%,100%{transform:rotate(0deg);}50%{transform:rotate(-12deg);}}
   /* ===== 表格 ===== */
   table{width:100%;border-collapse:collapse;font-size:14.5px;margin:14px 0;background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden;}
-  th{background:#F9FAFB;text-align:left;padding:10px 14px;font-size:13px;color:var(--muted);border-bottom:1px solid var(--line);}
-  td{padding:10px 14px;border-bottom:1px solid var(--line-soft);vertical-align:top;}
+  th{background:#F4F2EC;text-align:left;padding:9px 14px;font-size:13px;color:var(--muted);border-bottom:1px solid var(--line);}
+  td{padding:9px 14px;border-bottom:1px solid var(--line-soft);vertical-align:top;}
   tr:last-child td{border-bottom:none;}
   /* ===== 演练面板 ===== */
   .lab{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;margin:16px 0;}
   .lab-head{padding:12px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
   .lab-head b{font-size:15px;}
-  .lab-head .hint{font-size:13px;color:var(--faint);}
+  .hint{font-size:13px;color:var(--faint);}
   .steps{display:flex;flex-wrap:wrap;gap:6px;padding:14px 20px 0;}
-  .chip{font-size:12.5px;font-weight:600;padding:4px 12px;border-radius:999px;background:#F3F4F6;color:var(--faint);border:1px solid var(--line);transition:all .25s;}
-  .chip.on{background:var(--accent);border-color:var(--accent);color:#fff;}
-  .chip.done{background:var(--accent-soft);border-color:var(--accent-line);color:var(--accent);}
+  .chip{font-size:12.5px;font-weight:600;padding:4px 12px;border-radius:999px;background:#F4F2EC;color:var(--faint);border:1px solid var(--line);transition:all .25s;}
+  .chip.on{background:var(--teal);border-color:var(--teal);color:#fff;}
+  .chip.done{background:var(--teal-soft);border-color:var(--teal-line);color:#1E7268;}
   .lab-body{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:18px;padding:16px 20px 20px;}
-  .device{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#FAFBFC;}
-  .device-bar{background:#F3F4F6;border-bottom:1px solid var(--line);padding:7px 14px;font-size:12.5px;color:var(--muted);display:flex;justify-content:space-between;}
+  .device{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#FBFAF7;}
+  .device-bar{background:#F4F2EC;border-bottom:1px solid var(--line);padding:7px 14px;font-size:12.5px;color:var(--muted);display:flex;justify-content:space-between;}
   .device-screen{padding:16px;min-height:230px;font-size:14px;}
   .app-title{font-weight:700;font-size:14.5px;padding-bottom:8px;border-bottom:1px solid var(--line-soft);margin-bottom:10px;}
-  .dev-row{display:flex;justify-content:space-between;align-items:center;background:var(--accent-soft);border:1px solid var(--accent-line);border-radius:8px;padding:9px 13px;margin:8px 0;animation:fadein .4s;}
+  .dev-row{display:flex;justify-content:space-between;align-items:center;background:var(--teal-soft);border:1px solid var(--teal-line);border-radius:8px;padding:9px 13px;margin:8px 0;animation:fadein .4s;}
   .dev-row small{color:var(--muted);}
-  .temp{font-size:42px;font-weight:800;color:var(--accent);text-align:center;margin:14px 0 2px;font-variant-numeric:tabular-nums;animation:fadein .3s;}
+  .temp{font-size:42px;font-weight:800;color:var(--coral);text-align:center;margin:14px 0 2px;font-variant-numeric:tabular-nums;animation:fadein .3s;}
   .temp-sub{text-align:center;font-size:13px;color:var(--muted);}
   .stat{font-size:13px;color:var(--muted);text-align:center;margin-top:12px;}
   .svc-tree{font-size:13.5px;line-height:2.05;font-family:ui-monospace,Consolas,monospace;}
-  .svc-tree .u{color:var(--accent);}
+  .svc-tree .u{color:var(--teal);}
   .placeholder{color:var(--faint);text-align:center;padding-top:70px;font-size:14px;}
   .logcat{background:var(--code-bg);border-radius:10px;overflow:hidden;display:flex;flex-direction:column;}
-  .logcat-head{padding:7px 14px;font-size:12px;color:var(--code-cm);border-bottom:1px solid #1E293B;font-family:ui-monospace,Consolas,monospace;display:flex;justify-content:space-between;}
-  .logcat-body{padding:12px 14px;font-size:12.5px;line-height:1.95;font-family:ui-monospace,Consolas,monospace;color:#CBD5E1;overflow-y:auto;max-height:252px;min-height:230px;}
-  .logcat-body .t{color:#475569;} .logcat-body .api{color:#7DD3FC;} .logcat-body .ok{color:#86EFAC;} .logcat-body .c{color:#64748B;}
-  .lab-foot{padding:0 20px 20px;display:flex;gap:10px;align-items:center;}
-  .btn{font-family:inherit;font-size:14.5px;font-weight:600;cursor:pointer;border-radius:8px;padding:9px 22px;border:1px solid var(--accent);background:var(--accent);color:#fff;transition:background .15s;}
-  .btn:hover{background:#1D4ED8;}
+  .logcat-head{padding:7px 14px;font-size:12px;color:var(--code-cm);border-bottom:1px solid #3A352C;font-family:ui-monospace,Consolas,monospace;display:flex;justify-content:space-between;}
+  .logcat-body{padding:12px 14px;font-size:12.5px;line-height:1.95;font-family:ui-monospace,Consolas,monospace;color:#D6CFC2;overflow-y:auto;max-height:252px;min-height:230px;}
+  .logcat-body .t{color:#6B6455;} .logcat-body .api{color:var(--code-kw);} .logcat-body .ok{color:var(--code-str);} .logcat-body .c{color:var(--code-cm);}
+  .lab-foot{padding:0 20px 20px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+  .btn{font-family:inherit;font-size:14.5px;font-weight:600;cursor:pointer;border-radius:8px;padding:9px 22px;border:1px solid var(--coral);background:var(--coral);color:#fff;transition:background .15s;}
+  .btn:hover{background:#C24E38;}
   .btn.ghost{background:var(--card);color:var(--muted);border-color:var(--line);}
   .btn.ghost:hover{color:var(--ink);border-color:var(--faint);}
   .pulse{animation:blink 1.1s ease-in-out infinite;}
@@ -111,24 +118,24 @@
   /* ===== 自测 ===== */
   .quiz-q{font-weight:700;font-size:16px;margin:20px 0 10px;}
   .opt{display:block;width:100%;text-align:left;font-family:inherit;font-size:14.5px;cursor:pointer;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px 16px;margin:7px 0;color:var(--ink);transition:border-color .15s;}
-  .opt:hover{border-color:var(--accent);}
-  .opt.right{background:var(--green-soft);border-color:#10B981;font-weight:600;}
-  .opt.wrong{background:var(--red-soft);border-color:#EF4444;}
+  .opt:hover{border-color:var(--teal);}
+  .opt.right{background:var(--teal-soft);border-color:var(--teal);font-weight:600;}
+  .opt.wrong{background:var(--coral-soft);border-color:var(--coral);}
   .opt:disabled{cursor:default;}
   .explain{display:none;font-size:14px;border-radius:8px;padding:10px 14px;margin:6px 0;}
   .explain.show{display:block;animation:fadein .25s;}
-  .explain.good{background:var(--green-soft);border:1px solid var(--green-line);}
-  .explain.bad{background:var(--red-soft);border:1px solid #FECACA;}
+  .explain.good{background:var(--teal-soft);border:1px solid var(--teal-line);}
+  .explain.bad{background:var(--coral-soft);border:1px solid var(--coral-line);}
   /* ===== 底部 ===== */
   .next-links{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0;}
   .next-links a{display:inline-block;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:9px 18px;font-size:14px;font-weight:600;}
-  .next-links a:hover{border-color:var(--accent);text-decoration:none;}
+  .next-links a:hover{border-color:var(--coral);text-decoration:none;}
   footer{border-top:1px solid var(--line);margin-top:56px;padding-top:20px;font-size:13px;color:var(--faint);}
   @media (max-width:900px){
     .layout{grid-template-columns:1fr;gap:0;}
     .toc{display:none;}
     .lab-body{grid-template-columns:1fr;}
-    h1{font-size:26px;}
+    h1{font-size:25px;}
   }
 </style>
 </head>
@@ -145,262 +152,223 @@
 
 <div class="layout">
 <aside class="toc" id="toc">
-  <div class="toc-title">本页目录</div>
-  <a href="#roles">0 · 两个角色</a>
-  <a href="#adv">1 · 广播与扫描</a>
-  <a href="#conn">2 · 连接与参数</a>
-  <a href="#gatt">3 · GATT 数据模型</a>
-  <a href="#cccd">4 · 订阅与 CCCD</a>
-  <a href="#lab">5 · 完整链路演练</a>
-  <a href="#quiz">6 · 自测</a>
-  <a href="#map">7 · 术语对照与延伸</a>
+  <div class="toc-title">本课目录</div>
+  <a href="#intro">开场 · 两位新同学</a>
+  <a href="#adv">第 1 站 · 举手喊话</a>
+  <a href="#conn">第 2 站 · 拉手悄悄话</a>
+  <a href="#gatt">第 3 站 · 宝贝柜子</a>
+  <a href="#cccd">第 4 站 · 小红花</a>
+  <a href="#lab">第 5 站 · 动手玩</a>
+  <a href="#quiz">下课自测</a>
+  <a href="#map">比喻对照表</a>
 </aside>
 
 <main>
-  <div class="crumb">图解教程 / BLE 链路</div>
-  <h1>图解 BLE 链路：从扫描到一条温度数据</h1>
-  <p class="lead">一个温度值怎么从传感器跑到手机屏幕上？这一页用比喻把整条链路讲透，每一步都配上对应的 Android API。读完再进正文，你会发现那些接口名突然都认识了。</p>
-  <div class="meta"><span>难度：入门</span><span>阅读约 15 分钟</span><span>含交互演练</span><span>配套：Android 开发指南</span></div>
+  <div class="crumb">蓝牙幼儿园 / 第一课</div>
+  <h1>蓝牙幼儿园 · <em>一条温度数据的旅程</em></h1>
+  <p class="lead">24.5°C 这个数字，怎么从温度计跑到手机屏幕上？这一课把它讲成一个教室里的故事。每一站都标出了大人们的真实叫法和代码，故事负责让你懂，正文负责让你会。</p>
+  <div class="meta"><span>难度：零基础</span><span>约 15 分钟</span><span>含交互演练</span><span>配套：Android 开发指南</span></div>
 
-  <!-- ===== 0 角色 ===== -->
-  <section id="roles">
-    <h2><span class="no">00</span>先认清两个角色</h2>
-    <p>BLE 通信里只有两种角色。温度传感器这类设备守着数据、等人来取，叫 <b>外设（Peripheral）</b>；手机这类主动去找设备、发起连接的一方，叫 <b>中心设备（Central）</b>。你的 Android App 几乎总是中心设备。</p>
-    <div class="analogy"><span class="tag">打个比方</span>把 BLE 世界想成一间大教室：传感器是坐在座位上、知道答案的同学；手机是走动提问的老师。同学不离开座位，只负责「让人找到」和「回答问题」；老师负责找人、建立对话、拿到答案。整条链路就是「老师怎么找到同学并拿到那个温度值」。</div>
-    <figure>
-      <svg viewBox="0 0 640 130" width="640" aria-label="角色示意">
-        <rect x="20" y="25" width="180" height="80" rx="10" fill="#EFF4FF" stroke="#C7D7FE" stroke-width="2"/>
-        <text x="110" y="58" text-anchor="middle" font-size="15" font-weight="bold" fill="#1F2937">温度传感器</text>
-        <text x="110" y="82" text-anchor="middle" font-size="12.5" fill="#6B7280">Peripheral · 外设</text>
-        <rect x="440" y="25" width="180" height="80" rx="10" fill="#ECFDF5" stroke="#A7F3D0" stroke-width="2"/>
-        <text x="530" y="58" text-anchor="middle" font-size="15" font-weight="bold" fill="#1F2937">Android 手机</text>
-        <text x="530" y="82" text-anchor="middle" font-size="12.5" fill="#6B7280">Central · 中心设备</text>
-        <line x1="205" y1="65" x2="435" y2="65" stroke="#9CA3AF" stroke-width="2" stroke-dasharray="6 5"/>
-        <text x="320" y="52" text-anchor="middle" font-size="12.5" fill="#6B7280">广播 → 扫描 → 连接 → 数据</text>
-        <text x="320" y="88" text-anchor="middle" font-size="12" fill="#9CA3AF">本页走完这条线</text>
-      </svg>
-      <figcaption>图 0 · 本页的主角和路线</figcaption>
-    </figure>
+  <!-- ===== 开场 ===== -->
+  <section id="intro">
+    <h2><span class="no">开场</span>今天来了两位新同学</h2>
+    <div class="card">
+      <div class="say"><span class="tag">老师说</span>同学们坐好。今天教室里来了两位新同学：一位是<b>温度计小温</b>，它知道现在有多热；另一位是<b>手机大手</b>，它想把温度显示给主人看。小温不会走路，大手也不能穿墙——它们只能靠「喊话」和「悄悄话」交流。这就是蓝牙。</div>
+      <div class="row">
+        <svg viewBox="0 0 200 170" width="180" aria-label="温度计小温">
+          <ellipse cx="100" cy="152" rx="56" ry="8" fill="#EFEAE0"/>
+          <rect x="78" y="22" width="44" height="104" rx="22" fill="#FFF" stroke="#D95B43" stroke-width="4.5"/>
+          <circle cx="100" cy="126" r="25" fill="#D95B43"/>
+          <rect x="92" y="60" width="16" height="70" rx="8" fill="#D95B43"/>
+          <circle cx="90" cy="42" r="4" fill="#2B2620"/><circle cx="110" cy="42" r="4" fill="#2B2620"/>
+          <path d="M92 52 Q100 58 108 52" stroke="#2B2620" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+          <g class="hand"><rect x="122" y="70" width="28" height="10" rx="5" fill="#EBA79A" transform="rotate(-30 122 75)"/></g>
+          <text x="100" y="16" text-anchor="middle" font-size="13" fill="#D95B43" font-weight="bold">小温</text>
+        </svg>
+        <svg viewBox="0 0 200 170" width="180" aria-label="手机大手">
+          <ellipse cx="100" cy="152" rx="56" ry="8" fill="#EFEAE0"/>
+          <rect x="62" y="18" width="76" height="130" rx="16" fill="#2A9D8F"/>
+          <rect x="70" y="30" width="60" height="98" rx="8" fill="#FFFDF8"/>
+          <circle cx="88" cy="66" r="4.5" fill="#2B2620"/><circle cx="112" cy="66" r="4.5" fill="#2B2620"/>
+          <path d="M88 80 Q100 89 112 80" stroke="#2B2620" stroke-width="3" fill="none" stroke-linecap="round"/>
+          <rect x="80" y="100" width="40" height="14" rx="7" fill="#E9F4F2"/>
+          <text x="100" y="111" text-anchor="middle" font-size="10" fill="#1E7268" font-weight="bold">24.5°C</text>
+          <text x="100" y="14" text-anchor="middle" font-size="13" fill="#1E7268" font-weight="bold">大手</text>
+        </svg>
+      </div>
+      <p>小温这样的同学，大名叫做<span class="term">外设 Peripheral</span>——它守着一样宝贝（温度），等人来取。大手这样的同学叫<span class="term2">中心设备 Central</span>——它主动去找宝贝。你的 Android App 几乎总是扮演大手。</p>
+      <p>整节课我们就看一件事：<b>24.5°C 这个数字，怎么从小温的肚子跑到大手的屏幕上。</b>一共五站，走起。</p>
+    </div>
   </section>
 
-  <!-- ===== 1 广播与扫描 ===== -->
+  <!-- ===== 第 1 站 ===== -->
   <section id="adv">
-    <h2><span class="no">01</span>广播与扫描：设备怎么被找到</h2>
-    <p>传感器没连上任何手机之前，唯一能做的事是<b>周期性地对外广播</b>（Advertising）：每隔一段时间发一小包数据，内容通常是设备名、服务 UUID、厂商数据。手机侧调用 <code>BluetoothLeScanner.startScan()</code> 监听这些包，每收到一个就回调一次 <code>onScanResult()</code>——App 里的设备列表就是这么来的。</p>
-    <div class="analogy"><span class="tag">打个比方</span>广播就是同学隔一阵举一次手：「我在这儿，我是温度计。」扫描就是老师竖着耳朵听谁举手。注意两点：举手牌只有 <b>31 字节</b>，写不了几个字，所以广播内容要精简；举手太勤费电、太慢难被发现，<b>广播间隔是产品要做的取舍</b>。</div>
+    <h2><span class="no">第 1 站</span>举手喊话：「我在这儿！」</h2>
+    <p>小温想让人找到自己，办法只有一个：<b>隔一小会儿就举一次手，喊一嗓子</b>——「我叫小温！我是个温度计！」这声喊话，就是<span class="term">广播 Advertising</span>。</p>
     <figure>
-      <svg viewBox="0 0 640 150" width="640" aria-label="广播时序">
-        <line x1="60" y1="100" x2="600" y2="100" stroke="#E5E7EB" stroke-width="2"/>
-        <text x="60" y="130" font-size="12" fill="#9CA3AF">t</text>
-        <g fill="#2563EB">
-          <rect x="100" y="70" width="10" height="30" rx="3"/><rect x="220" y="70" width="10" height="30" rx="3"/>
-          <rect x="340" y="70" width="10" height="30" rx="3"/><rect x="460" y="70" width="10" height="30" rx="3"/>
-        </g>
-        <text x="105" y="58" text-anchor="middle" font-size="11.5" fill="#2563EB">ADV</text>
-        <text x="225" y="58" text-anchor="middle" font-size="11.5" fill="#2563EB">ADV</text>
-        <text x="345" y="58" text-anchor="middle" font-size="11.5" fill="#2563EB">ADV</text>
-        <text x="465" y="58" text-anchor="middle" font-size="11.5" fill="#2563EB">ADV</text>
-        <line x1="110" y1="112" x2="220" y2="112" stroke="#F59E0B" stroke-width="2"/>
-        <text x="165" y="128" text-anchor="middle" font-size="11.5" fill="#B45309">广播间隔</text>
-        <rect x="500" y="30" width="120" height="34" rx="8" fill="#FFFBEB" stroke="#FDE68A"/>
-        <text x="560" y="52" text-anchor="middle" font-size="12" fill="#B45309">每包 ≤ 31 字节</text>
-        <text x="60" y="30" font-size="12.5" fill="#6B7280">外设：周期性发广播包</text>
+      <svg viewBox="0 0 460 150" width="460" aria-label="广播示意">
+        <circle class="wave" cx="105" cy="78" r="58" fill="none" stroke="#D95B43" stroke-width="2.5"/>
+        <circle class="wave w2" cx="105" cy="78" r="58" fill="none" stroke="#EBA79A" stroke-width="2.5"/>
+        <circle class="wave w3" cx="105" cy="78" r="58" fill="none" stroke="#F0CFC6" stroke-width="2.5"/>
+        <rect x="88" y="48" width="34" height="66" rx="17" fill="#FFF" stroke="#D95B43" stroke-width="3.5"/>
+        <circle cx="105" cy="106" r="14" fill="#D95B43"/>
+        <circle cx="99" cy="62" r="2.8" fill="#2B2620"/><circle cx="111" cy="62" r="2.8" fill="#2B2620"/>
+        <g class="hand"><rect x="120" y="52" width="24" height="8" rx="4" fill="#EBA79A" transform="rotate(-35 120 56)"/></g>
+        <rect x="152" y="32" width="122" height="40" rx="10" fill="#FBF3E4" stroke="#EDD9B4" stroke-width="2"/>
+        <text x="213" y="49" text-anchor="middle" font-size="12.5" fill="#8A5510" font-weight="bold">我叫小温！</text>
+        <text x="213" y="64" text-anchor="middle" font-size="11" fill="#8A5510">我是温度计</text>
+        <rect x="316" y="42" width="60" height="84" rx="12" fill="#2A9D8F"/>
+        <rect x="322" y="50" width="48" height="64" rx="6" fill="#FFFDF8"/>
+        <circle cx="337" cy="72" r="3" fill="#2B2620"/><circle cx="355" cy="72" r="3" fill="#2B2620"/>
+        <path d="M337 82 Q346 88 355 82" stroke="#2B2620" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+        <text x="346" y="104" text-anchor="middle" font-size="9.5" fill="#1E7268" font-weight="bold">竖着耳朵听</text>
+        <text x="105" y="142" text-anchor="middle" font-size="12" fill="#D95B43" font-weight="bold">每隔一阵喊一次</text>
+        <text x="346" y="142" text-anchor="middle" font-size="12" fill="#1E7268" font-weight="bold">这就是「扫描」</text>
       </svg>
-      <figcaption>图 1 · 广播是周期性的短包，间隔与内容都是设计决策</figcaption>
+      <figcaption>小温周期性地举手喊话，大手竖着耳朵听——听到名字就记到小本本上</figcaption>
     </figure>
-    <div class="codeblock">
-      <div class="code-head"><span>ScanActivity.kt</span><span>Kotlin</span></div>
-<pre><span class="kw">val</span> scanner = bluetoothAdapter.bluetoothLeScanner
-<span class="kw">val</span> filter = ScanFilter.Builder()
-    .setServiceUuid(ParcelUuid.fromString(<span class="str">"00001809-0000-1000-8000-00805F9B34FB"</span>)) <span class="cm">// 温度服务</span>
-    .build()
-<span class="kw">val</span> settings = ScanSettings.Builder()
-    .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY) <span class="cm">// 用户正在等结果时用低延迟</span>
-    .build()
-scanner.startScan(listOf(filter), settings, scanCallback)
-<span class="cm">// scanCallback.onScanResult(result) → result.device 可用于建连，result.scanRecord 是原始广播</span></pre>
-    </div>
-    <div class="callout warn"><span class="tag">新手常踩</span>Android 7.0 起 30 秒内启停扫描超过 5 次会被限流；8.1 起熄屏时不带过滤器的扫描会被暂停。扫描要统一入口、带 <code>ScanFilter</code>、用完即停。详见 <a href="../#android/development-guide/scan-filter">过滤与后台扫描</a>。</div>
+    <p>大手竖起耳朵听谁在喊话，这个动作叫<span class="term2">扫描 Scanning</span>。听到「小温」就记到小本本上——你在 App 里看到的设备列表，就是这个本本。</p>
+    <div class="say"><span class="tag">老师说</span>注意哦，小温的喊话牌只有 <b>31 个字节</b>那么大，就像一张小便利贴，写不了几个字，所以名字要短、挑最要紧的写。喊得太勤快会累（费电），喊得太慢又半天被人发现——<b>多久喊一次，是个要动脑筋的决定</b>。</div>
+    <div class="note"><span class="tag">大人翻译</span>广播间隔常见 20ms～10s；传统广播包 31 字节，主动扫描还能追问一句（Scan Response，又一张 31 字节便利贴）。Android 侧入口是 <code>BluetoothLeScanner.startScan()</code>，每个广播包回调一次 <code>onScanResult()</code>。详见 <a href="../#bluetooth/fundamentals/advertising">广播篇</a>。</div>
   </section>
 
-  <!-- ===== 2 连接 ===== -->
+  <!-- ===== 第 2 站 ===== -->
   <section id="conn">
-    <h2><span class="no">02</span>连接：从「喊话」切换到「对话」</h2>
-    <p>在扫描结果里选中设备后，调用 <code>device.connectGatt()</code> 发起连接。连上之后规则变了：外设停止广播，双方按约定的周期交换数据。这个周期叫 <b>连接事件</b>，节奏由三个参数决定：</p>
+    <h2><span class="no">第 2 站</span>拉手说悄悄话</h2>
+    <p>大手在小本本上点了小温的名字，走过去<b>拉住它的手</b>。这一下，叫<span class="term">建立连接 Connection</span>。拉上手以后，规矩就变了：</p>
     <ul>
-      <li><b>Connection Interval</b>：多久碰一次头（7.5ms ～ 4s）。越小延迟越低、越费电。</li>
-      <li><b>Slave Latency</b>：外设没数据时可以跳过几次事件。省电的关键。</li>
-      <li><b>Supervision Timeout</b>：多久没碰头就判定断线。</li>
+      <li>小温<b>不用再满教室喊话</b>了——反正大手已经找到它了。</li>
+      <li>两个人改成<b>说悄悄话</b>：约好「每隔 30 毫秒碰一次头」，有话说话，没话就各干各的。</li>
+      <li>小温还可以撒娇：「我没变化时，让我<b>跳过几次碰头</b>睡会儿觉嘛。」大手同意了，它就更省电。</li>
     </ul>
-    <div class="analogy"><span class="tag">打个比方</span>扫描阶段是「满教室喊话」，连接之后改成「拉着手说悄悄话」：约好每 30ms 碰一次头，有话说话、没话各忙各的；传感器还能申请「没变化时让我翘几次碰头睡会儿」。<b>BLE 省电的本质不是不干活，而是约好了才干活。</b></div>
+    <div class="say"><span class="tag">老师说</span>「每隔多久碰一次头」叫<span class="term">连接间隔 Connection Interval</span>；「可以偷懒跳过几次」叫<span class="term">从机延迟 Slave Latency</span>。碰头越勤，说话越快，但两个人都越累。<b>蓝牙省电的秘密不是不干活，是约好了才干活。</b></div>
     <figure>
-      <svg viewBox="0 0 640 140" width="640" aria-label="连接事件时序">
-        <line x1="50" y1="95" x2="610" y2="95" stroke="#E5E7EB" stroke-width="2"/>
-        <g>
-          <rect x="90" y="65" width="12" height="30" rx="3" fill="#2563EB"/><text x="96" y="55" text-anchor="middle" font-size="11" fill="#2563EB">事件</text>
-          <rect x="210" y="80" width="12" height="15" rx="3" fill="#D1D5DB"/><text x="216" y="70" text-anchor="middle" font-size="10.5" fill="#9CA3AF">跳过</text>
-          <rect x="330" y="80" width="12" height="15" rx="3" fill="#D1D5DB"/><text x="336" y="70" text-anchor="middle" font-size="10.5" fill="#9CA3AF">跳过</text>
-          <rect x="450" y="65" width="12" height="30" rx="3" fill="#2563EB"/><text x="456" y="55" text-anchor="middle" font-size="11" fill="#2563EB">事件</text>
-        </g>
-        <line x1="102" y1="108" x2="210" y2="108" stroke="#F59E0B" stroke-width="2"/>
-        <text x="156" y="125" text-anchor="middle" font-size="11.5" fill="#B45309">interval</text>
-        <text x="276" y="125" text-anchor="middle" font-size="11.5" fill="#9CA3AF">latency 允许外设休眠</text>
-        <text x="50" y="30" font-size="12.5" fill="#6B7280">连接后：按周期醒来，外设可跳过空闲事件</text>
+      <svg viewBox="0 0 560 130" width="560" aria-label="连接事件时序">
+        <line x1="40" y1="88" x2="530" y2="88" stroke="#E8E4DC" stroke-width="2"/>
+        <rect x="80" y="58" width="12" height="30" rx="3" fill="#2A9D8F"/><text x="86" y="48" text-anchor="middle" font-size="11" fill="#1E7268">碰头</text>
+        <rect x="190" y="73" width="12" height="15" rx="3" fill="#D8D2C6"/><text x="196" y="63" text-anchor="middle" font-size="10.5" fill="#A39B8E">睡觉</text>
+        <rect x="300" y="73" width="12" height="15" rx="3" fill="#D8D2C6"/><text x="306" y="63" text-anchor="middle" font-size="10.5" fill="#A39B8E">睡觉</text>
+        <rect x="410" y="58" width="12" height="30" rx="3" fill="#2A9D8F"/><text x="416" y="48" text-anchor="middle" font-size="11" fill="#1E7268">碰头</text>
+        <line x1="92" y1="101" x2="190" y2="101" stroke="#C07A1E" stroke-width="2"/>
+        <text x="141" y="118" text-anchor="middle" font-size="11.5" fill="#C07A1E">连接间隔</text>
+        <text x="300" y="118" text-anchor="middle" font-size="11.5" fill="#A39B8E">从机延迟：没变化就跳过</text>
       </svg>
-      <figcaption>图 2 · 连接事件与从机延迟</figcaption>
+      <figcaption>约好周期碰头，没数据时外设可以跳过几次——这就是省电的机制</figcaption>
     </figure>
-    <div class="codeblock">
-      <div class="code-head"><span>ConnectStep.kt</span><span>Kotlin</span></div>
-<pre><span class="kw">val</span> gatt = device.connectGatt(context, <span class="kw">false</span>, gattCallback) <span class="cm">// false = 直接连接，用户在等</span>
-
-<span class="kw">override fun</span> <span class="fn">onConnectionStateChange</span>(gatt: BluetoothGatt, status: Int, newState: Int) {
-    <span class="kw">if</span> (status == BluetoothGatt.GATT_SUCCESS && newState == STATE_CONNECTED) {
-        gatt.discoverServices() <span class="cm">// 连上 ≠ 能用，下一步先看数据模型</span>
-    }
-}</pre>
-    </div>
-    <div class="callout tip"><span class="tag">记住</span><code>STATE_CONNECTED</code> 只代表链路建立。服务没发现、订阅没完成之前，业务上都不算「就绪」。断线重连要当全新会话处理，别复用旧 GATT 对象。</div>
+    <div class="note"><span class="tag">大人翻译</span>Android 侧 <code>device.connectGatt(context, false, callback)</code> 发起连接，<code>onConnectionStateChange()</code> 报告结果。interval 范围 7.5ms～4s；iOS 对参数另有硬规则。连上 ≠ 能用，还要走下一站。详见 <a href="../#bluetooth/fundamentals/connection">连接篇</a>。</div>
   </section>
 
-  <!-- ===== 3 GATT ===== -->
+  <!-- ===== 第 3 站 ===== -->
   <section id="gatt">
-    <h2><span class="no">03</span>GATT：设备里的数据长什么样</h2>
-    <p>连上之后，设备把它的数据组织成一棵三层树，这套规范叫 <b>GATT</b>：</p>
-    <ul>
-      <li><b>Service（服务）</b>：一组相关功能的集合，比如「健康温度计」「电池」。</li>
-      <li><b>Characteristic（特征）</b>：真正放数据的叶子节点，比如「温度测量值」。</li>
-      <li><b>Descriptor（描述符）</b>：特征的附加配置，最重要的是控制订阅的 CCCD。</li>
-    </ul>
-    <p>每个节点用 <b>UUID</b> 标识。蓝牙联盟给常见功能分配了 16 位短 UUID：温度测量是 <code>0x2A6E</code>，电池电量是 <code>0x2A19</code>。看到标准 UUID，不用问厂商就知道数据格式。</p>
-    <div class="analogy"><span class="tag">打个比方</span>GATT 就是设备随身携带的一个<b>文件柜</b>：Service 是抽屉（温度抽屉、电量抽屉），Characteristic 是抽屉里的文件夹（温度值、报警阈值），UUID 是每个抽屉和文件夹上的<b>统一标签</b>——全世界的温度计都用同一套标签，所以手机不用猜。<code>discoverServices()</code> 就是「把柜子拉开看一遍」，不看就伸手乱摸是要碰壁的。</div>
+    <h2><span class="no">第 3 站</span>小温的宝贝柜子</h2>
+    <p>拉上手，大手问：「温度放哪儿呀？」小温拍拍肚子：「都在我的<b>小柜子</b>里！」这个柜子的大名叫 <span class="term">GATT</span>，它长这样：</p>
     <figure>
-      <svg viewBox="0 0 640 250" width="640" aria-label="GATT 树">
-        <rect x="230" y="14" width="180" height="36" rx="8" fill="#1F2937"/>
-        <text x="320" y="38" text-anchor="middle" font-size="13.5" fill="#fff" font-weight="bold">设备（Peripheral）</text>
-        <line x1="320" y1="50" x2="320" y2="70" stroke="#9CA3AF" stroke-width="2"/>
-        <line x1="160" y1="70" x2="480" y2="70" stroke="#9CA3AF" stroke-width="2"/>
-        <line x1="160" y1="70" x2="160" y2="90" stroke="#9CA3AF" stroke-width="2"/>
-        <line x1="480" y1="70" x2="480" y2="90" stroke="#9CA3AF" stroke-width="2"/>
-        <rect x="60" y="90" width="200" height="36" rx="8" fill="#EFF4FF" stroke="#C7D7FE" stroke-width="2"/>
-        <text x="160" y="113" text-anchor="middle" font-size="13" fill="#1F2937" font-weight="bold">Service 0x1809 温度计</text>
-        <rect x="380" y="90" width="200" height="36" rx="8" fill="#EFF4FF" stroke="#C7D7FE" stroke-width="2"/>
-        <text x="480" y="113" text-anchor="middle" font-size="13" fill="#1F2937" font-weight="bold">Service 0x180F 电池</text>
-        <line x1="160" y1="126" x2="160" y2="150" stroke="#9CA3AF" stroke-width="2"/>
-        <line x1="480" y1="126" x2="480" y2="150" stroke="#9CA3AF" stroke-width="2"/>
-        <rect x="55" y="150" width="210" height="40" rx="8" fill="#ECFDF5" stroke="#A7F3D0" stroke-width="2"/>
-        <text x="160" y="167" text-anchor="middle" font-size="12.5" fill="#1F2937" font-weight="bold">Char 0x2A6E 温度测量</text>
-        <text x="160" y="183" text-anchor="middle" font-size="11" fill="#6B7280">Notify · sint16 · 0.01°C</text>
-        <rect x="380" y="150" width="200" height="40" rx="8" fill="#ECFDF5" stroke="#A7F3D0" stroke-width="2"/>
-        <text x="480" y="167" text-anchor="middle" font-size="12.5" fill="#1F2937" font-weight="bold">Char 0x2A19 电量</text>
-        <text x="480" y="183" text-anchor="middle" font-size="11" fill="#6B7280">Read / Notify · uint8 · %</text>
-        <line x1="160" y1="190" x2="160" y2="210" stroke="#9CA3AF" stroke-width="2"/>
-        <rect x="55" y="210" width="210" height="32" rx="8" fill="#FFFBEB" stroke="#FDE68A" stroke-width="2"/>
-        <text x="160" y="231" text-anchor="middle" font-size="12" fill="#B45309" font-weight="bold">Descriptor 0x2902（CCCD）</text>
+      <svg viewBox="0 0 460 240" width="460" aria-label="GATT 柜子示意">
+        <rect x="30" y="16" width="400" height="208" rx="14" fill="#FBF3E4" stroke="#EDD9B4" stroke-width="3"/>
+        <text x="230" y="42" text-anchor="middle" font-size="14.5" fill="#8A5510" font-weight="bold">小温的柜子（GATT 属性表）</text>
+        <rect x="52" y="58" width="356" height="70" rx="10" fill="#FFF" stroke="#D95B43" stroke-width="2.5"/>
+        <text x="66" y="80" font-size="13" fill="#D95B43" font-weight="bold">温度抽屉（服务 Service 1809）</text>
+        <rect x="66" y="90" width="160" height="28" rx="8" fill="#FBEDE9"/>
+        <text x="146" y="109" text-anchor="middle" font-size="12" fill="#B04A35" font-weight="bold">温度值格子 2A6E</text>
+        <rect x="236" y="90" width="160" height="28" rx="8" fill="#FBEDE9"/>
+        <text x="316" y="109" text-anchor="middle" font-size="12" fill="#B04A35" font-weight="bold">报警阈值格子（可写）</text>
+        <rect x="52" y="140" width="356" height="70" rx="10" fill="#FFF" stroke="#2A9D8F" stroke-width="2.5"/>
+        <text x="66" y="162" font-size="13" fill="#1E7268" font-weight="bold">电量抽屉（服务 Service 180F）</text>
+        <rect x="66" y="172" width="160" height="28" rx="8" fill="#E9F4F2"/>
+        <text x="146" y="191" text-anchor="middle" font-size="12" fill="#1E7268" font-weight="bold">电量格子 2A19</text>
+        <rect x="236" y="172" width="160" height="28" rx="8" fill="#E9F4F2"/>
+        <text x="316" y="191" text-anchor="middle" font-size="12" fill="#1E7268" font-weight="bold">订阅卡格子 2902</text>
       </svg>
-      <figcaption>图 3 · 一棵典型的 GATT 树：服务 → 特征 → 描述符</figcaption>
+      <figcaption>抽屉 = 服务，格子 = 特征，名牌编号 = UUID</figcaption>
     </figure>
-    <div class="codeblock">
-      <div class="code-head"><span>DiscoverStep.kt</span><span>Kotlin</span></div>
-<pre><span class="kw">override fun</span> <span class="fn">onServicesDiscovered</span>(gatt: BluetoothGatt, status: Int) {
-    <span class="kw">val</span> service = gatt.getService(UUID.fromString(<span class="str">"00001809-0000-1000-8000-00805F9B34FB"</span>))
-    <span class="kw">val</span> tempChar = service?.getCharacteristic(UUID.fromString(<span class="str">"00002A6E-0000-1000-8000-00805F9B34FB"</span>))
-    <span class="cm">// 16 位 UUID 的完整形式：0000xxxx-0000-1000-8000-00805F9B34FB</span>
-}</pre>
-    </div>
-    <p>对特征有三种基本操作：<b>Read</b>（问一次答一次）、<b>Write</b>（下发配置，比如报警阈值）、<b>Notify/Indicate</b>（设备主动上报）。温度这种持续变化的值，靠轮询 Read 又慢又费电，正确姿势是订阅。</p>
-  </section>
-
-  <!-- ===== 4 CCCD ===== -->
-  <section id="cccd">
-    <h2><span class="no">04</span>订阅：那朵「小红花」贴在哪</h2>
-    <p>订阅的开关不在特征本身，而在它旁边的描述符 <b>CCCD</b>（Client Characteristic Configuration，UUID <code>0x2902</code>）。往里写不同的值，含义不同：</p>
+    <ul>
+      <li>一个大抽屉叫一个<span class="term">服务 Service</span>——「温度抽屉」「电量抽屉」。</li>
+      <li>抽屉里的小格子叫<span class="term">特征 Characteristic</span>——每个格子放一样宝贝。</li>
+      <li>每个抽屉和格子都挂着<b>名牌</b>，编号叫<span class="term">UUID</span>。全世界商量好了：温度格子统一写 <b>2A6E</b>，电量格子写 <b>2A19</b>。大手看名牌就知道里面是什么，不用猜。</li>
+    </ul>
+    <div class="say"><span class="tag">老师说</span>大手找温度要按顺序来：<b>先拉开抽屉，再找格子</b>。这个「把柜子看一遍」的动作叫<span class="term2">服务发现 discoverServices()</span>。不先看柜子就伸手乱摸，可是要碰壁的哦。</div>
+    <p>找到格子以后，有三种玩法：</p>
     <table>
-      <tr><th>写入值（小端）</th><th>含义</th><th>区别</th></tr>
-      <tr><td><code>01 00</code></td><td>开启 Notify</td><td>设备发了就走，不等确认，快</td></tr>
-      <tr><td><code>02 00</code></td><td>开启 Indicate</td><td>每条要等手机回「收到」才发下一条，可靠但慢</td></tr>
-      <tr><td><code>00 00</code></td><td>关闭</td><td>停止上报</td></tr>
+      <tr><th>玩法</th><th>幼儿园说法</th><th>大人说法</th></tr>
+      <tr><td>读</td><td>问一句「现在几度呀」，小温答一次</td><td>Read</td></tr>
+      <tr><td>写</td><td>递张小纸条：「超过 30 度记得报警」</td><td>Write</td></tr>
+      <tr><td>订阅</td><td>贴朵小红花：「温度一变就<b>主动</b>告诉我！」</td><td>Notify / Indicate</td></tr>
     </table>
-    <div class="analogy"><span class="tag">打个比方</span>CCCD 是文件夹边上的一张<b>订阅卡</b>：贴上花（写 01 00）等于告诉设备「以后有变化主动告诉我，不用我来问」；贴大红花（02 00）还要求「每汇报一条，等我签收再报下一条」。<b>很多「收不到通知」的 bug，根因就是卡没贴、贴错了文件夹，或者只贴了自己这一半。</b></div>
-    <div class="codeblock">
-      <div class="code-head"><span>SubscribeStep.kt</span><span>Kotlin · 两步都要做</span></div>
-<pre><span class="cm">// 第 1 步：打开本地开关（只影响手机侧分发，不会通知设备）</span>
-gatt.setCharacteristicNotification(tempChar, <span class="kw">true</span>)
-
-<span class="cm">// 第 2 步：写远端 CCCD，设备才会真的开始发</span>
-<span class="kw">val</span> cccd = tempChar.getDescriptor(UUID.fromString(<span class="str">"00002902-0000-1000-8000-00805F9B34FB"</span>))
-gatt.writeDescriptor(cccd, BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE) <span class="cm">// 01 00</span>
-
-<span class="kw">override fun</span> <span class="fn">onDescriptorWrite</span>(gatt: BluetoothGatt, d: BluetoothGattDescriptor, status: Int) {
-    <span class="cm">// status == GATT_SUCCESS 才算订阅完成，此前设备可能已经开始发数据</span>
-}
-<span class="kw">override fun</span> <span class="fn">onCharacteristicChanged</span>(gatt: BluetoothGatt, c: BluetoothGattCharacteristic, value: ByteArray) {
-    <span class="cm">// 2A6E：小端 sint16，除以 100 得摄氏度。2450 → 24.50°C</span>
-}</pre>
-    </div>
-    <div class="callout warn"><span class="tag">高频故障</span>只做第 1 步不写 CCCD，是「收不到通知」的头号原因。另外订阅要等服务发现完成、写操作要排队（一次只提交一条属性操作），详见 <a href="../#android/development-guide/notify-cccd">Notify 与 CCCD</a>、<a href="../#android/development-guide/thread-state-machine">命令队列</a>。</div>
+    <div class="note"><span class="tag">大人翻译</span>温度这种持续变化的值，轮询 Read 又慢又费电，正确姿势是订阅——下一站就讲怎么贴花。详见 <a href="../#bluetooth/communication/gatt-att">GATT 篇</a>、<a href="../#bluetooth/communication/uuid-services">UUID 篇</a>。</div>
   </section>
 
-  <!-- ===== 5 演练 ===== -->
+  <!-- ===== 第 4 站 ===== -->
+  <section id="cccd">
+    <h2><span class="no">第 4 站</span>那朵小红花，贴在哪儿？</h2>
+    <p>订阅不是嘴上说说。每个能主动汇报的格子旁边，都有一个<b>专门贴小红花的小格子</b>，名牌编号 <b>2902</b>，大名<span class="term">CCCD</span>。往里面写不同的值，意思不一样：</p>
+    <table>
+      <tr><th>写入值</th><th>幼儿园说法</th><th>大人说法</th></tr>
+      <tr><td><code>01 00</code></td><td>贴红花：「有变化就说，不用等我问」</td><td>Notify，发了就走，快</td></tr>
+      <tr><td><code>02 00</code></td><td>贴大红花：「说完要等我回『收到』，才能说下一条」</td><td>Indicate，可靠但慢</td></tr>
+      <tr><td><code>00 00</code></td><td>摘掉花：「先别吵我」</td><td>关闭上报</td></tr>
+    </table>
+    <div class="say"><span class="tag">老师说</span>很多同学的 App 收不到温度，十有八九是<b>忘了贴花</b>，或者<b>花贴错了格子</b>！记住：<b>先贴花，再等汇报</b>。而且贴花这个动作本身也是「写」，要等小温点头（写回调成功）才算贴牢了。</div>
+    <div class="note"><span class="tag">大人翻译</span>Android 上要两步都做：<code>setCharacteristicNotification()</code> 开本地开关，再 <code>writeDescriptor(CCCD, 01 00)</code> 写远端，等 <code>onDescriptorWrite()</code> 成功。只做第一步是「收不到通知」的头号原因。数据从 <code>onCharacteristicChanged()</code> 回来；2A6E 是小端 sint16，除以 100 才是摄氏度。详见 <a href="../#android/development-guide/notify-cccd">订阅篇</a>。</div>
+  </section>
+
+  <!-- ===== 第 5 站 ===== -->
   <section id="lab">
-    <h2><span class="no">05</span>完整链路演练</h2>
-    <p>下面把五步串起来。左边是 App 界面，右边是同一时刻 logcat 里发生的事。每点一次「下一步」走一站，注意界面状态和回调的对应关系——<b>每个「成功」都来自一个具体的回调，而不是方法调用本身。</b></p>
+    <h2><span class="no">第 5 站 · 动手玩</span>你来当大手，走一遍全程</h2>
+    <p>下面是一台模拟手机。每点一次按钮走一站。<b>右边的深色窗口</b>是大人们真正写的代码在做什么——看看，是不是和刚才的故事一一对应？</p>
     <div class="lab">
-      <div class="lab-head"><b>链路演练</b><span class="hint">扫描 → 连接 → 服务发现 → 订阅 → 通知</span></div>
+      <div class="lab-head"><b>链路演练</b><span class="hint">扫描 → 拉手 → 看柜子 → 贴花 → 收温度</span></div>
       <div class="steps" id="chips">
-        <span class="chip">1 扫描</span><span class="chip">2 连接</span><span class="chip">3 服务发现</span><span class="chip">4 订阅</span><span class="chip">5 通知</span>
+        <span class="chip">1 扫描</span><span class="chip">2 拉手</span><span class="chip">3 看柜子</span><span class="chip">4 贴花</span><span class="chip">5 收温度</span>
       </div>
       <div class="lab-body">
         <div class="device">
-          <div class="device-bar"><span>ThermometerApp</span><span id="conn-state">未连接</span></div>
-          <div class="device-screen" id="screen">
+          <div class="device-bar"><span>大手 · 温度计 App</span><span id="conn-state">未连接</span></div>
+          <div class="device-screen">
             <div class="app-title">我的温度计</div>
-            <div id="screen-body"><div class="placeholder">点击下方「开始扫描」</div></div>
+            <div id="screen-body"><div class="placeholder">点下面的按钮开始</div></div>
           </div>
         </div>
         <div class="logcat">
-          <div class="logcat-head"><span>logcat · BluetoothGatt</span><span>verbose</span></div>
-          <div class="logcat-body" id="log"><span class="c">// 每一步对应的真实调用与回调会出现在这里</span></div>
+          <div class="logcat-head"><span>大人们的世界 · 真实 API</span><span>logcat</span></div>
+          <div class="logcat-body" id="log"><span class="c">// 每走一站，这里出现对应的真实代码</span></div>
         </div>
       </div>
       <div class="lab-foot">
         <button class="btn" id="next">开始扫描</button>
-        <button class="btn ghost" id="reset">重置</button>
-        <span class="hint" id="step-hint" style="font-size:13px;color:var(--faint);"></span>
+        <button class="btn ghost" id="reset">重来</button>
+        <span class="hint" id="step-hint"></span>
       </div>
     </div>
   </section>
 
-  <!-- ===== 6 自测 ===== -->
+  <!-- ===== 自测 ===== -->
   <section id="quiz">
-    <h2><span class="no">06</span>自测：三个问题</h2>
-    <p>答对全部三题，说明这条链路你已经建立了正确的心智模型。</p>
+    <h2><span class="no">下课前</span>三个问题，答对就毕业</h2>
     <div class="card" id="quiz-box"></div>
-    <p id="quiz-done" style="display:none;font-weight:700;color:var(--green);">全部答对。可以进入正文了——建议从 <a href="../#android/development-guide/guide">Android 导读</a> 开始。</p>
+    <p id="quiz-done" style="display:none;font-weight:700;color:#1E7268;">全对啦！你已经从小小班毕业，可以去大人的教室了——建议从 <a href="../#android/development-guide/guide">Android 导读</a> 开始。</p>
   </section>
 
-  <!-- ===== 7 对照 ===== -->
+  <!-- ===== 对照表 ===== -->
   <section id="map">
-    <h2><span class="no">07</span>术语对照与延伸阅读</h2>
+    <h2><span class="no">附录</span>比喻 ↔ 术语 对照表</h2>
     <table>
-      <tr><th>本页比喻</th><th>术语</th><th>Android 入口</th><th>深入阅读</th></tr>
-      <tr><td>举手喊话</td><td>Advertising</td><td><code>BluetoothLeAdvertiser</code>（外设侧）</td><td><a href="../#bluetooth/fundamentals/advertising">广播篇</a></td></tr>
-      <tr><td>竖耳朵听</td><td>Scanning</td><td><code>BluetoothLeScanner</code></td><td><a href="../#android/development-guide/scanning">扫描篇</a></td></tr>
-      <tr><td>拉手 + 约好碰头</td><td>Connection / Interval / Latency</td><td><code>connectGatt()</code></td><td><a href="../#bluetooth/fundamentals/connection">连接篇</a></td></tr>
-      <tr><td>文件柜 / 抽屉 / 文件夹</td><td>GATT / Service / Characteristic</td><td><code>discoverServices()</code></td><td><a href="../#bluetooth/communication/gatt-att">GATT 篇</a></td></tr>
-      <tr><td>统一标签</td><td>UUID</td><td><code>ParcelUuid</code></td><td><a href="../#bluetooth/communication/uuid-services">UUID 篇</a></td></tr>
-      <tr><td>订阅卡 / 小红花</td><td>CCCD（0x2902）</td><td><code>writeDescriptor()</code></td><td><a href="../#android/development-guide/notify-cccd">订阅篇</a></td></tr>
-      <tr><td>一张纸条写几个字</td><td>MTU 与分包</td><td><code>requestMtu()</code></td><td><a href="../#bluetooth/communication/data-transfer">分包篇</a></td></tr>
+      <tr><th>幼儿园说法</th><th>术语</th><th>去哪儿深造</th></tr>
+      <tr><td>举手喊话</td><td>广播 Advertising</td><td><a href="../#bluetooth/fundamentals/advertising">广播篇</a></td></tr>
+      <tr><td>竖耳朵听</td><td>扫描 Scanning</td><td><a href="../#android/development-guide/scanning">Android 扫描篇</a></td></tr>
+      <tr><td>拉手 + 约好碰头</td><td>连接与连接参数</td><td><a href="../#bluetooth/fundamentals/connection">连接篇</a></td></tr>
+      <tr><td>宝贝柜子 / 抽屉 / 格子</td><td>GATT / Service / Characteristic</td><td><a href="../#bluetooth/communication/gatt-att">GATT 篇</a></td></tr>
+      <tr><td>名牌编号</td><td>UUID</td><td><a href="../#bluetooth/communication/uuid-services">UUID 篇</a></td></tr>
+      <tr><td>小红花</td><td>CCCD（0x2902）与 Notify / Indicate</td><td><a href="../#android/development-guide/notify-cccd">订阅篇</a></td></tr>
+      <tr><td>一张纸条写几个字</td><td>MTU 与分包</td><td><a href="../#bluetooth/communication/data-transfer">分包篇</a></td></tr>
     </table>
-    <h3>接下来读什么</h3>
+    <h3>大人的教室在这里</h3>
     <div class="next-links">
       <a href="../#bluetooth">Bluetooth 通用知识（16 篇）</a>
       <a href="../#android">Android 蓝牙开发指南（50 篇）</a>
-      <a href="../#bluetooth/lab/nrf-connect-lab">动手实验：nRF Connect 走通链路</a>
+      <a href="../#bluetooth/lab/nrf-connect-lab">不写代码先动手：nRF Connect 实验</a>
     </div>
-    <footer>
-      青竹蓝牙开发指南 · 图解教程样板页。比喻为教学简化，工程细节以正文与官方规范为准。<br>
-      本页为单文件 HTML，无外部依赖；交互演练为模拟数据，非真实设备通信。
-    </footer>
+    <div class="note"><span class="tag">说明</span>这一课是「幼儿园版」样板：故事负责让你<b>懂</b>，大人的教室负责让你<b>会</b>。两边讲的是同一件事，随时可以互相跳。比喻为教学简化，工程细节以正文与官方规范为准；演练为模拟数据，非真实设备通信。</div>
+    <footer>青竹蓝牙开发指南 · 蓝牙幼儿园第一课 · <a href="../">回到主站</a></footer>
   </section>
 </main>
 </div>
@@ -425,29 +393,29 @@ const chips=[...document.querySelectorAll('.chip')];
 const connState=document.getElementById('conn-state');
 const stepHint=document.getElementById('step-hint');
 let logT=0;
-function ts(){ logT+=Math.floor(180+Math.random()*400); const s=(logT/1000).toFixed(3); return `<span class="t">${s.padStart(7)}</span>`; }
+function ts(){ logT+=Math.floor(180+Math.random()*400); return `<span class="t">${(logT/1000).toFixed(3).padStart(7)}</span>`; }
 function addLog(html){ const d=document.createElement('div'); d.innerHTML=html; logEl.appendChild(d); logEl.scrollTop=logEl.scrollHeight; }
 
 const STEPS=[
-  { label:'下一步：连接设备', hint:'扫描回调带来 device 句柄',
-    screen:`<div class="dev-row"><span>XiaoWen-T <small>· -52 dBm</small></span><b style="color:var(--accent)">可连接</b></div><div class="stat">扫描到 1 台匹配设备</div>`,
-    log:()=>`${ts()} <span class="api">startScan</span>(filter=0x1809, LOW_LATENCY)<br>${ts()} <span class="ok">onScanResult</span>: XiaoWen-T rssi=-52<br>${ts()} <span class="c">// 列表项来自扫描回调，不是 startScan 的返回值</span>`,
+  { label:'下一步：拉住小温', hint:'扫描回调带来设备句柄',
+    screen:`<div class="dev-row"><span>小温 XiaoWen-T <small>· -52 dBm</small></span><b style="color:#1E7268">发现了</b></div><div class="stat">小本本上出现了小温的名字</div>`,
+    log:()=>`${ts()} <span class="api">startScan</span>(filter=0x1809)<br>${ts()} <span class="ok">onScanResult</span>: XiaoWen-T rssi=-52<br>${ts()} <span class="c">// 扫描 = 竖耳朵听喊话</span>`,
     after(){ connState.textContent='扫描中'; } },
-  { label:'下一步：发现服务', hint:'CONNECTED 之后才能 discoverServices',
-    screen:`<div class="stat pulse" id="st">正在建立连接…</div>`,
-    log:()=>`${ts()} <span class="api">connectGatt</span>(autoConnect=false)<br>${ts()} <span class="ok">onConnectionStateChange</span>: status=0 CONNECTED<br>${ts()} <span class="c">// 链路建立 ≠ 业务就绪</span>`,
-    after(){ connState.textContent='连接中'; setTimeout(()=>{ if(S.step!==1) return; const st=document.getElementById('st'); if(st){st.classList.remove('pulse'); st.textContent='已连接 · 等待服务发现';} connState.textContent='已连接'; },900); } },
-  { label:'下一步：订阅温度', hint:'按 UUID 找到 2A6E 和它的 CCCD',
-    screen:`<div class="svc-tree">Service <span class="u">1809</span> Health Thermometer<br>&nbsp;&nbsp;└ Char <span class="u">2A6E</span> Temperature [Notify]<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└ Desc <span class="u">2902</span> CCCD<br>Service <span class="u">180F</span> Battery<br>&nbsp;&nbsp;└ Char <span class="u">2A19</span> Battery Level [Read]</div>`,
-    log:()=>`${ts()} <span class="api">discoverServices</span>()<br>${ts()} <span class="ok">onServicesDiscovered</span>: status=0, 2 services<br>${ts()} <span class="c">// 服务表是这次会话的快照，重连后要重新发现</span>`,
+  { label:'下一步：看柜子', hint:'CONNECTED 之后才能发现服务',
+    screen:`<div class="stat pulse" id="st">正在拉手…</div>`,
+    log:()=>`${ts()} <span class="api">connectGatt</span>(autoConnect=false)<br>${ts()} <span class="ok">onConnectionStateChange</span>: CONNECTED<br>${ts()} <span class="c">// 拉手 = 建立连接，之后按间隔碰头</span>`,
+    after(){ connState.textContent='连接中'; setTimeout(()=>{ if(S.step!==1) return; const st=document.getElementById('st'); if(st){st.classList.remove('pulse'); st.textContent='拉上手了！悄悄话通道已打开';} connState.textContent='已连接'; },900); } },
+  { label:'下一步：贴小红花', hint:'按名牌找到 2A6E 和它的订阅卡',
+    screen:`<div class="svc-tree">温度抽屉 <span class="u">1809</span><br>&nbsp;&nbsp;└ 温度格子 <span class="u">2A6E</span> [可订阅]<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└ 订阅卡 <span class="u">2902</span><br>电量抽屉 <span class="u">180F</span><br>&nbsp;&nbsp;└ 电量格子 <span class="u">2A19</span> [可读]</div>`,
+    log:()=>`${ts()} <span class="api">discoverServices</span>()<br>${ts()} <span class="ok">onServicesDiscovered</span>: 2 services<br>${ts()} <span class="c">// 看柜子 = 服务发现，看名牌认格子</span>`,
     after(){ connState.textContent='已连接'; } },
-  { label:'下一步：接收通知', hint:'本地开关 + 写 CCCD，两步都要',
-    screen:`<div class="stat pulse" id="st2">正在写入 CCCD（01 00）…</div>`,
-    log:()=>`${ts()} <span class="api">setCharacteristicNotification</span>(2A6E, true)<br>${ts()} <span class="api">writeDescriptor</span>(2902, 01 00)<br>${ts()} <span class="ok">onDescriptorWrite</span>: status=0<br>${ts()} <span class="c">// 写成功才算订阅完成</span>`,
-    after(){ setTimeout(()=>{ if(S.step!==3) return; const st=document.getElementById('st2'); if(st){st.classList.remove('pulse'); st.textContent='订阅成功 · 等待设备上报';} },900); } },
-  { label:'重新开始', hint:'通知持续到达，无需再调用任何 API',
-    screen:`<div class="temp" id="temp">24.50°C</div><div class="temp-sub">Notify 推送中 · 每秒约 1 条</div><div class="stat">设备主动上报，App 只负责解析</div>`,
-    log:()=>`${ts()} <span class="ok">onCharacteristicChanged</span>: 2A6E = 92 09<br>${ts()} <span class="c">// 小端 sint16: 0x0992 = 2450 → 24.50°C</span>`,
+  { label:'下一步：等小温汇报', hint:'本地开关 + 写订阅卡，两步都要',
+    screen:`<div class="stat pulse" id="st2">正在贴花（写 01 00）…</div>`,
+    log:()=>`${ts()} <span class="api">setCharacteristicNotification</span>(2A6E, true)<br>${ts()} <span class="api">writeDescriptor</span>(2902, 01 00)<br>${ts()} <span class="ok">onDescriptorWrite</span>: SUCCESS<br>${ts()} <span class="c">// 贴花 = 两步都做，写成功才算贴牢</span>`,
+    after(){ setTimeout(()=>{ if(S.step!==3) return; const st=document.getElementById('st2'); if(st){st.classList.remove('pulse'); st.textContent='贴牢了！小温答应：温度一变就汇报';} },900); } },
+  { label:'毕业啦（重来再玩）', hint:'通知持续到达，不用再调任何 API',
+    screen:`<div class="temp" id="temp">24.50°C</div><div class="temp-sub">小温主动汇报中</div><div class="stat">不用问，它自己说！</div>`,
+    log:()=>`${ts()} <span class="ok">onCharacteristicChanged</span>: 92 09<br>${ts()} <span class="c">// 小端 sint16: 0x0992 = 2450 → 24.50°C</span>`,
     after(){ connState.textContent='已连接 · 订阅中';
       S.timer=setInterval(()=>{
         S.temp=Math.round((S.temp+(Math.random()-.5)*.4)*100)/100;
@@ -470,8 +438,8 @@ function next(){
 }
 function reset(){
   clearInterval(S.timer); S.timer=null; S.step=-1; S.temp=24.5; logT=0;
-  screenBody.innerHTML='<div class="placeholder">点击下方「开始扫描」</div>';
-  logEl.innerHTML='<span class="c">// 每一步对应的真实调用与回调会出现在这里</span>';
+  screenBody.innerHTML='<div class="placeholder">点下面的按钮开始</div>';
+  logEl.innerHTML='<span class="c">// 每走一站，这里出现对应的真实代码</span>';
   nextBtn.textContent='开始扫描'; stepHint.textContent=''; connState.textContent='未连接';
   renderChips();
 }
@@ -480,18 +448,18 @@ document.getElementById('reset').addEventListener('click',reset);
 
 /* ===== 自测 ===== */
 const QUIZ=[
-  { q:'1. BLE 外设省电的核心机制是什么？', opts:[
-      ['持续广播但降低发射功率',false,'降低功率有帮助，但不是核心。核心在连接后的调度。'],
-      ['按连接间隔周期醒来，空闲时靠 latency 跳过事件',true,'正确。约好才干活、没事多睡觉，这是 BLE 低功耗设计的本质。'],
-      ['只在用户打开 App 时才工作',false,'设备无法感知手机 App 的状态。']]},
-  { q:'2. 收到 STATE_CONNECTED 后，下一步应该做什么？', opts:[
-      ['直接 writeCharacteristic 写业务数据',false,'还不知道特征句柄，写会失败。先发现服务。'],
-      ['调用 discoverServices()，按 UUID 找到目标特征',true,'正确。连接建立只是链路就绪，服务发现之后才谈得上读写。'],
-      ['重新 startScan 确认设备还在',false,'已经连上了，扫描可以停了。']]},
-  { q:'3. 订阅后收不到通知，最应该先检查什么？', opts:[
-      ['是否只调了 setCharacteristicNotification 而没写 CCCD',true,'正确。本地开关不通知设备；必须写 0x2902 = 01 00 并等 onDescriptorWrite 成功。'],
-      ['手机蓝牙版本是否低于 5.0',false,'Notify 从 4.0 就有，与 5.0 无关。'],
-      ['设备名是否包含中文',false,'设备名与通知无关。']]},
+  { q:'1. 小温为什么能省电？', opts:[
+      ['它一直大声喊话',false,'一直喊话最费电啦！'],
+      ['约好碰头时间，没变化还能翘几次',true,'对！连接间隔 + 从机延迟：约好才干活，没事多睡觉。'],
+      ['它把电池藏起来了',false,'哈哈，电池可藏不住。']]},
+  { q:'2. 大手想找温度，应该先做什么？', opts:[
+      ['直接伸手进肚子摸',false,'乱摸要碰壁的！'],
+      ['先看柜子：拉开抽屉找格子',true,'对！先 discoverServices()，按 UUID 名牌找到 2A6E。'],
+      ['再喊一遍它的名字',false,'已经拉上手了，不用喊啦。']]},
+  { q:'3. App 收不到温度汇报，最先检查什么？', opts:[
+      ['小红花贴没贴、贴对格子没',true,'对！CCCD（2902）要写 01 00，本地开关和远端写入两步都要做。'],
+      ['手机屏幕够不够亮',false,'屏幕亮度不管蓝牙的事哦。'],
+      ['小温的名字好不好听',false,'名字再好听，不贴花也不汇报呀。']]},
 ];
 let solved=0;
 const box=document.getElementById('quiz-box');
@@ -506,7 +474,7 @@ QUIZ.forEach((item,qi)=>{
       sib.forEach(s=>s.disabled=true);
       b.classList.add(ok?'right':'wrong');
       ex.className='explain show '+(ok?'good':'bad');
-      ex.textContent=(ok?'✓ ':'✗ ')+why;
+      ex.textContent=(ok?'✓ ':'✗ ')+why+(ok?'':' 再想想～');
       if(ok){ solved++; if(solved===QUIZ.length) document.getElementById('quiz-done').style.display='block'; }
       else setTimeout(()=>{ sib.forEach(s=>{s.disabled=false;s.classList.remove('wrong');}); ex.className='explain'; },2000);
     });
