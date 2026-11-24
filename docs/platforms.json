@@ -5,7 +5,7 @@
       "id": "bluetooth",
       "name": "Bluetooth",
       "title": "Bluetooth 通用知识",
-      "summary": "先看经典蓝牙与 BLE 怎么选，再用温度传感器走一遍广播、连接、数据收发和安全流程。涉及系统 API 的地方可以跳到对应的 Android 章节。"
+      "summary": "先看协议栈全景和版本能力地图，再用温度传感器走一遍广播、连接、数据收发和安全流程；不写代码也能用 nRF Connect 把链路做一遍。涉及系统 API 的地方可以跳到对应的平台章节。"
     },
     {
       "id": "android",
