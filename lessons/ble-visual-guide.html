@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>蓝牙幼儿园 · 第一课：一条温度数据的旅程 · 青竹蓝牙开发指南</title>
+<title>蓝牙小课堂 · 第一课：温度计和手机是怎么说上话的 · 青竹蓝牙开发指南</title>
 <style>
   :root{
     --bg:#F7F6F2; --card:#FFFFFF; --ink:#2B2620; --muted:#7A7267; --faint:#A39B8E;
@@ -22,14 +22,12 @@
   a{color:var(--blue);text-decoration:none;} a:hover{text-decoration:underline;}
   code{font-family:ui-monospace,"SF Mono",Consolas,monospace;font-size:.87em;
     background:#F0EDE6;border:1px solid var(--line);border-radius:5px;padding:1px 6px;color:#5B4A2F;}
-  /* ===== 顶栏 ===== */
   .topbar{background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:50;}
   .topbar-in{max-width:1080px;margin:0 auto;padding:0 20px;height:56px;display:flex;align-items:center;gap:14px;}
   .logo{font-weight:800;font-size:16px;white-space:nowrap;}
   .logo span{color:var(--coral);}
   .topnav{margin-left:auto;display:flex;gap:18px;font-size:14px;}
   .topnav a{color:var(--muted);} .topnav a:hover{color:var(--coral);text-decoration:none;}
-  /* ===== 布局 ===== */
   .layout{max-width:1080px;margin:0 auto;padding:32px 20px 80px;display:grid;grid-template-columns:200px minmax(0,1fr);gap:40px;}
   .toc{position:sticky;top:84px;align-self:start;font-size:14px;}
   .toc-title{font-size:12px;font-weight:700;color:var(--faint);letter-spacing:2px;margin-bottom:10px;}
@@ -37,14 +35,18 @@
   .toc a:hover{color:var(--coral);text-decoration:none;}
   .toc a.on{color:var(--coral);border-left-color:var(--coral);font-weight:600;background:linear-gradient(90deg,var(--coral-soft),transparent);}
   main{min-width:0;}
-  /* ===== 头部 ===== */
   .crumb{font-size:13.5px;color:var(--faint);margin-bottom:14px;}
-  h1{font-size:31px;line-height:1.4;letter-spacing:.5px;margin-bottom:10px;}
+  h1{font-size:30px;line-height:1.4;letter-spacing:.5px;margin-bottom:10px;}
   h1 em{font-style:normal;color:var(--coral);}
   .lead{font-size:16.5px;color:var(--muted);margin-bottom:16px;}
-  .meta{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px;}
+  .meta{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px;}
   .meta span{font-size:12.5px;color:var(--muted);background:var(--card);border:1px solid var(--line);border-radius:999px;padding:3px 12px;}
-  /* ===== 章节 ===== */
+  .journey{display:flex;flex-wrap:wrap;gap:0;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px 10px;margin:0 0 8px;}
+  .j-step{flex:1 1 120px;text-align:center;padding:4px 8px;position:relative;}
+  .j-step .n{display:inline-flex;width:26px;height:26px;border-radius:50%;background:var(--coral-soft);color:var(--coral);font-weight:800;font-size:13px;align-items:center;justify-content:center;border:1px solid var(--coral-line);}
+  .j-step .t{display:block;font-weight:700;font-size:14px;margin-top:4px;}
+  .j-step .s{display:block;font-size:12px;color:var(--faint);}
+  .j-step:not(:last-child)::after{content:"→";position:absolute;right:-7px;top:12px;color:var(--faint);font-size:14px;}
   section{margin-top:44px;}
   h2{font-size:22px;padding-bottom:10px;border-bottom:1px solid var(--line);margin-bottom:16px;scroll-margin-top:80px;}
   h2 .no{display:inline-block;font-size:12.5px;font-weight:700;color:var(--coral);background:var(--coral-soft);
@@ -53,20 +55,19 @@
   p{margin:10px 0;}
   ul{margin:10px 0 10px 24px;} li{margin:5px 0;}
   .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:22px 24px;margin:16px 0;}
-  b,strong{color:var(--ink);}
   .term{background:var(--teal-soft);color:#1E7268;border:1px solid var(--teal-line);border-radius:6px;padding:0 7px;font-weight:700;white-space:nowrap;font-size:.93em;}
   .term2{background:var(--blue-soft);color:#2F58A8;border:1px solid var(--blue-line);border-radius:6px;padding:0 7px;font-weight:700;white-space:nowrap;font-size:.93em;}
-  /* ===== 老师说 / 大人翻译 ===== */
-  .say{background:var(--amber-soft);border:1px solid var(--amber-line);border-left:4px solid var(--amber);
+  .key{background:var(--amber-soft);border:1px solid var(--amber-line);border-left:4px solid var(--amber);
     border-radius:8px;padding:12px 18px;margin:16px 0;font-size:15.5px;}
-  .say .tag,.note .tag{display:block;font-size:12px;font-weight:800;letter-spacing:2px;margin-bottom:3px;}
-  .say .tag{color:var(--amber);}
-  .say b{color:#8A5510;}
+  .key .tag,.note .tag{display:block;font-size:12px;font-weight:800;letter-spacing:2px;margin-bottom:3px;}
+  .key .tag{color:var(--amber);}
+  .key b{color:#8A5510;}
   .note{background:#F4F2EC;border:1px solid var(--line);border-left:4px solid var(--faint);
     border-radius:8px;padding:11px 16px;margin:16px 0;font-size:14px;color:var(--muted);}
   .note .tag{color:var(--faint);}
   .note code{font-size:.9em;}
-  /* ===== 图 ===== */
+  .recap{margin:18px 0 4px;padding:10px 16px;background:var(--teal-soft);border:1px solid var(--teal-line);border-radius:8px;font-size:15px;}
+  .recap b{color:#1E7268;}
   figure{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px;margin:16px 0;text-align:center;}
   figcaption{font-size:13px;color:var(--faint);margin-top:8px;}
   svg{max-width:100%;height:auto;}
@@ -74,14 +75,10 @@
   .wave{transform-origin:center;animation:pop 2.4s ease-out infinite;opacity:0;}
   .wave.w2{animation-delay:.8s;} .wave.w3{animation-delay:1.6s;}
   @keyframes pop{0%{opacity:.7;transform:scale(.4);}80%{opacity:0;transform:scale(1.2);}100%{opacity:0;}}
-  .hand{animation:raise 1.8s ease-in-out infinite;transform-origin:60px 95px;}
-  @keyframes raise{0%,100%{transform:rotate(0deg);}50%{transform:rotate(-12deg);}}
-  /* ===== 表格 ===== */
   table{width:100%;border-collapse:collapse;font-size:14.5px;margin:14px 0;background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden;}
   th{background:#F4F2EC;text-align:left;padding:9px 14px;font-size:13px;color:var(--muted);border-bottom:1px solid var(--line);}
   td{padding:9px 14px;border-bottom:1px solid var(--line-soft);vertical-align:top;}
   tr:last-child td{border-bottom:none;}
-  /* ===== 演练面板 ===== */
   .lab{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;margin:16px 0;}
   .lab-head{padding:12px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
   .lab-head b{font-size:15px;}
@@ -115,7 +112,6 @@
   .pulse{animation:blink 1.1s ease-in-out infinite;}
   @keyframes blink{0%,100%{opacity:1;}50%{opacity:.4;}}
   @keyframes fadein{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
-  /* ===== 自测 ===== */
   .quiz-q{font-weight:700;font-size:16px;margin:20px 0 10px;}
   .opt{display:block;width:100%;text-align:left;font-family:inherit;font-size:14.5px;cursor:pointer;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px 16px;margin:7px 0;color:var(--ink);transition:border-color .15s;}
   .opt:hover{border-color:var(--teal);}
@@ -126,7 +122,6 @@
   .explain.show{display:block;animation:fadein .25s;}
   .explain.good{background:var(--teal-soft);border:1px solid var(--teal-line);}
   .explain.bad{background:var(--coral-soft);border:1px solid var(--coral-line);}
-  /* ===== 底部 ===== */
   .next-links{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0;}
   .next-links a{display:inline-block;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:9px 18px;font-size:14px;font-weight:600;}
   .next-links a:hover{border-color:var(--coral);text-decoration:none;}
@@ -136,6 +131,7 @@
     .toc{display:none;}
     .lab-body{grid-template-columns:1fr;}
     h1{font-size:25px;}
+    .j-step:not(:last-child)::after{display:none;}
   }
 </style>
 </head>
@@ -153,189 +149,213 @@
 <div class="layout">
 <aside class="toc" id="toc">
   <div class="toc-title">本课目录</div>
-  <a href="#intro">开场 · 两位新同学</a>
-  <a href="#adv">第 1 站 · 举手喊话</a>
-  <a href="#conn">第 2 站 · 拉手悄悄话</a>
-  <a href="#gatt">第 3 站 · 宝贝柜子</a>
-  <a href="#cccd">第 4 站 · 小红花</a>
-  <a href="#lab">第 5 站 · 动手玩</a>
-  <a href="#quiz">下课自测</a>
-  <a href="#map">比喻对照表</a>
+  <a href="#intro">开场 · 桌上的两样东西</a>
+  <a href="#adv">第 1 步 · 广播与扫描</a>
+  <a href="#conn">第 2 步 · 建立连接</a>
+  <a href="#gatt">第 3 步 · 发现服务</a>
+  <a href="#cccd">第 4 步 · 订阅与通知</a>
+  <a href="#lab">第 5 步 · 动手走一遍</a>
+  <a href="#quiz">本课自测</a>
+  <a href="#map">全程回顾与速查</a>
 </aside>
 
 <main>
-  <div class="crumb">蓝牙幼儿园 / 第一课</div>
-  <h1>蓝牙幼儿园 · <em>一条温度数据的旅程</em></h1>
-  <p class="lead">24.5°C 这个数字，怎么从温度计跑到手机屏幕上？这一课把它讲成一个教室里的故事。每一站都标出了大人们的真实叫法和代码，故事负责让你懂，正文负责让你会。</p>
+  <div class="crumb">蓝牙小课堂 / 第一课</div>
+  <h1>温度计和手机，<em>是怎么说上话的</em></h1>
+  <p class="lead">这节课不绕弯子。桌上就两样东西：一个蓝牙温度计，一部手机。目标只有一个——让手机屏幕显示出温度计测到的温度。它们之间没有线，靠无线电交流。我们按顺序看它们一来一回到底做了什么。</p>
   <div class="meta"><span>难度：零基础</span><span>约 15 分钟</span><span>含交互演练</span><span>配套：Android 开发指南</span></div>
+  <div class="journey">
+    <div class="j-step"><span class="n">1</span><span class="t">广播 / 扫描</span><span class="s">先被发现</span></div>
+    <div class="j-step"><span class="n">2</span><span class="t">建立连接</span><span class="s">专属通道</span></div>
+    <div class="j-step"><span class="n">3</span><span class="t">发现服务</span><span class="s">认清数据</span></div>
+    <div class="j-step"><span class="n">4</span><span class="t">订阅</span><span class="s">写 CCCD</span></div>
+    <div class="j-step"><span class="n">5</span><span class="t">收通知</span><span class="s">温度上屏</span></div>
+  </div>
 
   <!-- ===== 开场 ===== -->
   <section id="intro">
-    <h2><span class="no">开场</span>今天来了两位新同学</h2>
+    <h2><span class="no">开场</span>桌上的两样东西</h2>
     <div class="card">
-      <div class="say"><span class="tag">老师说</span>同学们坐好。今天教室里来了两位新同学：一位是<b>温度计小温</b>，它知道现在有多热；另一位是<b>手机大手</b>，它想把温度显示给主人看。小温不会走路，大手也不能穿墙——它们只能靠「喊话」和「悄悄话」交流。这就是蓝牙。</div>
       <div class="row">
-        <svg viewBox="0 0 200 170" width="180" aria-label="温度计小温">
-          <ellipse cx="100" cy="152" rx="56" ry="8" fill="#EFEAE0"/>
-          <rect x="78" y="22" width="44" height="104" rx="22" fill="#FFF" stroke="#D95B43" stroke-width="4.5"/>
-          <circle cx="100" cy="126" r="25" fill="#D95B43"/>
-          <rect x="92" y="60" width="16" height="70" rx="8" fill="#D95B43"/>
-          <circle cx="90" cy="42" r="4" fill="#2B2620"/><circle cx="110" cy="42" r="4" fill="#2B2620"/>
-          <path d="M92 52 Q100 58 108 52" stroke="#2B2620" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-          <g class="hand"><rect x="122" y="70" width="28" height="10" rx="5" fill="#EBA79A" transform="rotate(-30 122 75)"/></g>
-          <text x="100" y="16" text-anchor="middle" font-size="13" fill="#D95B43" font-weight="bold">小温</text>
+        <svg viewBox="0 0 200 170" width="170" aria-label="蓝牙温度计">
+          <ellipse cx="100" cy="152" rx="52" ry="8" fill="#EFEAE0"/>
+          <rect x="76" y="20" width="48" height="112" rx="24" fill="#FFF" stroke="#D95B43" stroke-width="4"/>
+          <circle cx="100" cy="118" r="20" fill="#D95B43"/>
+          <rect x="93" y="58" width="14" height="62" rx="7" fill="#D95B43"/>
+          <rect x="86" y="34" width="28" height="14" rx="4" fill="#FBEDE9"/>
+          <text x="100" y="45" text-anchor="middle" font-size="9.5" fill="#B04A35" font-weight="bold">24.5</text>
+          <text x="100" y="14" text-anchor="middle" font-size="13" fill="#D95B43" font-weight="bold">蓝牙温度计</text>
         </svg>
-        <svg viewBox="0 0 200 170" width="180" aria-label="手机大手">
-          <ellipse cx="100" cy="152" rx="56" ry="8" fill="#EFEAE0"/>
+        <svg viewBox="0 0 200 170" width="170" aria-label="手机">
+          <ellipse cx="100" cy="152" rx="52" ry="8" fill="#EFEAE0"/>
           <rect x="62" y="18" width="76" height="130" rx="16" fill="#2A9D8F"/>
           <rect x="70" y="30" width="60" height="98" rx="8" fill="#FFFDF8"/>
-          <circle cx="88" cy="66" r="4.5" fill="#2B2620"/><circle cx="112" cy="66" r="4.5" fill="#2B2620"/>
-          <path d="M88 80 Q100 89 112 80" stroke="#2B2620" stroke-width="3" fill="none" stroke-linecap="round"/>
-          <rect x="80" y="100" width="40" height="14" rx="7" fill="#E9F4F2"/>
-          <text x="100" y="111" text-anchor="middle" font-size="10" fill="#1E7268" font-weight="bold">24.5°C</text>
-          <text x="100" y="14" text-anchor="middle" font-size="13" fill="#1E7268" font-weight="bold">大手</text>
+          <text x="100" y="66" text-anchor="middle" font-size="10" fill="#7A7267">当前温度</text>
+          <text x="100" y="94" text-anchor="middle" font-size="20" fill="#D95B43" font-weight="bold">--.-°C</text>
+          <rect x="80" y="106" width="40" height="12" rx="6" fill="#E9F4F2"/>
+          <text x="100" y="14" text-anchor="middle" font-size="13" fill="#1E7268" font-weight="bold">手机（Android）</text>
         </svg>
       </div>
-      <p>小温这样的同学，大名叫做<span class="term">外设 Peripheral</span>——它守着一样宝贝（温度），等人来取。大手这样的同学叫<span class="term2">中心设备 Central</span>——它主动去找宝贝。你的 Android App 几乎总是扮演大手。</p>
-      <p>整节课我们就看一件事：<b>24.5°C 这个数字，怎么从小温的肚子跑到大手的屏幕上。</b>一共五站，走起。</p>
+      <p>温度计里有一块蓝牙芯片，手机里也有一块。两块芯片用同一种「语言」——<b>低功耗蓝牙（BLE）</b>——就能交流。这种交流分两种角色：温度计这种<b>提供数据、等人来连</b>的叫<span class="term">外设 Peripheral</span>；手机这种<b>主动去找、发起连接</b>的叫<span class="term2">中心设备 Central</span>。你写的 Android App，指挥的就是手机这一块芯片。</p>
+      <p>接下来五步，就是这两块芯片从「互不相识」到「温度上屏」的全部过程。每一步都标出真实术语，学完这一课，你再去看 API 文档就知道每个接口在干嘛。</p>
     </div>
   </section>
 
-  <!-- ===== 第 1 站 ===== -->
+  <!-- ===== 第 1 步 ===== -->
   <section id="adv">
-    <h2><span class="no">第 1 站</span>举手喊话：「我在这儿！」</h2>
-    <p>小温想让人找到自己，办法只有一个：<b>隔一小会儿就举一次手，喊一嗓子</b>——「我叫小温！我是个温度计！」这声喊话，就是<span class="term">广播 Advertising</span>。</p>
+    <h2><span class="no">第 1 步</span>广播与扫描：先让手机发现温度计</h2>
+    <p>温度计还没连上任何手机，它怎么让手机知道自己存在？办法是：<b>每隔一段时间，向外发一小段无线电信号</b>，信号里写着「我叫 XiaoWen-T，我提供温度数据」。这个动作叫<span class="term">广播 Advertising</span>。它不针对谁，附近任何在监听的设备都能收到。</p>
+    <p>手机这边，App 调用扫描接口，让蓝牙芯片<b>监听这些信号</b>。每收到一个广播，系统就回调一次，把设备名、信号强度、广播内容交给 App。这个动作叫<span class="term2">扫描 Scanning</span>。App 把收到的设备列出来——你在界面上看到的设备列表，就是这么来的。</p>
     <figure>
-      <svg viewBox="0 0 460 150" width="460" aria-label="广播示意">
-        <circle class="wave" cx="105" cy="78" r="58" fill="none" stroke="#D95B43" stroke-width="2.5"/>
-        <circle class="wave w2" cx="105" cy="78" r="58" fill="none" stroke="#EBA79A" stroke-width="2.5"/>
-        <circle class="wave w3" cx="105" cy="78" r="58" fill="none" stroke="#F0CFC6" stroke-width="2.5"/>
-        <rect x="88" y="48" width="34" height="66" rx="17" fill="#FFF" stroke="#D95B43" stroke-width="3.5"/>
-        <circle cx="105" cy="106" r="14" fill="#D95B43"/>
-        <circle cx="99" cy="62" r="2.8" fill="#2B2620"/><circle cx="111" cy="62" r="2.8" fill="#2B2620"/>
-        <g class="hand"><rect x="120" y="52" width="24" height="8" rx="4" fill="#EBA79A" transform="rotate(-35 120 56)"/></g>
-        <rect x="152" y="32" width="122" height="40" rx="10" fill="#FBF3E4" stroke="#EDD9B4" stroke-width="2"/>
-        <text x="213" y="49" text-anchor="middle" font-size="12.5" fill="#8A5510" font-weight="bold">我叫小温！</text>
-        <text x="213" y="64" text-anchor="middle" font-size="11" fill="#8A5510">我是温度计</text>
-        <rect x="316" y="42" width="60" height="84" rx="12" fill="#2A9D8F"/>
-        <rect x="322" y="50" width="48" height="64" rx="6" fill="#FFFDF8"/>
-        <circle cx="337" cy="72" r="3" fill="#2B2620"/><circle cx="355" cy="72" r="3" fill="#2B2620"/>
-        <path d="M337 82 Q346 88 355 82" stroke="#2B2620" stroke-width="2.2" fill="none" stroke-linecap="round"/>
-        <text x="346" y="104" text-anchor="middle" font-size="9.5" fill="#1E7268" font-weight="bold">竖着耳朵听</text>
-        <text x="105" y="142" text-anchor="middle" font-size="12" fill="#D95B43" font-weight="bold">每隔一阵喊一次</text>
-        <text x="346" y="142" text-anchor="middle" font-size="12" fill="#1E7268" font-weight="bold">这就是「扫描」</text>
+      <svg viewBox="0 0 500 160" width="500" aria-label="广播与扫描">
+        <rect x="40" y="50" width="90" height="70" rx="12" fill="#FFF" stroke="#D95B43" stroke-width="3"/>
+        <circle cx="85" cy="100" r="12" fill="#D95B43"/>
+        <rect x="80" y="66" width="10" height="36" rx="5" fill="#D95B43"/>
+        <text x="85" y="140" text-anchor="middle" font-size="12" fill="#D95B43" font-weight="bold">温度计</text>
+        <circle class="wave" cx="85" cy="85" r="52" fill="none" stroke="#D95B43" stroke-width="2"/>
+        <circle class="wave w2" cx="85" cy="85" r="52" fill="none" stroke="#EBA79A" stroke-width="2"/>
+        <g>
+          <rect x="180" y="60" width="120" height="30" rx="6" fill="#FBEDE9" stroke="#F0CFC6"/>
+          <text x="240" y="80" text-anchor="middle" font-size="11.5" fill="#B04A35">广播包：名字 + 服务</text>
+          <path d="M300 75 L340 75" stroke="#D95B43" stroke-width="2" marker-end="url(#ar)"/>
+        </g>
+        <rect x="350" y="44" width="70" height="86" rx="12" fill="#2A9D8F"/>
+        <rect x="357" y="52" width="56" height="62" rx="6" fill="#FFFDF8"/>
+        <text x="385" y="78" text-anchor="middle" font-size="10" fill="#1E7268" font-weight="bold">XiaoWen-T</text>
+        <text x="385" y="96" text-anchor="middle" font-size="9" fill="#7A7267">-52 dBm</text>
+        <text x="385" y="140" text-anchor="middle" font-size="12" fill="#1E7268" font-weight="bold">手机：扫描中</text>
+        <defs><marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#D95B43"/></marker></defs>
+        <text x="240" y="118" text-anchor="middle" font-size="11.5" fill="#7A7267">每隔一阵发一次，谁都能收</text>
       </svg>
-      <figcaption>小温周期性地举手喊话，大手竖着耳朵听——听到名字就记到小本本上</figcaption>
+      <figcaption>温度计周期性发广播，手机监听并列出设备——此时双方还没有任何连接</figcaption>
     </figure>
-    <p>大手竖起耳朵听谁在喊话，这个动作叫<span class="term2">扫描 Scanning</span>。听到「小温」就记到小本本上——你在 App 里看到的设备列表，就是这个本本。</p>
-    <div class="say"><span class="tag">老师说</span>注意哦，小温的喊话牌只有 <b>31 个字节</b>那么大，就像一张小便利贴，写不了几个字，所以名字要短、挑最要紧的写。喊得太勤快会累（费电），喊得太慢又半天被人发现——<b>多久喊一次，是个要动脑筋的决定</b>。</div>
-    <div class="note"><span class="tag">大人翻译</span>广播间隔常见 20ms～10s；传统广播包 31 字节，主动扫描还能追问一句（Scan Response，又一张 31 字节便利贴）。Android 侧入口是 <code>BluetoothLeScanner.startScan()</code>，每个广播包回调一次 <code>onScanResult()</code>。详见 <a href="../#bluetooth/fundamentals/advertising">广播篇</a>。</div>
+    <p>关于广播，记住三个事实：</p>
+    <ul>
+      <li><b>广播包只有 31 字节</b>。装个设备名和几个服务编号就差不多了，所以广播内容必须精简。</li>
+      <li><b>广播间隔是个权衡</b>：发得勤，手机很快发现你，但费电；发得疏，省电，但半天才被看见。常见从几十毫秒到几秒。</li>
+      <li><b>收到广播 ≠ 连上设备</b>。这一步只是「看见」，双方还没建立任何关系。</li>
+    </ul>
+    <div class="note"><span class="tag">代码入口</span>Android：<code>BluetoothLeScanner.startScan()</code> 开始扫描，每个广播包回调一次 <code>onScanResult()</code>。注意 Android 7.0 起频繁启停扫描会被限流，8.1 起熄屏时不带过滤器的扫描会暂停。详见 <a href="../#bluetooth/fundamentals/advertising">广播篇</a>、<a href="../#android/development-guide/scan-filter">扫描与过滤</a>。</div>
+    <div class="recap"><b>本步收束：</b>广播 = 温度计周期性对外发信号；扫描 = 手机监听并列出设备。这一步只解决「被发现」。</div>
   </section>
 
-  <!-- ===== 第 2 站 ===== -->
+  <!-- ===== 第 2 步 ===== -->
   <section id="conn">
-    <h2><span class="no">第 2 站</span>拉手说悄悄话</h2>
-    <p>大手在小本本上点了小温的名字，走过去<b>拉住它的手</b>。这一下，叫<span class="term">建立连接 Connection</span>。拉上手以后，规矩就变了：</p>
+    <h2><span class="no">第 2 步</span>建立连接：开一条专属通道</h2>
+    <p>用户在列表里点了温度计，App 就向它<b>发起连接</b>。双方握手成功后，建立起一条<b>只属于它们俩的通信通道</b>。从这一刻起：</p>
     <ul>
-      <li>小温<b>不用再满教室喊话</b>了——反正大手已经找到它了。</li>
-      <li>两个人改成<b>说悄悄话</b>：约好「每隔 30 毫秒碰一次头」，有话说话，没话就各干各的。</li>
-      <li>小温还可以撒娇：「我没变化时，让我<b>跳过几次碰头</b>睡会儿觉嘛。」大手同意了，它就更省电。</li>
+      <li>温度计<b>停止广播</b>——已经连上了，不用再对外喊。</li>
+      <li>双方按约定的节奏交换数据：每隔一个<b>连接间隔</b>醒来一次，有数据就发，没数据就继续睡。</li>
+      <li>温度计可以要求<b>跳过几个空闲周期</b>（从机延迟），进一步省电。</li>
+      <li>如果太久没联系上，双方判定<b>连接超时</b>，通道断开。</li>
     </ul>
-    <div class="say"><span class="tag">老师说</span>「每隔多久碰一次头」叫<span class="term">连接间隔 Connection Interval</span>；「可以偷懒跳过几次」叫<span class="term">从机延迟 Slave Latency</span>。碰头越勤，说话越快，但两个人都越累。<b>蓝牙省电的秘密不是不干活，是约好了才干活。</b></div>
     <figure>
       <svg viewBox="0 0 560 130" width="560" aria-label="连接事件时序">
         <line x1="40" y1="88" x2="530" y2="88" stroke="#E8E4DC" stroke-width="2"/>
-        <rect x="80" y="58" width="12" height="30" rx="3" fill="#2A9D8F"/><text x="86" y="48" text-anchor="middle" font-size="11" fill="#1E7268">碰头</text>
-        <rect x="190" y="73" width="12" height="15" rx="3" fill="#D8D2C6"/><text x="196" y="63" text-anchor="middle" font-size="10.5" fill="#A39B8E">睡觉</text>
-        <rect x="300" y="73" width="12" height="15" rx="3" fill="#D8D2C6"/><text x="306" y="63" text-anchor="middle" font-size="10.5" fill="#A39B8E">睡觉</text>
-        <rect x="410" y="58" width="12" height="30" rx="3" fill="#2A9D8F"/><text x="416" y="48" text-anchor="middle" font-size="11" fill="#1E7268">碰头</text>
+        <rect x="80" y="58" width="12" height="30" rx="3" fill="#2A9D8F"/><text x="86" y="48" text-anchor="middle" font-size="11" fill="#1E7268">交换数据</text>
+        <rect x="190" y="73" width="12" height="15" rx="3" fill="#D8D2C6"/><text x="196" y="63" text-anchor="middle" font-size="10.5" fill="#A39B8E">跳过</text>
+        <rect x="300" y="73" width="12" height="15" rx="3" fill="#D8D2C6"/><text x="306" y="63" text-anchor="middle" font-size="10.5" fill="#A39B8E">跳过</text>
+        <rect x="410" y="58" width="12" height="30" rx="3" fill="#2A9D8F"/><text x="416" y="48" text-anchor="middle" font-size="11" fill="#1E7268">交换数据</text>
         <line x1="92" y1="101" x2="190" y2="101" stroke="#C07A1E" stroke-width="2"/>
         <text x="141" y="118" text-anchor="middle" font-size="11.5" fill="#C07A1E">连接间隔</text>
-        <text x="300" y="118" text-anchor="middle" font-size="11.5" fill="#A39B8E">从机延迟：没变化就跳过</text>
+        <text x="330" y="118" text-anchor="middle" font-size="11.5" fill="#A39B8E">从机延迟：空闲周期可跳过</text>
       </svg>
-      <figcaption>约好周期碰头，没数据时外设可以跳过几次——这就是省电的机制</figcaption>
+      <figcaption>连接后双方按周期醒来；没数据时外设可跳过几个周期省电</figcaption>
     </figure>
-    <div class="note"><span class="tag">大人翻译</span>Android 侧 <code>device.connectGatt(context, false, callback)</code> 发起连接，<code>onConnectionStateChange()</code> 报告结果。interval 范围 7.5ms～4s；iOS 对参数另有硬规则。连上 ≠ 能用，还要走下一站。详见 <a href="../#bluetooth/fundamentals/connection">连接篇</a>。</div>
+    <div class="key"><span class="tag">重点</span><b>BLE 省电的本质不是不干活，而是约好了才干活。</b>连接间隔越小延迟越低、越费电；从机延迟让没变化的传感器多睡会儿。另外记住：<b>连上 ≠ 能用</b>——通道建好了，但手机还不知道温度计里有哪些数据，这是下一步的事。</div>
+    <div class="note"><span class="tag">代码入口</span>Android：<code>device.connectGatt(context, false, callback)</code> 发起连接，结果从 <code>onConnectionStateChange()</code> 回来。连接参数范围 7.5ms～4s，iOS 另有硬规则。断线重连要当新会话处理。详见 <a href="../#bluetooth/fundamentals/connection">连接篇</a>。</div>
+    <div class="recap"><b>本步收束：</b>连接 = 建立专属通道，停止广播、按周期交流。节奏参数决定快慢与功耗。</div>
   </section>
 
-  <!-- ===== 第 3 站 ===== -->
+  <!-- ===== 第 3 步 ===== -->
   <section id="gatt">
-    <h2><span class="no">第 3 站</span>小温的宝贝柜子</h2>
-    <p>拉上手，大手问：「温度放哪儿呀？」小温拍拍肚子：「都在我的<b>小柜子</b>里！」这个柜子的大名叫 <span class="term">GATT</span>，它长这样：</p>
+    <h2><span class="no">第 3 步</span>发现服务：弄清温度计里有哪些数据</h2>
+    <p>连上之后，手机问温度计：「你都能提供什么数据？」温度计回一份<b>清单</b>。这份清单的组织方式有个名字，叫 <span class="term">GATT</span>，它分三层：</p>
     <figure>
-      <svg viewBox="0 0 460 240" width="460" aria-label="GATT 柜子示意">
-        <rect x="30" y="16" width="400" height="208" rx="14" fill="#FBF3E4" stroke="#EDD9B4" stroke-width="3"/>
-        <text x="230" y="42" text-anchor="middle" font-size="14.5" fill="#8A5510" font-weight="bold">小温的柜子（GATT 属性表）</text>
-        <rect x="52" y="58" width="356" height="70" rx="10" fill="#FFF" stroke="#D95B43" stroke-width="2.5"/>
-        <text x="66" y="80" font-size="13" fill="#D95B43" font-weight="bold">温度抽屉（服务 Service 1809）</text>
-        <rect x="66" y="90" width="160" height="28" rx="8" fill="#FBEDE9"/>
-        <text x="146" y="109" text-anchor="middle" font-size="12" fill="#B04A35" font-weight="bold">温度值格子 2A6E</text>
-        <rect x="236" y="90" width="160" height="28" rx="8" fill="#FBEDE9"/>
-        <text x="316" y="109" text-anchor="middle" font-size="12" fill="#B04A35" font-weight="bold">报警阈值格子（可写）</text>
-        <rect x="52" y="140" width="356" height="70" rx="10" fill="#FFF" stroke="#2A9D8F" stroke-width="2.5"/>
-        <text x="66" y="162" font-size="13" fill="#1E7268" font-weight="bold">电量抽屉（服务 Service 180F）</text>
-        <rect x="66" y="172" width="160" height="28" rx="8" fill="#E9F4F2"/>
-        <text x="146" y="191" text-anchor="middle" font-size="12" fill="#1E7268" font-weight="bold">电量格子 2A19</text>
-        <rect x="236" y="172" width="160" height="28" rx="8" fill="#E9F4F2"/>
-        <text x="316" y="191" text-anchor="middle" font-size="12" fill="#1E7268" font-weight="bold">订阅卡格子 2902</text>
+      <svg viewBox="0 0 560 250" width="560" aria-label="GATT 结构">
+        <rect x="190" y="14" width="180" height="36" rx="8" fill="#2B2620"/>
+        <text x="280" y="38" text-anchor="middle" font-size="13.5" fill="#fff" font-weight="bold">温度计</text>
+        <line x1="280" y1="50" x2="280" y2="70" stroke="#A39B8E" stroke-width="2"/>
+        <line x1="140" y1="70" x2="420" y2="70" stroke="#A39B8E" stroke-width="2"/>
+        <line x1="140" y1="70" x2="140" y2="90" stroke="#A39B8E" stroke-width="2"/>
+        <line x1="420" y1="70" x2="420" y2="90" stroke="#A39B8E" stroke-width="2"/>
+        <rect x="40" y="90" width="200" height="36" rx="8" fill="#FBEDE9" stroke="#F0CFC6" stroke-width="2"/>
+        <text x="140" y="113" text-anchor="middle" font-size="13" fill="#B04A35" font-weight="bold">服务 0x1809 · 健康温度计</text>
+        <rect x="320" y="90" width="200" height="36" rx="8" fill="#E9F4F2" stroke="#BFE0DB" stroke-width="2"/>
+        <text x="420" y="113" text-anchor="middle" font-size="13" fill="#1E7268" font-weight="bold">服务 0x180F · 电池</text>
+        <line x1="140" y1="126" x2="140" y2="150" stroke="#A39B8E" stroke-width="2"/>
+        <line x1="420" y1="126" x2="420" y2="150" stroke="#A39B8E" stroke-width="2"/>
+        <rect x="35" y="150" width="210" height="40" rx="8" fill="#FFF" stroke="#E8E4DC" stroke-width="2"/>
+        <text x="140" y="167" text-anchor="middle" font-size="12.5" fill="#2B2620" font-weight="bold">特征 0x2A6E · 温度测量</text>
+        <text x="140" y="183" text-anchor="middle" font-size="11" fill="#7A7267">Notify · 小端 sint16 · 0.01°C</text>
+        <rect x="320" y="150" width="200" height="40" rx="8" fill="#FFF" stroke="#E8E4DC" stroke-width="2"/>
+        <text x="420" y="167" text-anchor="middle" font-size="12.5" fill="#2B2620" font-weight="bold">特征 0x2A19 · 电量</text>
+        <text x="420" y="183" text-anchor="middle" font-size="11" fill="#7A7267">Read / Notify · uint8 · %</text>
+        <line x1="140" y1="190" x2="140" y2="210" stroke="#A39B8E" stroke-width="2"/>
+        <rect x="35" y="210" width="210" height="32" rx="8" fill="#FBF3E4" stroke="#EDD9B4" stroke-width="2"/>
+        <text x="140" y="231" text-anchor="middle" font-size="12" fill="#8A5510" font-weight="bold">描述符 0x2902 · CCCD</text>
       </svg>
-      <figcaption>抽屉 = 服务，格子 = 特征，名牌编号 = UUID</figcaption>
+      <figcaption>GATT 三层：服务 → 特征 → 描述符，每个节点用 UUID 标识</figcaption>
     </figure>
     <ul>
-      <li>一个大抽屉叫一个<span class="term">服务 Service</span>——「温度抽屉」「电量抽屉」。</li>
-      <li>抽屉里的小格子叫<span class="term">特征 Characteristic</span>——每个格子放一样宝贝。</li>
-      <li>每个抽屉和格子都挂着<b>名牌</b>，编号叫<span class="term">UUID</span>。全世界商量好了：温度格子统一写 <b>2A6E</b>，电量格子写 <b>2A19</b>。大手看名牌就知道里面是什么，不用猜。</li>
+      <li><b>服务 Service</b>：一组相关数据。比如「健康温度计」「电池」。</li>
+      <li><b>特征 Characteristic</b>：真正装数据的节点。比如「温度测量值」「电量」。</li>
+      <li><b>描述符 Descriptor</b>：特征的附加配置。最重要的是 CCCD，下一步讲。</li>
     </ul>
-    <div class="say"><span class="tag">老师说</span>大手找温度要按顺序来：<b>先拉开抽屉，再找格子</b>。这个「把柜子看一遍」的动作叫<span class="term2">服务发现 discoverServices()</span>。不先看柜子就伸手乱摸，可是要碰壁的哦。</div>
-    <p>找到格子以后，有三种玩法：</p>
-    <table>
-      <tr><th>玩法</th><th>幼儿园说法</th><th>大人说法</th></tr>
-      <tr><td>读</td><td>问一句「现在几度呀」，小温答一次</td><td>Read</td></tr>
-      <tr><td>写</td><td>递张小纸条：「超过 30 度记得报警」</td><td>Write</td></tr>
-      <tr><td>订阅</td><td>贴朵小红花：「温度一变就<b>主动</b>告诉我！」</td><td>Notify / Indicate</td></tr>
-    </table>
-    <div class="note"><span class="tag">大人翻译</span>温度这种持续变化的值，轮询 Read 又慢又费电，正确姿势是订阅——下一站就讲怎么贴花。详见 <a href="../#bluetooth/communication/gatt-att">GATT 篇</a>、<a href="../#bluetooth/communication/uuid-services">UUID 篇</a>。</div>
+    <p>每个节点用 <b>UUID</b> 编号。蓝牙联盟给常见数据定了<b>统一编号</b>：温度测量是 <code>0x2A6E</code>，电量是 <code>0x2A19</code>。所以手机看到编号就知道这是什么数据、什么格式，不用问厂商。</p>
+    <div class="key"><span class="tag">重点</span>手机「把清单要过来看一遍」的动作叫<span class="term2">服务发现 discoverServices()</span>。<b>顺序不能乱：先连接，再发现，再操作。</b>没发现服务就去读写，系统找不到目标，必然失败。</div>
+    <div class="note"><span class="tag">代码入口</span>Android：<code>gatt.discoverServices()</code>，完成后 <code>onServicesDiscovered()</code> 回调，再用 <code>getService()</code> / <code>getCharacteristic()</code> 按 UUID 取对象。16 位 UUID 完整形式：<code>0000xxxx-0000-1000-8000-00805F9B34FB</code>。详见 <a href="../#bluetooth/communication/gatt-att">GATT 篇</a>、<a href="../#bluetooth/communication/uuid-services">UUID 篇</a>。</div>
+    <div class="recap"><b>本步收束：</b>GATT = 数据清单，服务 → 特征 → 描述符，UUID 是统一编号。先发现、后操作。</div>
   </section>
 
-  <!-- ===== 第 4 站 ===== -->
+  <!-- ===== 第 4 步 ===== -->
   <section id="cccd">
-    <h2><span class="no">第 4 站</span>那朵小红花，贴在哪儿？</h2>
-    <p>订阅不是嘴上说说。每个能主动汇报的格子旁边，都有一个<b>专门贴小红花的小格子</b>，名牌编号 <b>2902</b>，大名<span class="term">CCCD</span>。往里面写不同的值，意思不一样：</p>
+    <h2><span class="no">第 4 步</span>订阅与通知：让温度计主动上报</h2>
+    <p>找到温度特征后，手机有三种操作可选：</p>
     <table>
-      <tr><th>写入值</th><th>幼儿园说法</th><th>大人说法</th></tr>
-      <tr><td><code>01 00</code></td><td>贴红花：「有变化就说，不用等我问」</td><td>Notify，发了就走，快</td></tr>
-      <tr><td><code>02 00</code></td><td>贴大红花：「说完要等我回『收到』，才能说下一条」</td><td>Indicate，可靠但慢</td></tr>
-      <tr><td><code>00 00</code></td><td>摘掉花：「先别吵我」</td><td>关闭上报</td></tr>
+      <tr><th>操作</th><th>含义</th><th>适用</th></tr>
+      <tr><td><b>Read</b></td><td>手机问一次，温度计答一次</td><td>偶尔看一眼</td></tr>
+      <tr><td><b>Write</b></td><td>手机向温度计写入配置（如报警阈值）</td><td>下发设置</td></tr>
+      <tr><td><b>Notify / Indicate</b></td><td>温度计<b>主动</b>把变化推给手机</td><td>持续变化的温度</td></tr>
     </table>
-    <div class="say"><span class="tag">老师说</span>很多同学的 App 收不到温度，十有八九是<b>忘了贴花</b>，或者<b>花贴错了格子</b>！记住：<b>先贴花，再等汇报</b>。而且贴花这个动作本身也是「写」，要等小温点头（写回调成功）才算贴牢了。</div>
-    <div class="note"><span class="tag">大人翻译</span>Android 上要两步都做：<code>setCharacteristicNotification()</code> 开本地开关，再 <code>writeDescriptor(CCCD, 01 00)</code> 写远端，等 <code>onDescriptorWrite()</code> 成功。只做第一步是「收不到通知」的头号原因。数据从 <code>onCharacteristicChanged()</code> 回来；2A6E 是小端 sint16，除以 100 才是摄氏度。详见 <a href="../#android/development-guide/notify-cccd">订阅篇</a>。</div>
+    <p>温度一直在变，靠手机一次次 Read 去问，又慢又费电。正确做法是<b>订阅</b>：手机告诉温度计「以后温度一变，你就主动发给我」。这个开关不在特征本身，而在它旁边的描述符 <b>CCCD</b>（编号 <code>0x2902</code>）里。手机往 CCCD 写不同的值：</p>
+    <table>
+      <tr><th>写入值（小端）</th><th>含义</th><th>区别</th></tr>
+      <tr><td><code>01 00</code></td><td>开启 Notify</td><td>温度计发了就走，不等确认，快</td></tr>
+      <tr><td><code>02 00</code></td><td>开启 Indicate</td><td>每条要等手机回「收到」才发下一条，可靠但慢</td></tr>
+      <tr><td><code>00 00</code></td><td>关闭</td><td>停止上报</td></tr>
+    </table>
+    <p>写成功之后，温度计每次测到新温度，就主动发一个<b>通知</b>过来，手机在回调里收到字节、解析、显示。从此手机不用再问，温度自己上屏。</p>
+    <div class="key"><span class="tag">重点 · 高频故障</span>Android 上订阅要<b>两步都做</b>：<code>setCharacteristicNotification()</code> 打开本地开关，再 <code>writeDescriptor()</code> 把 <code>01 00</code> 写到温度计的 CCCD，等写成功回调。<b>只做第一步，温度计根本不知道你要订阅</b>——这是「收不到通知」的头号原因。</div>
+    <div class="note"><span class="tag">代码入口</span>数据从 <code>onCharacteristicChanged()</code> 回来。2A6E 的格式是小端 sint16、单位 0.01°C：收到 <code>92 09</code> → 0x0992 = 2450 → 24.50°C。详见 <a href="../#android/development-guide/notify-cccd">订阅篇</a>。</div>
+    <div class="recap"><b>本步收束：</b>订阅 = 向 CCCD 写 01 00，本地开关 + 远端写入两步都做；之后温度计主动发通知，手机只管收。</div>
   </section>
 
-  <!-- ===== 第 5 站 ===== -->
+  <!-- ===== 第 5 步 ===== -->
   <section id="lab">
-    <h2><span class="no">第 5 站 · 动手玩</span>你来当大手，走一遍全程</h2>
-    <p>下面是一台模拟手机。每点一次按钮走一站。<b>右边的深色窗口</b>是大人们真正写的代码在做什么——看看，是不是和刚才的故事一一对应？</p>
+    <h2><span class="no">第 5 步 · 动手</span>完整走一遍</h2>
+    <p>下面把五步串起来。左边是 App 界面，右边是同一时刻 logcat 里的真实调用与回调。每点一次走一步，注意：<b>每个「成功」都来自一个具体的回调，而不是方法调用本身。</b></p>
     <div class="lab">
-      <div class="lab-head"><b>链路演练</b><span class="hint">扫描 → 拉手 → 看柜子 → 贴花 → 收温度</span></div>
+      <div class="lab-head"><b>链路演练</b><span class="hint">扫描 → 连接 → 服务发现 → 订阅 → 通知</span></div>
       <div class="steps" id="chips">
-        <span class="chip">1 扫描</span><span class="chip">2 拉手</span><span class="chip">3 看柜子</span><span class="chip">4 贴花</span><span class="chip">5 收温度</span>
+        <span class="chip">1 扫描</span><span class="chip">2 连接</span><span class="chip">3 服务发现</span><span class="chip">4 订阅</span><span class="chip">5 通知</span>
       </div>
       <div class="lab-body">
         <div class="device">
-          <div class="device-bar"><span>大手 · 温度计 App</span><span id="conn-state">未连接</span></div>
+          <div class="device-bar"><span>温度计 App</span><span id="conn-state">未连接</span></div>
           <div class="device-screen">
             <div class="app-title">我的温度计</div>
             <div id="screen-body"><div class="placeholder">点下面的按钮开始</div></div>
           </div>
         </div>
         <div class="logcat">
-          <div class="logcat-head"><span>大人们的世界 · 真实 API</span><span>logcat</span></div>
-          <div class="logcat-body" id="log"><span class="c">// 每走一站，这里出现对应的真实代码</span></div>
+          <div class="logcat-head"><span>logcat · BluetoothGatt</span><span>verbose</span></div>
+          <div class="logcat-body" id="log"><span class="c">// 每一步对应的真实调用与回调会出现在这里</span></div>
         </div>
       </div>
       <div class="lab-foot">
         <button class="btn" id="next">开始扫描</button>
-        <button class="btn ghost" id="reset">重来</button>
+        <button class="btn ghost" id="reset">重置</button>
         <span class="hint" id="step-hint"></span>
       </div>
     </div>
@@ -343,38 +363,63 @@
 
   <!-- ===== 自测 ===== -->
   <section id="quiz">
-    <h2><span class="no">下课前</span>三个问题，答对就毕业</h2>
+    <h2><span class="no">自测</span>三个问题</h2>
     <div class="card" id="quiz-box"></div>
-    <p id="quiz-done" style="display:none;font-weight:700;color:#1E7268;">全对啦！你已经从小小班毕业，可以去大人的教室了——建议从 <a href="../#android/development-guide/guide">Android 导读</a> 开始。</p>
+    <p id="quiz-done" style="display:none;font-weight:700;color:#1E7268;">全对。这条链路你已经清楚了，可以进正文——建议从 <a href="../#android/development-guide/guide">Android 导读</a> 开始。</p>
   </section>
 
-  <!-- ===== 对照表 ===== -->
+  <!-- ===== 回顾 ===== -->
   <section id="map">
-    <h2><span class="no">附录</span>比喻 ↔ 术语 对照表</h2>
+    <h2><span class="no">回顾</span>全程一图 + 流程速查</h2>
+    <figure>
+      <svg viewBox="0 0 560 360" width="560" aria-label="全程时序图">
+        <rect x="70" y="10" width="120" height="32" rx="8" fill="#FBEDE9" stroke="#F0CFC6" stroke-width="2"/>
+        <text x="130" y="31" text-anchor="middle" font-size="13" fill="#B04A35" font-weight="bold">温度计</text>
+        <rect x="370" y="10" width="120" height="32" rx="8" fill="#E9F4F2" stroke="#BFE0DB" stroke-width="2"/>
+        <text x="430" y="31" text-anchor="middle" font-size="13" fill="#1E7268" font-weight="bold">手机</text>
+        <line x1="130" y1="42" x2="130" y2="350" stroke="#D8D2C6" stroke-width="2" stroke-dasharray="4 4"/>
+        <line x1="430" y1="42" x2="430" y2="350" stroke="#D8D2C6" stroke-width="2" stroke-dasharray="4 4"/>
+        <defs><marker id="a2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#7A7267"/></marker></defs>
+        <line x1="130" y1="70" x2="424" y2="70" stroke="#D95B43" stroke-width="2" marker-end="url(#a2)"/>
+        <text x="280" y="62" text-anchor="middle" font-size="12" fill="#B04A35">① 广播（周期性，谁都能收）</text>
+        <line x1="430" y1="110" x2="136" y2="110" stroke="#7A7267" stroke-width="2" marker-end="url(#a2)"/>
+        <text x="280" y="102" text-anchor="middle" font-size="12" fill="#2B2620">② 连接请求</text>
+        <line x1="130" y1="140" x2="424" y2="140" stroke="#7A7267" stroke-width="2" marker-end="url(#a2)"/>
+        <text x="280" y="132" text-anchor="middle" font-size="12" fill="#2B2620">连接建立，停止广播</text>
+        <line x1="430" y1="180" x2="136" y2="180" stroke="#7A7267" stroke-width="2" marker-end="url(#a2)"/>
+        <text x="280" y="172" text-anchor="middle" font-size="12" fill="#2B2620">③ 发现服务请求</text>
+        <line x1="130" y1="210" x2="424" y2="210" stroke="#7A7267" stroke-width="2" marker-end="url(#a2)"/>
+        <text x="280" y="202" text-anchor="middle" font-size="12" fill="#2B2620">服务清单（1809 / 2A6E / 2902…）</text>
+        <line x1="430" y1="250" x2="136" y2="250" stroke="#C07A1E" stroke-width="2" marker-end="url(#a2)"/>
+        <text x="280" y="242" text-anchor="middle" font-size="12" fill="#8A5510">④ 写 CCCD = 01 00（订阅）</text>
+        <line x1="130" y1="290" x2="424" y2="290" stroke="#2A9D8F" stroke-width="2" marker-end="url(#a2)"/>
+        <text x="280" y="282" text-anchor="middle" font-size="12" fill="#1E7268">⑤ 通知：24.50°C</text>
+        <line x1="130" y1="325" x2="424" y2="325" stroke="#2A9D8F" stroke-width="2" marker-end="url(#a2)"/>
+        <text x="280" y="317" text-anchor="middle" font-size="12" fill="#1E7268">通知：24.60°C（持续主动上报）</text>
+      </svg>
+      <figcaption>两块芯片的一来一回：这就是 BLE 通信的全部主线</figcaption>
+    </figure>
     <table>
-      <tr><th>幼儿园说法</th><th>术语</th><th>去哪儿深造</th></tr>
-      <tr><td>举手喊话</td><td>广播 Advertising</td><td><a href="../#bluetooth/fundamentals/advertising">广播篇</a></td></tr>
-      <tr><td>竖耳朵听</td><td>扫描 Scanning</td><td><a href="../#android/development-guide/scanning">Android 扫描篇</a></td></tr>
-      <tr><td>拉手 + 约好碰头</td><td>连接与连接参数</td><td><a href="../#bluetooth/fundamentals/connection">连接篇</a></td></tr>
-      <tr><td>宝贝柜子 / 抽屉 / 格子</td><td>GATT / Service / Characteristic</td><td><a href="../#bluetooth/communication/gatt-att">GATT 篇</a></td></tr>
-      <tr><td>名牌编号</td><td>UUID</td><td><a href="../#bluetooth/communication/uuid-services">UUID 篇</a></td></tr>
-      <tr><td>小红花</td><td>CCCD（0x2902）与 Notify / Indicate</td><td><a href="../#android/development-guide/notify-cccd">订阅篇</a></td></tr>
-      <tr><td>一张纸条写几个字</td><td>MTU 与分包</td><td><a href="../#bluetooth/communication/data-transfer">分包篇</a></td></tr>
+      <tr><th>步骤</th><th>温度计做什么</th><th>手机做什么</th><th>Android API</th></tr>
+      <tr><td>1 广播 / 扫描</td><td>周期性发广播包</td><td>监听、列出设备</td><td><code>startScan</code> / <code>onScanResult</code></td></tr>
+      <tr><td>2 连接</td><td>停止广播，按周期交流</td><td>发起连接</td><td><code>connectGatt</code> / <code>onConnectionStateChange</code></td></tr>
+      <tr><td>3 发现服务</td><td>返回服务清单</td><td>按 UUID 找特征</td><td><code>discoverServices</code> / <code>onServicesDiscovered</code></td></tr>
+      <tr><td>4 订阅</td><td>记录订阅开关</td><td>本地开关 + 写 CCCD</td><td><code>setCharacteristicNotification</code> + <code>writeDescriptor</code></td></tr>
+      <tr><td>5 通知</td><td>主动推送温度</td><td>接收、解析、显示</td><td><code>onCharacteristicChanged</code></td></tr>
     </table>
-    <h3>大人的教室在这里</h3>
+    <h3>接下来读什么</h3>
     <div class="next-links">
       <a href="../#bluetooth">Bluetooth 通用知识（16 篇）</a>
       <a href="../#android">Android 蓝牙开发指南（50 篇）</a>
-      <a href="../#bluetooth/lab/nrf-connect-lab">不写代码先动手：nRF Connect 实验</a>
+      <a href="../#bluetooth/lab/nrf-connect-lab">动手实验：nRF Connect 走通链路</a>
     </div>
-    <div class="note"><span class="tag">说明</span>这一课是「幼儿园版」样板：故事负责让你<b>懂</b>，大人的教室负责让你<b>会</b>。两边讲的是同一件事，随时可以互相跳。比喻为教学简化，工程细节以正文与官方规范为准；演练为模拟数据，非真实设备通信。</div>
-    <footer>青竹蓝牙开发指南 · 蓝牙幼儿园第一课 · <a href="../">回到主站</a></footer>
+    <div class="note"><span class="tag">说明</span>本页为教学简化，工程细节以正文与官方规范为准；演练为模拟数据，非真实设备通信。</div>
+    <footer>青竹蓝牙开发指南 · 蓝牙小课堂第一课 · <a href="../">回到主站</a></footer>
   </section>
 </main>
 </div>
 
 <script>
-/* ===== 目录高亮 ===== */
 const tocLinks=[...document.querySelectorAll('.toc a')];
 const secs=tocLinks.map(a=>document.querySelector(a.getAttribute('href')));
 const io=new IntersectionObserver(es=>{
@@ -384,7 +429,6 @@ const io=new IntersectionObserver(es=>{
 },{rootMargin:'-20% 0px -70% 0px'});
 secs.forEach(s=>s&&io.observe(s));
 
-/* ===== 链路演练 ===== */
 const S={step:-1,temp:24.5,timer:null};
 const screenBody=document.getElementById('screen-body');
 const logEl=document.getElementById('log');
@@ -397,25 +441,25 @@ function ts(){ logT+=Math.floor(180+Math.random()*400); return `<span class="t">
 function addLog(html){ const d=document.createElement('div'); d.innerHTML=html; logEl.appendChild(d); logEl.scrollTop=logEl.scrollHeight; }
 
 const STEPS=[
-  { label:'下一步：拉住小温', hint:'扫描回调带来设备句柄',
-    screen:`<div class="dev-row"><span>小温 XiaoWen-T <small>· -52 dBm</small></span><b style="color:#1E7268">发现了</b></div><div class="stat">小本本上出现了小温的名字</div>`,
-    log:()=>`${ts()} <span class="api">startScan</span>(filter=0x1809)<br>${ts()} <span class="ok">onScanResult</span>: XiaoWen-T rssi=-52<br>${ts()} <span class="c">// 扫描 = 竖耳朵听喊话</span>`,
+  { label:'下一步：连接', hint:'扫描回调带来设备句柄',
+    screen:`<div class="dev-row"><span>XiaoWen-T <small>· -52 dBm</small></span><b style="color:#1E7268">已发现</b></div><div class="stat">扫描到 1 台匹配设备</div>`,
+    log:()=>`${ts()} <span class="api">startScan</span>(filter=0x1809)<br>${ts()} <span class="ok">onScanResult</span>: XiaoWen-T rssi=-52<br>${ts()} <span class="c">// 设备列表来自扫描回调</span>`,
     after(){ connState.textContent='扫描中'; } },
-  { label:'下一步：看柜子', hint:'CONNECTED 之后才能发现服务',
-    screen:`<div class="stat pulse" id="st">正在拉手…</div>`,
-    log:()=>`${ts()} <span class="api">connectGatt</span>(autoConnect=false)<br>${ts()} <span class="ok">onConnectionStateChange</span>: CONNECTED<br>${ts()} <span class="c">// 拉手 = 建立连接，之后按间隔碰头</span>`,
-    after(){ connState.textContent='连接中'; setTimeout(()=>{ if(S.step!==1) return; const st=document.getElementById('st'); if(st){st.classList.remove('pulse'); st.textContent='拉上手了！悄悄话通道已打开';} connState.textContent='已连接'; },900); } },
-  { label:'下一步：贴小红花', hint:'按名牌找到 2A6E 和它的订阅卡',
-    screen:`<div class="svc-tree">温度抽屉 <span class="u">1809</span><br>&nbsp;&nbsp;└ 温度格子 <span class="u">2A6E</span> [可订阅]<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└ 订阅卡 <span class="u">2902</span><br>电量抽屉 <span class="u">180F</span><br>&nbsp;&nbsp;└ 电量格子 <span class="u">2A19</span> [可读]</div>`,
-    log:()=>`${ts()} <span class="api">discoverServices</span>()<br>${ts()} <span class="ok">onServicesDiscovered</span>: 2 services<br>${ts()} <span class="c">// 看柜子 = 服务发现，看名牌认格子</span>`,
+  { label:'下一步：发现服务', hint:'CONNECTED 之后才能 discoverServices',
+    screen:`<div class="stat pulse" id="st">正在建立连接…</div>`,
+    log:()=>`${ts()} <span class="api">connectGatt</span>(autoConnect=false)<br>${ts()} <span class="ok">onConnectionStateChange</span>: status=0 CONNECTED<br>${ts()} <span class="c">// 链路建立 ≠ 业务就绪</span>`,
+    after(){ connState.textContent='连接中'; setTimeout(()=>{ if(S.step!==1) return; const st=document.getElementById('st'); if(st){st.classList.remove('pulse'); st.textContent='已连接 · 等待服务发现';} connState.textContent='已连接'; },900); } },
+  { label:'下一步：订阅', hint:'按 UUID 找到 2A6E 和它的 CCCD',
+    screen:`<div class="svc-tree">Service <span class="u">1809</span> Health Thermometer<br>&nbsp;&nbsp;└ Char <span class="u">2A6E</span> Temperature [Notify]<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└ Desc <span class="u">2902</span> CCCD<br>Service <span class="u">180F</span> Battery<br>&nbsp;&nbsp;└ Char <span class="u">2A19</span> Battery Level [Read]</div>`,
+    log:()=>`${ts()} <span class="api">discoverServices</span>()<br>${ts()} <span class="ok">onServicesDiscovered</span>: status=0, 2 services<br>${ts()} <span class="c">// 服务表是本次会话的快照</span>`,
     after(){ connState.textContent='已连接'; } },
-  { label:'下一步：等小温汇报', hint:'本地开关 + 写订阅卡，两步都要',
-    screen:`<div class="stat pulse" id="st2">正在贴花（写 01 00）…</div>`,
-    log:()=>`${ts()} <span class="api">setCharacteristicNotification</span>(2A6E, true)<br>${ts()} <span class="api">writeDescriptor</span>(2902, 01 00)<br>${ts()} <span class="ok">onDescriptorWrite</span>: SUCCESS<br>${ts()} <span class="c">// 贴花 = 两步都做，写成功才算贴牢</span>`,
-    after(){ setTimeout(()=>{ if(S.step!==3) return; const st=document.getElementById('st2'); if(st){st.classList.remove('pulse'); st.textContent='贴牢了！小温答应：温度一变就汇报';} },900); } },
-  { label:'毕业啦（重来再玩）', hint:'通知持续到达，不用再调任何 API',
-    screen:`<div class="temp" id="temp">24.50°C</div><div class="temp-sub">小温主动汇报中</div><div class="stat">不用问，它自己说！</div>`,
-    log:()=>`${ts()} <span class="ok">onCharacteristicChanged</span>: 92 09<br>${ts()} <span class="c">// 小端 sint16: 0x0992 = 2450 → 24.50°C</span>`,
+  { label:'下一步：接收通知', hint:'本地开关 + 写 CCCD，两步都要',
+    screen:`<div class="stat pulse" id="st2">正在写入 CCCD（01 00）…</div>`,
+    log:()=>`${ts()} <span class="api">setCharacteristicNotification</span>(2A6E, true)<br>${ts()} <span class="api">writeDescriptor</span>(2902, 01 00)<br>${ts()} <span class="ok">onDescriptorWrite</span>: status=0<br>${ts()} <span class="c">// 写成功才算订阅完成</span>`,
+    after(){ setTimeout(()=>{ if(S.step!==3) return; const st=document.getElementById('st2'); if(st){st.classList.remove('pulse'); st.textContent='订阅成功 · 等待设备上报';} },900); } },
+  { label:'重新开始', hint:'通知持续到达，无需再调用任何 API',
+    screen:`<div class="temp" id="temp">24.50°C</div><div class="temp-sub">Notify 推送中</div><div class="stat">设备主动上报，App 只负责解析</div>`,
+    log:()=>`${ts()} <span class="ok">onCharacteristicChanged</span>: 2A6E = 92 09<br>${ts()} <span class="c">// 小端 sint16: 0x0992 = 2450 → 24.50°C</span>`,
     after(){ connState.textContent='已连接 · 订阅中';
       S.timer=setInterval(()=>{
         S.temp=Math.round((S.temp+(Math.random()-.5)*.4)*100)/100;
@@ -439,27 +483,26 @@ function next(){
 function reset(){
   clearInterval(S.timer); S.timer=null; S.step=-1; S.temp=24.5; logT=0;
   screenBody.innerHTML='<div class="placeholder">点下面的按钮开始</div>';
-  logEl.innerHTML='<span class="c">// 每走一站，这里出现对应的真实代码</span>';
+  logEl.innerHTML='<span class="c">// 每一步对应的真实调用与回调会出现在这里</span>';
   nextBtn.textContent='开始扫描'; stepHint.textContent=''; connState.textContent='未连接';
   renderChips();
 }
 nextBtn.addEventListener('click',next);
 document.getElementById('reset').addEventListener('click',reset);
 
-/* ===== 自测 ===== */
 const QUIZ=[
-  { q:'1. 小温为什么能省电？', opts:[
-      ['它一直大声喊话',false,'一直喊话最费电啦！'],
-      ['约好碰头时间，没变化还能翘几次',true,'对！连接间隔 + 从机延迟：约好才干活，没事多睡觉。'],
-      ['它把电池藏起来了',false,'哈哈，电池可藏不住。']]},
-  { q:'2. 大手想找温度，应该先做什么？', opts:[
-      ['直接伸手进肚子摸',false,'乱摸要碰壁的！'],
-      ['先看柜子：拉开抽屉找格子',true,'对！先 discoverServices()，按 UUID 名牌找到 2A6E。'],
-      ['再喊一遍它的名字',false,'已经拉上手了，不用喊啦。']]},
-  { q:'3. App 收不到温度汇报，最先检查什么？', opts:[
-      ['小红花贴没贴、贴对格子没',true,'对！CCCD（2902）要写 01 00，本地开关和远端写入两步都要做。'],
-      ['手机屏幕够不够亮',false,'屏幕亮度不管蓝牙的事哦。'],
-      ['小温的名字好不好听',false,'名字再好听，不贴花也不汇报呀。']]},
+  { q:'1. 温度计还没连上手机时，怎么让手机发现自己？', opts:[
+      ['周期性向外发广播包',true,'对。广播不针对谁，附近监听的设备都能收到。'],
+      ['等手机主动问它',false,'手机不知道它存在，没法问。得它先广播。'],
+      ['通过 Wi-Fi 上报',false,'这是 BLE 课，走的是蓝牙广播。']]},
+  { q:'2. 手机连上温度计后，想读温度，第一步是？', opts:[
+      ['直接 writeCharacteristic',false,'还没发现服务，找不到目标特征。'],
+      ['discoverServices()，按 UUID 找到温度特征',true,'对。先连接、再发现、再操作，顺序不能乱。'],
+      ['重新扫描确认设备还在',false,'已经连上了，扫描可以停了。']]},
+  { q:'3. 想让温度变化时手机自动收到，应该？', opts:[
+      ['向 CCCD 写 01 00，本地开关和远端写入两步都做',true,'对。订阅成功后设备主动发通知，手机在 onCharacteristicChanged 里收。'],
+      ['每隔 100ms 调一次 readCharacteristic',false,'轮询又慢又费电，不是正确姿势。'],
+      ['把手机蓝牙重启',false,'重启解决不了订阅问题。']]},
 ];
 let solved=0;
 const box=document.getElementById('quiz-box');
@@ -474,7 +517,7 @@ QUIZ.forEach((item,qi)=>{
       sib.forEach(s=>s.disabled=true);
       b.classList.add(ok?'right':'wrong');
       ex.className='explain show '+(ok?'good':'bad');
-      ex.textContent=(ok?'✓ ':'✗ ')+why+(ok?'':' 再想想～');
+      ex.textContent=(ok?'✓ ':'✗ ')+why;
       if(ok){ solved++; if(solved===QUIZ.length) document.getElementById('quiz-done').style.display='block'; }
       else setTimeout(()=>{ sib.forEach(s=>{s.disabled=false;s.classList.remove('wrong');}); ex.className='explain'; },2000);
     });
