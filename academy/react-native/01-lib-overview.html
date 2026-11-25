@@ -172,6 +172,10 @@
   .ctl-row label{display:inline-flex;align-items:center;gap:10px;}
   .ctl-row input[type=range]{accent-color:var(--coral);width:160px;}
   .ctl-row .chk input{accent-color:var(--coral);}
+  .api-lv{display:inline-block;font-family:ui-monospace,Consolas,monospace;font-size:11.5px;font-weight:800;color:#2F58A8;background:var(--blue-soft);border:1px solid var(--blue-line);border-radius:999px;padding:0 8px;white-space:nowrap;}
+  .refs{font-size:14px;}
+  .refs li{margin:7px 0;}
+  .refs .src{font-size:12px;color:var(--faint);}
 </style>
 </head>
 <body style="--coral:#E8590C;--coral-soft:#FBEADF;--coral-line:#F2C4A4">
@@ -197,68 +201,195 @@
 <main>
   <div class="crumb">蓝牙小课堂 / RN 第一课 · F1</div>
   <h1>RN 蓝牙全景：<em>react-native-ble-plx</em></h1>
-  <p class="lead">RN 用 react-native-ble-plx（BleManager）做 BLE，Promise/事件驱动。这一课讲选型与对象模型，对照原生。</p>
-  <div class="meta"><span>约 10 分钟</span><span>含交互演练</span><span>跨端对照</span></div>
+  <p class="lead">RN 用 react-native-ble-plx（BleManager）做 BLE，Promise/事件驱动。这一课讲选型、对象模型与逐 API 职责，对照原生。</p>
+  <div class="meta"><span>平台：React Native/TS</span><span>约 20 分钟</span><span>react-native-ble-plx 3.5.1</span><span>含两场交互演练</span><span>跨端对照</span></div>
   <div class="journey">
     <div class="j-step"><span class="n">1</span><span class="t">选型</span><span class="s">ble-plx</span></div>
-    <div class="j-step"><span class="n">2</span><span class="t">模型</span><span class="s">BleManager</span></div>
+    <div class="j-step"><span class="n">2</span><span class="t">模型与 API</span><span class="s">逐 API</span></div>
+    <div class="j-step"><span class="n">3</span><span class="t">值形态</span><span class="s">base64</span></div>
+    <div class="j-step"><span class="n">4</span><span class="t">动手</span><span class="s">两场演练</span></div>
+    <div class="j-step"><span class="n">5</span><span class="t">自测</span><span class="s">六个问题</span></div>
   </div>
 
   <section id="a">
     <h2><span class="no">第 1 步</span>库选型</h2>
-    <p>react-native-ble-plx 维护活跃、API 清晰；本板用它。BleManager 单例管理扫描/连接。</p><div class="recap"><b>收束：</b>BleManager 单例。</div>
+    <p>react-native-ble-plx 维护活跃、API 清晰；本板用它。BleManager 单例管理扫描/连接。</p>
+    <table>
+      <tr><th>候选库</th><th>API 风格</th><th>维护方</th><th>适合</th></tr>
+      <tr><td><b>react-native-ble-plx</b> <span class="api-lv">3.5.1</span></td><td>Promise + Device 对象 + 回调订阅</td><td>dotintent（原 Polidea）</td><td>本板：链式 async/await、对象化操作</td></tr>
+      <tr><td>react-native-ble-manager <span class="api-lv">12.6.1</span></td><td>静态方法 + 全局事件（NativeAppEventEmitter）</td><td>innoveit</td><td>事件驱动风格；<b>配套旧样例 thermometer-mvp 用它</b>（F8 给映射）</td></tr>
+      <tr><td>自写原生模块</td><td>自定义</td><td>自己</td><td>厂商 SDK/后台任务（F7）</td></tr>
+    </table>
+    <ul>
+      <li><b>版本口径</b>：npm 最新 3.5.1；官方文档站由 3.3 构建，核心 API 签名一致。本课徽章标 3.x。</li>
+      <li><b>选型判据</b>：plx 把设备做成对象（device.connect()/monitor…），错误走 BleError 枚举；manager 把一切做成全局事件。两种风格都成熟，本板统一 plx。</li>
+    </ul>
+    <div class="recap"><b>收束：</b>BleManager 单例。</div>
   </section>
 
   <section id="b">
-    <h2><span class="no">第 2 步</span>对象模型</h2>
+    <h2><span class="no">第 2 步</span>对象模型与逐 API 讲解</h2>
     <pre>const manager = new BleManager();
 manager.startDeviceScan([uuid], null, (err, device)=>{})
 await device.connect()
-await device.discoverAllServicesAndCharacteristics()</pre><div class="key"><span class="tag">对照</span>原生回调 ≈ Promise + 事件订阅。</div>
+await device.discoverAllServicesAndCharacteristics()</pre>
+    <figure>
+      <svg viewBox="0 0 760 200" role="img" aria-label="ble-plx 对象层级：Manager 到 Characteristic">
+        <defs><marker id="arf1" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#A39B8E"/></marker></defs>
+        <rect x="20" y="24" width="170" height="60" rx="12" fill="#FBEDE9" stroke="#F0CFC6"/>
+        <text x="105" y="50" text-anchor="middle" font-size="13" font-weight="bold" fill="#B04A35">BleManager</text>
+        <text x="105" y="70" text-anchor="middle" font-size="10.5" fill="#C08475">单例 · 扫描/状态/销毁</text>
+        <rect x="230" y="24" width="170" height="60" rx="12" fill="#ECF1FB" stroke="#C9D8F2"/>
+        <text x="315" y="50" text-anchor="middle" font-size="13" font-weight="bold" fill="#2F58A8">Device</text>
+        <text x="315" y="70" text-anchor="middle" font-size="10.5" fill="#5F7FB5">id/name/rssi/mtu · connect</text>
+        <rect x="440" y="24" width="150" height="60" rx="12" fill="#E9F4F2" stroke="#BFE0DB"/>
+        <text x="515" y="50" text-anchor="middle" font-size="13" font-weight="bold" fill="#1E7268">Service</text>
+        <text x="515" y="70" text-anchor="middle" font-size="10.5" fill="#4E8A80">uuid · characteristics()</text>
+        <rect x="630" y="24" width="110" height="60" rx="12" fill="#FBF3E4" stroke="#EDD9B4"/>
+        <text x="685" y="50" text-anchor="middle" font-size="12" font-weight="bold" fill="#8A5510">Characteristic</text>
+        <text x="685" y="70" text-anchor="middle" font-size="10" fill="#A8762A">value = base64</text>
+        <line x1="190" y1="54" x2="228" y2="54" stroke="#A39B8E" stroke-width="2" marker-end="url(#arf1)"/>
+        <line x1="400" y1="54" x2="438" y2="54" stroke="#A39B8E" stroke-width="2" marker-end="url(#arf1)"/>
+        <line x1="590" y1="54" x2="628" y2="54" stroke="#A39B8E" stroke-width="2" marker-end="url(#arf1)"/>
+        <rect x="20" y="116" width="720" height="62" rx="12" fill="#FBF3E4" stroke="#EDD9B4"/>
+        <text x="40" y="142" font-size="12.5" font-weight="bold" fill="#8A5510">两条铁律</text>
+        <text x="40" y="164" font-size="11.5" fill="#A8762A">① 一切特征值都是 base64 字符串，先解码再解析（F5）；② 订阅返回 Subscription，退出必须 remove（F6）</text>
+      </svg>
+      <figcaption>图 1 · 对象层级：Manager → Device → Service → Characteristic；操作挂在对象上，结果走 Promise/回调。</figcaption>
+    </figure>
+    <table>
+      <tr><th>API / 对象</th><th>职责</th><th>参数与结果来源</th><th>版本 / 平台</th></tr>
+      <tr><td><code>new BleManager()</code> / <code>destroy()</code></td><td>单例与销毁</td><td>App 生命周期内一个实例；destroy 后不可再用</td><td><span class="api-lv">3.x</span> 双端</td></tr>
+      <tr><td><code>state()</code> / <code>onStateChange(cb, true)</code></td><td>适配器状态</td><td>State 六态；第二参 true 立即补发当前态（F2）</td><td><span class="api-lv">3.x</span> 双端</td></tr>
+      <tr><td><code>startDeviceScan(uuids, options, cb)</code></td><td>扫描</td><td>uuids=null 全收；cb(error, device)；stopDeviceScan 停</td><td><span class="api-lv">3.x</span> 双端</td></tr>
+      <tr><td><code>device.connect()</code> / <code>manager.connectToDevice(id)</code></td><td>连接</td><td>Promise&lt;Device&gt;；id 在 Android 是 MAC、iOS 是 UUID</td><td><span class="api-lv">3.x</span> 双端</td></tr>
+      <tr><td><code>discoverAllServicesAndCharacteristics()</code></td><td>发现</td><td>每连接一次必做一次（F4）</td><td><span class="api-lv">3.x</span> 双端</td></tr>
+      <tr><td><code>readCharacteristicForService(s, c)</code></td><td>读</td><td>Promise&lt;Characteristic&gt;，value 为 base64</td><td><span class="api-lv">3.x</span> 双端</td></tr>
+      <tr><td><code>writeCharacteristicWithResponseForService(s, c, base64)</code></td><td>带应答写</td><td>WithoutResponse 版不等应答（F5）</td><td><span class="api-lv">3.x</span> 双端</td></tr>
+      <tr><td><code>monitorCharacteristicForService(s, c, cb)</code></td><td>订阅</td><td>返回 Subscription；cb(error, characteristic)</td><td><span class="api-lv">3.x</span> 双端</td></tr>
+      <tr><td><code>device.onDisconnected(cb)</code></td><td>断开监听</td><td>返回 Subscription；cb(error, device)</td><td><span class="api-lv">3.x</span> 双端</td></tr>
+      <tr><td><code>requestMTU(mtu)</code></td><td>协商 MTU</td><td>Android 有效；iOS 自动协商、调用无效果</td><td><span class="api-lv">3.x</span> Android 协商 / iOS 自动</td></tr>
+    </table>
+    <div class="key"><span class="tag">对照</span>原生回调 ≈ Promise + 事件订阅。Android 侧底层仍是 BluetoothGatt、iOS 侧 CoreBluetooth，plx 用原生模块把两端统一成同一套 JS API。</div>
+    <div class="recap"><b>收束：</b>对象化 API + base64 值 + Subscription 清理，是 plx 的三个心智锚点。</div>
   </section>
 
   <section id="lab">
-    <h2><span class="no">动手</span>库 / 模型</h2>
-    <p>点按钮切换本平台写法与 Android 对照，概念一一对应。</p>
+    <h2><span class="no">动手</span>两场演练：API 对照、对象层级走查</h2>
+    <p>演练一切换写法对照。演练二逐层点开对象，看字段与操作归属。</p>
     <div class="lab">
-      <div class="lab-head"><b>库 / 模型</b><span class="hint">点按钮看 API</span></div>
+      <div class="lab-head"><b>演练一 · 库 / 模型 API</b><span class="hint">点按钮看 API</span></div>
       <div class="controls"><div class="seg" id="f1"><button data-k="api" class="on">本平台 API</button><button data-k="cmp">对照 Android</button></div></div>
       <div class="lab-body"><div><pre id="f1code" style="margin:0;"></pre></div><div class="logcat"><div class="logcat-head"><span>说明</span><span>live</span></div><div class="logcat-body" id="f1log"></div></div></div>
       <div class="lab-foot"><span class="hint">Android: startScan/connectGatt/discoverServices</span></div>
     </div>
-    <div class="key"><span class="tag">看懂这场演练</span>BleManager 单例；Promise+事件。</div>
+    <div class="lab">
+      <div class="lab-head"><b>演练二 · 对象层级走查</b><span class="hint">操作挂在哪个对象上？</span></div>
+      <div class="controls"><div class="seg" id="g1"><button data-g="mgr" class="on">BleManager</button><button data-g="dev">Device</button><button data-g="svc">Service</button><button data-g="chr">Characteristic</button><button data-g="sub">Subscription</button></div></div>
+      <div class="lab-body"><div><div class="chips" id="g1chips"></div><div class="key" id="g1hint"></div></div><div class="logcat"><div class="logcat-head"><span>对象日志</span><span>live</span></div><div class="logcat-body" id="g1log"></div></div></div>
+      <div class="lab-foot"><span class="hint">Manager 管全局，Device 管连接，Characteristic 管值</span></div>
+    </div>
+    <div class="key"><span class="tag">看懂这两场演练</span>BleManager 单例；Promise+事件。找 API 先想对象层级：全局找 manager、连接找 device、值找 characteristic。</div>
   </section>
 
   <section id="quiz">
-    <h2><span class="no">自测</span>三个问题</h2>
+    <h2><span class="no">自测</span>六个问题</h2>
     <div class="card" id="quiz-box"></div>
     <p id="quiz-done" style="display:none;font-weight:700;color:#1E7268;">全对。下一课讲权限与状态。</p>
   </section>
 
   <section id="map">
-    <h2><span class="no">回顾</span>速查</h2>
-    <table><tr><th>项</th><th>API</th></tr><tr><td>管理</td><td>BleManager</td></tr><tr><td>扫描</td><td>startDeviceScan</td></tr></table>
-    <div class="note"><span class="tag">说明</span>本页为教学简化，工程细节以正文与官方规范为准；演练为模拟，非真实设备通信。</div>
+    <h2><span class="no">回顾</span>速查表</h2>
+    <table>
+      <tr><th>项</th><th>API / 要点</th></tr>
+      <tr><td>管理</td><td>new BleManager() 单例；destroy() 销毁</td></tr>
+      <tr><td>状态</td><td>state() / onStateChange(cb, true)</td></tr>
+      <tr><td>扫描</td><td>startDeviceScan(uuids, options, cb) / stopDeviceScan</td></tr>
+      <tr><td>连接</td><td>device.connect() / onDisconnected(cb)</td></tr>
+      <tr><td>发现</td><td>discoverAllServicesAndCharacteristics()（每连接一次）</td></tr>
+      <tr><td>读写订阅</td><td>read/write/monitor…ForService；值 base64</td></tr>
+      <tr><td>清理</td><td>Subscription.remove()；cancelDeviceConnection；destroy</td></tr>
+      <tr><td>对照库</td><td>ble-manager（innoveit）事件风格；旧样例用它，F8 映射</td></tr>
+    </table>
+    <div class="note"><span class="tag">说明</span>本页为教学整理，API 签名对照 dotintent 官方文档站与 npm 元数据核实；演练为模拟，非真实设备通信。</div>
+  </section>
+
+  <section id="refs">
+    <h2><span class="no">依据</span>参考链接</h2>
+    <div class="card refs">
+      <h3 style="margin-top:0;">库官方</h3>
+      <ul>
+        <li><a href="https://dotintent.github.io/react-native-ble-plx/" target="_blank" rel="noopener">react-native-ble-plx 官方文档</a> <span class="src">— BleManager / Device / Service / Characteristic 全量签名</span></li>
+        <li><a href="https://github.com/dotintent/react-native-ble-plx" target="_blank" rel="noopener">dotintent/react-native-ble-plx · GitHub</a> <span class="src">— 维护方、示例工程、Expo 插件</span></li>
+        <li><a href="https://www.npmjs.com/package/react-native-ble-plx" target="_blank" rel="noopener">npm · react-native-ble-plx</a> <span class="src">— 当前版本 3.5.1</span></li>
+      </ul>
+      <h3>对照库</h3>
+      <ul>
+        <li><a href="https://github.com/innoveit/react-native-ble-manager" target="_blank" rel="noopener">innoveit/react-native-ble-manager</a> <span class="src">— 事件驱动风格；配套旧样例所用（12.6.1）</span></li>
+      </ul>
+    </div>
+    <div class="next-links">
+      <a href="02-permission.html">F2 权限与状态 →</a>
+    </div>
     <footer>青竹蓝牙学堂 · 蓝牙小课堂RN 第一课 · F1 · <a href="../index.html">回到学堂</a></footer>
   </section>
 </main>
 <aside class="toc" id="toc">
   <div class="toc-title">本课目录</div>
   <a href="#a">库选型</a>
-  <a href="#b">对象模型</a>
-  <a href="#lab">动手演练</a>
+  <a href="#b">对象模型与 API</a>
+  <a href="#lab">两场演练</a>
   <a href="#quiz">本课自测</a>
-  <a href="#map">回顾与速查</a>
+  <a href="#map">速查表</a>
+  <a href="#refs">参考链接</a>
 </aside>
 </div>
 <script>
-(function(){var API="点按钮看写法。";var CMP="new BleManager()\nstartDeviceScan([uuid],null,cb)\ndevice.connect()\ndiscoverAllServicesAndCharacteristics()";var NT="Android: startScan/connectGatt/discoverServices";function show(k){document.getElementById("f1code").textContent=(k==="api"?API:CMP);document.getElementById("f1log").innerHTML="<div><span class=\"ok\">"+(k==="api"?"本平台写法":"Android 对照")+"</span></div><div><span class=\"c\">// "+(k==="api"?NT:"概念相同，API 名不同")+"</span></div>";}document.querySelectorAll("#f1 button").forEach(function(b){b.addEventListener("click",function(){document.querySelectorAll("#f1 button").forEach(function(x){x.classList.remove("on");});b.classList.add("on");show(b.getAttribute("data-k"));});});show("api");})();
+(function(){
+  var API="const manager = new BleManager();\nmanager.startDeviceScan([SVC], null, (err, device) => {\n  if (err) { /* 扫描已停，需重启 */ return; }\n});\nconst d = await device.connect();\nawait d.discoverAllServicesAndCharacteristics();\nconst sub = d.monitorCharacteristicForService(SVC, CHR, cb);";
+  var CMP="// Android 原生\nBluetoothLeScanner.startScan(filters, settings, callback);\nBluetoothGatt gatt = device.connectGatt(ctx, false, cb);\ngatt.discoverServices();\ngatt.setCharacteristicNotification(ch, true);\n// 对照：startScan≈startDeviceScan；connectGatt≈connect；\n// discoverServices≈discoverAll…；setNotify≈monitor";
+  var NT="Android: startScan/connectGatt/discoverServices";
+  function show(k){document.getElementById("f1code").textContent=(k==="api"?API:CMP);document.getElementById("f1log").innerHTML="<div><span class=\"ok\">"+(k==="api"?"RN Promise+事件":"Android 回调对照")+"</span></div><div><span class=\"c\">// "+(k==="api"?NT:"概念相同，形态不同")+"</span></div>";}
+  document.querySelectorAll("#f1 button").forEach(function(b){b.addEventListener("click",function(){document.querySelectorAll("#f1 button").forEach(function(x){x.classList.remove("on");});b.classList.add("on");show(b.getAttribute("data-k"));});});
+  show("api");
+})();
 
+// 演练二：对象层级
+(function(){
+  var G={
+    mgr:{obj:'BleManager',ops:'startDeviceScan / state / destroy',hint:'全局操作都在 manager：扫描、状态、连接入口、销毁。',
+      log:['<span class="api">new BleManager()</span>','<span class="ok">startDeviceScan(uuids, options, cb)</span>','<span class="ok">state() / onStateChange(cb, true)</span>','<span class="c">// App 退出：destroy()</span>']},
+    dev:{obj:'Device',ops:'connect / discoverAll / onDisconnected',hint:'扫描回调拿到的就是 Device；连接与发现挂在它身上。id：Android MAC / iOS UUID。',
+      log:['<span class="api">device.connect() → Promise&lt;Device&gt;</span>','<span class="ok">discoverAllServicesAndCharacteristics()</span>','<span class="ok">onDisconnected(cb) → Subscription</span>','<span class="c">// 字段：id / name / rssi / mtu / serviceUUIDs</span>']},
+    svc:{obj:'Service',ops:'characteristics()',hint:'发现后按 UUID 取服务；服务下再取特征列表。',
+      log:['<span class="api">await d.services()</span>','<span class="ok">service.uuid = 476cdf45-…0601</span>','<span class="api">await d.characteristicsForService(SVC)</span>']},
+    chr:{obj:'Characteristic',ops:'value(base64) / isReadable / isNotifiable',hint:'值永远是 base64 字符串；属性标志决定能读/能写/能订阅。',
+      log:['<span class="ok">c.value = "QgLECQO/Ew=="（base64）</span>','<span class="ok">isReadable / isWritableWithResponse / isNotifiable</span>','<span class="c">// 先解码再小端解析（F5）</span>']},
+    sub:{obj:'Subscription',ops:'remove()',hint:'monitor / onDisconnected / onStateChange 都返回 Subscription；退出页面逐个 remove。',
+      log:['<span class="api">const sub = d.monitorCharacteristicForService(...)</span>','<span class="ok">sub.remove() → 退订</span>','<span class="c">// 漏 remove = 幽灵回调（F6）</span>']}
+  };
+  function show(k){
+    var g=G[k];
+    document.getElementById('g1chips').innerHTML=
+      '<span class="chip on">对象: '+g.obj+'</span>'+
+      '<span class="chip on">'+g.ops+'</span>';
+    document.getElementById('g1hint').innerHTML='<span class="tag">归属</span>'+g.hint;
+    document.getElementById('g1log').innerHTML=g.log.map(function(l){return '<div>'+l+'</div>';}).join('');
+  }
+  document.querySelectorAll('#g1 button').forEach(function(b){b.addEventListener('click',function(){
+    document.querySelectorAll('#g1 button').forEach(function(x){x.classList.remove('on');});
+    b.classList.add('on'); show(b.getAttribute('data-g'));
+  });});
+  show('mgr');
+})();
+
+const QUIZ=[{"q":"1. 本板库？","opts":[["react-native-ble-plx",true,"对。"],["reactive_ble",false,"Flutter。"],["CoreBluetooth",false,"iOS。"]]},{"q":"2. 管理用？","opts":[["BleManager",true,"对。"],["CBCentralManager",false,"iOS。"],["GattClient",false,"鸿蒙。"]]},{"q":"3. 操作以？","opts":[["Promise+事件",true,"对。"],["同步",false,"异步。"],["句柄",false,"对象。"]]},{"q":"4. 特征值 value 的形态？","opts":[["base64 字符串，先解码再解析",true,"对。JS 桥传字节的约定。"],["Uint8Array",false,"那是解码后。"],["hex 字符串",false,"base64。"]]},{"q":"5. monitor 返回什么？","opts":[["Subscription，退出要 remove()",true,"对。onDisconnected/onStateChange 同样。"],["Promise",false,"订阅是回调+Subscription。"],["Device",false,"那是 connect。"]]},{"q":"6. 配套旧样例 thermometer-mvp 用哪个库？","opts":[["react-native-ble-manager（innoveit，事件风格）",true,"对。F8 给概念映射；本板正课统一 plx。"],["ble-plx",false,"样例 package.json 锁的是 ble-manager 12.6.1。"],["reactive_ble",false,"Flutter 库。"]]}];
+</script>
+<script>
 const tocLinks=[...document.querySelectorAll('.toc a')];
 const secs=tocLinks.map(a=>document.getElementById(a.getAttribute('href').slice(1)));
 const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){tocLinks.forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+e.target.id));}});},{rootMargin:'-20% 0px -70% 0px'});
 secs.forEach(s=>s&&io.observe(s));
-const QUIZ=[{"q":"1. 本板库？","opts":[["react-native-ble-plx",true,"对。"],["reactive_ble",false,"Flutter。"],["CoreBluetooth",false,"iOS。"]]},{"q":"2. 管理用？","opts":[["BleManager",true,"对。"],["CBCentralManager",false,"iOS。"],["GattClient",false,"鸿蒙。"]]},{"q":"3. 操作以？","opts":[["Promise+事件",true,"对。"],["同步",false,"异步。"],["句柄",false,"对象。"]]}];
 let solved=0; const box=document.getElementById('quiz-box');
 QUIZ.forEach((item,qi)=>{
   const h=document.createElement('div'); h.className='quiz-q'; h.textContent=item.q; box.appendChild(h);
@@ -278,7 +409,6 @@ QUIZ.forEach((item,qi)=>{
   });
   box.appendChild(ex);
 });
-
 </script>
 </body>
 </html>

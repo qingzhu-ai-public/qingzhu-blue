@@ -172,6 +172,10 @@
   .ctl-row label{display:inline-flex;align-items:center;gap:10px;}
   .ctl-row input[type=range]{accent-color:var(--coral);width:160px;}
   .ctl-row .chk input{accent-color:var(--coral);}
+  .api-lv{display:inline-block;font-family:ui-monospace,Consolas,monospace;font-size:11.5px;font-weight:800;color:#2F58A8;background:var(--blue-soft);border:1px solid var(--blue-line);border-radius:999px;padding:0 8px;white-space:nowrap;}
+  .refs{font-size:14px;}
+  .refs li{margin:7px 0;}
+  .refs .src{font-size:12px;color:var(--faint);}
 </style>
 </head>
 <body style="--coral:#E8590C;--coral-soft:#FBEADF;--coral-line:#F2C4A4">
@@ -197,66 +201,199 @@
 <main>
   <div class="crumb">蓝牙小课堂 / RN 第八课 · F8</div>
   <h1>综合实战：<em>温湿度计</em> 双端对照</h1>
-  <p class="lead">把 F1–F7 串成温湿度计：扫描→连接→发现→monitor→base64 解码→小端解析→UI，双端验收。</p>
-  <div class="meta"><span>约 10 分钟</span><span>含交互演练</span><span>跨端对照</span></div>
+  <p class="lead">把 F1–F7 串成温湿度计：扫描→连接→发现→monitor→base64 解码→小端解析→UI，双端验收。配套旧样例用 ble-manager 实现，本课给概念映射。</p>
+  <div class="meta"><span>平台：React Native/TS</span><span>约 24 分钟</span><span>ble-plx 3.x</span><span>含两场交互演练</span><span>跨端对照</span></div>
   <div class="journey">
-    <div class="j-step"><span class="n">1</span><span class="t">流程</span><span class="s">六步</span></div>
-    <div class="j-step"><span class="n">2</span><span class="t">验收</span><span class="s">双端</span></div>
+    <div class="j-step"><span class="n">1</span><span class="t">流程</span><span class="s">七步</span></div>
+    <div class="j-step"><span class="n">2</span><span class="t">验收</span><span class="s">双端双机</span></div>
+    <div class="j-step"><span class="n">3</span><span class="t">工程</span><span class="s">样例映射</span></div>
+    <div class="j-step"><span class="n">4</span><span class="t">动手</span><span class="s">两场演练</span></div>
+    <div class="j-step"><span class="n">5</span><span class="t">自测</span><span class="s">六个问题</span></div>
   </div>
 
   <section id="a">
-    <h2><span class="no">第 1 步</span>六步流程</h2>
+    <h2><span class="no">第 1 步</span>七步流程（比 Flutter 多一级解码）</h2>
     <pre>startDeviceScan → connect → discoverAll
-→ monitor → base64 解码 → 小端解析 → UI</pre><div class="recap"><b>收束：</b>多一步 base64 解码。</div>
+→ monitor → base64 解码 → 小端解析 → UI</pre>
+    <table>
+      <tr><th>步</th><th>API</th><th>课</th><th>验收点</th></tr>
+      <tr><td>1 扫描</td><td>startDeviceScan([476c…0601], null, cb) <span class="api-lv">3.x</span></td><td>F3</td><td>过滤命中、id 去重、err 即停扫</td></tr>
+      <tr><td>2 连接</td><td>device.connect() <span class="api-lv">3.x</span></td><td>F4</td><td>Promise resolve 才下一步</td></tr>
+      <tr><td>3 发现</td><td>discoverAllServicesAndCharacteristics() <span class="api-lv">3.x</span></td><td>F4</td><td>拿到 …0602（READ+WRITE）</td></tr>
+      <tr><td>4 订阅/请求</td><td>monitor…ForService + write "AQ=="(0x01) <span class="api-lv">3.x</span></td><td>F5</td><td>关键命令带应答写；收帧</td></tr>
+      <tr><td>5 base64 解码</td><td>Buffer.from(c.value, 'base64')</td><td>F5</td><td>QgLECQO/Ew== → 40 02 C4 09 03 BF 13</td></tr>
+      <tr><td>6 小端解析</td><td>readInt16LE(2)/readUInt16LE(5) ×0.01</td><td>F5</td><td>25.00/26.50 交替、湿度 50.55</td></tr>
+      <tr><td>7 UI/清理</td><td>setState + sub.remove/cancel/stop</td><td>F6</td><td>退页无幽灵回调、无孤儿连接</td></tr>
+    </table>
+    <figure>
+      <svg viewBox="0 0 760 150" role="img" aria-label="温湿度计七步流水线">
+        <defs><marker id="arf8" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#A39B8E"/></marker></defs>
+        <rect x="8" y="40" width="98" height="52" rx="10" fill="#ECF1FB" stroke="#C9D8F2"/><text x="57" y="70" text-anchor="middle" font-size="11" font-weight="bold" fill="#2F58A8">扫描</text>
+        <rect x="118" y="40" width="98" height="52" rx="10" fill="#E9F4F2" stroke="#BFE0DB"/><text x="167" y="70" text-anchor="middle" font-size="11" font-weight="bold" fill="#1E7268">连接</text>
+        <rect x="228" y="40" width="98" height="52" rx="10" fill="#E9F4F2" stroke="#BFE0DB"/><text x="277" y="70" text-anchor="middle" font-size="11" font-weight="bold" fill="#1E7268">发现</text>
+        <rect x="338" y="40" width="98" height="52" rx="10" fill="#FBF3E4" stroke="#EDD9B4"/><text x="387" y="70" text-anchor="middle" font-size="11" font-weight="bold" fill="#8A5510">monitor+写01</text>
+        <rect x="448" y="40" width="98" height="52" rx="10" fill="#FBEDE9" stroke="#F0CFC6"/><text x="497" y="70" text-anchor="middle" font-size="11" font-weight="bold" fill="#B04A35">base64 解码</text>
+        <rect x="558" y="40" width="98" height="52" rx="10" fill="#FBF3E4" stroke="#EDD9B4"/><text x="607" y="70" text-anchor="middle" font-size="11" font-weight="bold" fill="#8A5510">小端解析</text>
+        <rect x="668" y="40" width="84" height="52" rx="10" fill="#FBEDE9" stroke="#F0CFC6"/><text x="710" y="70" text-anchor="middle" font-size="11" font-weight="bold" fill="#B04A35">UI+清理</text>
+        <line x1="106" y1="66" x2="116" y2="66" stroke="#A39B8E" stroke-width="2" marker-end="url(#arf8)"/>
+        <line x1="216" y1="66" x2="226" y2="66" stroke="#A39B8E" stroke-width="2" marker-end="url(#arf8)"/>
+        <line x1="326" y1="66" x2="336" y2="66" stroke="#A39B8E" stroke-width="2" marker-end="url(#arf8)"/>
+        <line x1="436" y1="66" x2="446" y2="66" stroke="#A39B8E" stroke-width="2" marker-end="url(#arf8)"/>
+        <line x1="546" y1="66" x2="556" y2="66" stroke="#A39B8E" stroke-width="2" marker-end="url(#arf8)"/>
+        <line x1="656" y1="66" x2="666" y2="66" stroke="#A39B8E" stroke-width="2" marker-end="url(#arf8)"/>
+        <text x="380" y="125" text-anchor="middle" font-size="11.5" fill="#A39B8E">权限门×状态门（F2）贯穿全程；红色一步是 RN 独有</text>
+      </svg>
+      <figcaption>图 1 · 七步链：base64 解码是 RN 比 Flutter 多出的一级。</figcaption>
+    </figure>
+    <div class="recap"><b>收束：</b>多一步 base64 解码。</div>
   </section>
 
   <section id="b">
-    <h2><span class="no">第 2 步</span>双端验收</h2>
-    <p>同一 JS 跑 Android+iOS，对照权限/后台差异；第二设备当外设发值验收。</p><div class="recap"><b>收束：</b>双端+双机验收。</div>
+    <h2><span class="no">第 2 步</span>双端验收与样例工程映射</h2>
+    <p>同一 JS 跑 Android+iOS，对照权限/后台差异；第二设备当外设发值验收。</p>
+    <table>
+      <tr><th>对照项</th><th>Android</th><th>iOS</th></tr>
+      <tr><td>权限</td><td>12+ SCAN/CONNECT 弹窗；旧系统位置</td><td>plist 文案，首次自动弹窗</td></tr>
+      <tr><td>设备 id</td><td>MAC（可能随机化）</td><td>系统 UUID，<b>不能硬编码</b></td></tr>
+      <tr><td>MTU</td><td>requestMTU 可协商（Android 14 起默认 517）</td><td>自动协商，调用无效果</td></tr>
+      <tr><td>扫描重复</td><td>默认上报重复</td><td>allowDuplicates 才重复</td></tr>
+      <tr><td>后台</td><td>前台服务/Headless JS</td><td>挂起；后台模式是原生能力</td></tr>
+    </table>
+    <ul>
+      <li><b>双机验收</b>：第二台设备跑教学外设（服务 476cdf45-…0601，特征 …0602 READ+WRITE）；手机写 "AQ=="(0x01)，外设回帧温度 25.00/26.50 交替、湿度固定 50.55%。</li>
+      <li><b>对日志不看 UI</b>：每步打印 base64 原值、解码 hex 与解析结果；UI 数字必须能从日志复算。</li>
+      <li><b>样例工程口径</b>：<code>examples/react-native/thermometer-mvp</code>（Expo 55 + dev-client，RN 0.83）用 <b>react-native-ble-manager 12.6.1</b> 实现同一流程——事件驱动风格；本板正课统一 ble-plx。两者概念一一对应（下表），读样例时按映射翻译即可。</li>
+    </ul>
+    <table>
+      <tr><th>流程</th><th>本课 ble-plx</th><th>样例 ble-manager</th></tr>
+      <tr><td>初始化</td><td>new BleManager()</td><td>BleManager.start()</td></tr>
+      <tr><td>扫描</td><td>startDeviceScan(uuids, null, cb)</td><td>BleManager.scan([svc], seconds) + onDiscoverPeripheral 事件</td></tr>
+      <tr><td>连接</td><td>device.connect()</td><td>BleManager.connect(id)</td></tr>
+      <tr><td>发现</td><td>discoverAllServicesAndCharacteristics()</td><td>BleManager.retrieveServices(id)</td></tr>
+      <tr><td>订阅</td><td>monitor…ForService(s, c, cb)</td><td>startNotification(id, s, c) + onDidUpdateValueForCharacteristic 事件</td></tr>
+      <tr><td>读写</td><td>read/write…ForService（base64）</td><td>BleManager.read/write（同样 base64）</td></tr>
+      <tr><td>停扫</td><td>stopDeviceScan()</td><td>BleManager.stopScan()</td></tr>
+    </table>
+    <div class="recap"><b>收束：</b>双端+双机验收；库不同、流程同。</div>
   </section>
 
   <section id="lab">
-    <h2><span class="no">动手</span>实战流程</h2>
-    <p>点按钮切换本平台写法与 Android 对照，概念一一对应。</p>
+    <h2><span class="no">动手</span>两场演练：API 对照、七步走查</h2>
+    <p>演练一切换写法对照。演练二逐步点完七步，看每步日志与验收点。</p>
     <div class="lab">
-      <div class="lab-head"><b>实战流程</b><span class="hint">点按钮看 API</span></div>
+      <div class="lab-head"><b>演练一 · 实战流程 API</b><span class="hint">点按钮看 API</span></div>
       <div class="controls"><div class="seg" id="f8"><button data-k="api" class="on">本平台 API</button><button data-k="cmp">对照 Android</button></div></div>
       <div class="lab-body"><div><pre id="f8code" style="margin:0;"></pre></div><div class="logcat"><div class="logcat-head"><span>说明</span><span>live</span></div><div class="logcat-body" id="f8log"></div></div></div>
       <div class="lab-foot"><span class="hint">原生同流程</span></div>
     </div>
-    <div class="key"><span class="tag">看懂这场演练</span>多 base64 解码；双端验收。</div>
+    <div class="lab">
+      <div class="lab-head"><b>演练二 · 七步走查</b><span class="hint">点一步走一步，日志累积</span></div>
+      <div class="controls"><div class="seg" id="g8"><button data-g="1" class="on">1 扫描</button><button data-g="2">2 连接</button><button data-g="3">3 发现</button><button data-g="4">4 monitor+写01</button><button data-g="5">5 base64</button><button data-g="6">6 解析</button><button data-g="7">7 UI+清理</button></div></div>
+      <div class="lab-body"><div><div class="chips" id="g8chips"></div><div class="key" id="g8hint"></div></div><div class="logcat"><div class="logcat-head"><span>实战日志</span><span>live</span></div><div class="logcat-body" id="g8log"></div></div></div>
+      <div class="lab-foot"><span class="hint">教学外设：写 0x01 回帧，温度交替</span></div>
+    </div>
+    <div class="key"><span class="tag">看懂这两场演练</span>多 base64 解码；双端验收。每一步的验收点就是对应课的自测点。</div>
   </section>
 
   <section id="quiz">
-    <h2><span class="no">自测</span>三个问题</h2>
+    <h2><span class="no">自测</span>六个问题</h2>
     <div class="card" id="quiz-box"></div>
     <p id="quiz-done" style="display:none;font-weight:700;color:#1E7268;">全对。RN 板八课完成。全部平台板正课齐备。</p>
   </section>
 
   <section id="map">
-    <h2><span class="no">回顾</span>速查</h2>
-    <table><tr><th>步</th><th>API</th></tr><tr><td>扫描</td><td>startDeviceScan</td></tr><tr><td>订阅</td><td>monitor…ForService</td></tr></table>
-    <div class="note"><span class="tag">说明</span>本页为教学简化，工程细节以正文与官方规范为准；演练为模拟，非真实设备通信。</div>
+    <h2><span class="no">回顾</span>速查表</h2>
+    <table>
+      <tr><th>步</th><th>API / 要点</th></tr>
+      <tr><td>扫描</td><td>startDeviceScan；err 即停扫要重启</td></tr>
+      <tr><td>连接/发现</td><td>connect → discoverAll（每连接一次）</td></tr>
+      <tr><td>订阅</td><td>monitor…ForService；写 0x01 = "AQ==" 带应答</td></tr>
+      <tr><td>解码</td><td>Buffer.from(base64) → readInt16LE/readUInt16LE ×0.01</td></tr>
+      <tr><td>清理</td><td>sub.remove + cancel + stop；App 退出 destroy</td></tr>
+      <tr><td>验收</td><td>双端对照 + 双机对日志；样例 ble-manager 按映射读</td></tr>
+    </table>
+    <div class="note"><span class="tag">说明</span>本页为教学整理，API 对照 dotintent 官方文档、样例库版本对照其 package.json 核实；演练为模拟，非真实设备通信。</div>
+  </section>
+
+  <section id="refs">
+    <h2><span class="no">依据</span>参考链接</h2>
+    <div class="card refs">
+      <h3 style="margin-top:0;">库官方</h3>
+      <ul>
+        <li><a href="https://dotintent.github.io/react-native-ble-plx/" target="_blank" rel="noopener">react-native-ble-plx 官方文档</a> <span class="src">— 七步所用全部 API 签名</span></li>
+        <li><a href="https://github.com/innoveit/react-native-ble-manager" target="_blank" rel="noopener">innoveit/react-native-ble-manager</a> <span class="src">— 样例工程所用库；事件 API 映射依据</span></li>
+      </ul>
+      <h3>协议规范</h3>
+      <ul>
+        <li><a href="https://bthome.io/format/" target="_blank" rel="noopener">BTHome v2 格式规范</a> <span class="src">— 帧布局与官方样例值</span></li>
+      </ul>
+      <h3>配套工程（本仓库）</h3>
+      <ul>
+        <li><a href="../../examples/react-native/thermometer-mvp/prototype/index.html">thermometer-mvp 浏览器原型</a> <span class="src">— 先演练流程再上真机</span></li>
+      </ul>
+    </div>
+    <div class="next-links">
+      <a href="07-native-bridge.html">← F7 原生模块</a>
+      <a href="../../examples/react-native/thermometer-mvp/prototype/index.html">样例原型 →</a>
+      <a href="../index.html">回到学堂</a>
+    </div>
     <footer>青竹蓝牙学堂 · 蓝牙小课堂RN 第八课 · F8 · <a href="../index.html">回到学堂</a></footer>
   </section>
 </main>
 <aside class="toc" id="toc">
   <div class="toc-title">本课目录</div>
-  <a href="#a">六步流程</a>
-  <a href="#b">双端验收</a>
-  <a href="#lab">动手演练</a>
+  <a href="#a">七步流程</a>
+  <a href="#b">双端验收与映射</a>
+  <a href="#lab">两场演练</a>
   <a href="#quiz">本课自测</a>
-  <a href="#map">回顾与速查</a>
+  <a href="#map">速查表</a>
+  <a href="#refs">参考链接</a>
 </aside>
 </div>
 <script>
-(function(){var API="点按钮看流程。";var CMP="startDeviceScan(['1809']) → connect → discoverAll\n→ monitor → base64→bytes→6A 09→24.10°C";var NT="原生同流程";function show(k){document.getElementById("f8code").textContent=(k==="api"?API:CMP);document.getElementById("f8log").innerHTML="<div><span class=\"ok\">"+(k==="api"?"本平台写法":"Android 对照")+"</span></div><div><span class=\"c\">// "+(k==="api"?NT:"概念相同，API 名不同")+"</span></div>";}document.querySelectorAll("#f8 button").forEach(function(b){b.addEventListener("click",function(){document.querySelectorAll("#f8 button").forEach(function(x){x.classList.remove("on");});b.classList.add("on");show(b.getAttribute("data-k"));});});show("api");})();
+(function(){
+  var API="startDeviceScan([476c…0601], null, cb)\n→ device.connect()\n→ discoverAllServicesAndCharacteristics()\n→ monitorCharacteristicForService + write \"AQ==\"\n→ Buffer.from(c.value,'base64')\n→ 40 02 C4 09 03 BF 13 → 25.00°C / 50.55%\n→ setState + remove/cancel/stop";
+  var CMP="Android 原生同流程:\nstartScan(filter) → connectGatt\n→ discoverServices → setNotify+CCCD\n→ writeCharacteristic(0x01)\n→ onCharacteristicChanged 解析\n// RN 多一级 base64；样例 ble-manager 用事件风格同流程";
+  var NT="原生同流程";
+  function show(k){document.getElementById("f8code").textContent=(k==="api"?API:CMP);document.getElementById("f8log").innerHTML="<div><span class=\"ok\">"+(k==="api"?"RN 七步":"Android 对照")+"</span></div><div><span class=\"c\">// "+(k==="api"?NT:"概念相同，API 名不同")+"</span></div>";}
+  document.querySelectorAll("#f8 button").forEach(function(b){b.addEventListener("click",function(){document.querySelectorAll("#f8 button").forEach(function(x){x.classList.remove("on");});b.classList.add("on");show(b.getAttribute("data-k"));});});
+  show("api");
+})();
 
+// 演练二：七步走查
+(function(){
+  var S=[
+    {t:'扫描',log:'<span class="api">startDeviceScan([476c…0601], null, cb)</span> → <span class="ok">device(Qingzhu-Sensor, id=AA:BB:…, rssi=-52)</span>',hint:'过滤命中、id 去重；err 即停扫（F3）。'},
+    {t:'连接',log:'<span class="api">await device.connect()</span> → <span class="ok">Promise resolve</span>',hint:'resolve 才下一步（F4）。'},
+    {t:'发现',log:'<span class="api">discoverAllServicesAndCharacteristics()</span> → <span class="ok">…0601 / …0602 READ+WRITE</span>',hint:'每连接一次必做（F4）。'},
+    {t:'monitor+写01',log:'<span class="api">monitor…ForService + write "AQ==" WithResponse</span> → <span class="ok">c.value = "QgLECQO/Ew=="</span>',hint:'关键命令带应答写（F5）。'},
+    {t:'base64',log:'<span class="api">Buffer.from("QgLECQO/Ew==", "base64")</span> → <span class="ok">40 02 C4 09 03 BF 13（7 字节 ✓）</span>',hint:'RN 独有的一级解码（F5）。'},
+    {t:'解析',log:'<span class="ok">readInt16LE(2)=2500 → 25.00°C；readUInt16LE(5)=5055 → 50.55%</span> → <span class="ok">再写 0x01 → 26.50°C 交替</span>',hint:'小端+符号×0.01（F5）。'},
+    {t:'UI+清理',log:'<span class="ok">setState 刷新</span> → <span class="api">sub.remove() + cancelDeviceConnection + stopDeviceScan</span> → <span class="ok">残留 0</span>',hint:'退页无幽灵回调（F6）。'}
+  ];
+  function show(n){
+    var chips='';
+    for(var i=0;i<7;i++){chips+='<span class="chip '+(i<n?'on':'')+'">'+(i+1)+' '+S[i].t+'</span>';}
+    document.getElementById('g8chips').innerHTML=chips;
+    document.getElementById('g8hint').innerHTML='<span class="tag">验收点</span>'+S[n-1].hint;
+    var logs=[];
+    for(var j=0;j<n;j++){logs.push('<div>'+S[j].log+'</div>');}
+    document.getElementById('g8log').innerHTML=logs.join('');
+  }
+  document.querySelectorAll('#g8 button').forEach(function(b){b.addEventListener('click',function(){
+    document.querySelectorAll('#g8 button').forEach(function(x){x.classList.remove('on');});
+    b.classList.add('on'); show(parseInt(b.getAttribute('data-g'),10));
+  });});
+  show(1);
+})();
+
+const QUIZ=[{"q":"1. RN 订阅用？","opts":[["monitor…ForService",true,"对。"],["subscribe",false,"Flutter。"],["setNotify",false,"原生。"]]},{"q":"2. 值先？","opts":[["base64 解码",true,"对。"],["直接小端",false,"先解码。"],["hex",false,"base64。"]]},{"q":"3. 温度解析？","opts":[["小端×0.01",true,"对。"],["大端",false,"错。"],["不乘",false,"要乘。"]]},{"q":"4. 样例工程 ble-manager 的订阅对应 plx 哪个？","opts":[["startNotification + 事件 ≈ monitor…ForService",true,"对。F8 映射表。"],["scan ≈ monitor",false,"那是扫描。"],["connect ≈ monitor",false,"那是连接。"]]},{"q":"5. iOS 上设备 id 能硬编码吗？","opts":[["不能：系统 UUID，换机/重装会变",true,"对。每次从扫描结果取。"],["能：和 MAC 一样固定",false,"iOS 不暴露 MAC。"],["写死即可",false,"不同手机看到的不同。"]]},{"q":"6. 退页验收看什么？","opts":[["日志确认 remove/cancel/stop、无孤儿连接",true,"对。F6 三级清理。"],["UI 不报错就行",false,"幽灵回调可能延迟。"],["重启 App",false,"不必。"]]}];
+</script>
+<script>
 const tocLinks=[...document.querySelectorAll('.toc a')];
 const secs=tocLinks.map(a=>document.getElementById(a.getAttribute('href').slice(1)));
 const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){tocLinks.forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+e.target.id));}});},{rootMargin:'-20% 0px -70% 0px'});
 secs.forEach(s=>s&&io.observe(s));
-const QUIZ=[{"q":"1. RN 订阅用？","opts":[["monitor…ForService",true,"对。"],["subscribe",false,"Flutter。"],["setNotify",false,"原生。"]]},{"q":"2. 值先？","opts":[["base64 解码",true,"对。"],["直接小端",false,"先解码。"],["hex",false,"base64。"]]},{"q":"3. 温度解析？","opts":[["小端×0.01",true,"对。"],["大端",false,"错。"],["不乘",false,"要乘。"]]}];
 let solved=0; const box=document.getElementById('quiz-box');
 QUIZ.forEach((item,qi)=>{
   const h=document.createElement('div'); h.className='quiz-q'; h.textContent=item.q; box.appendChild(h);
@@ -276,7 +413,6 @@ QUIZ.forEach((item,qi)=>{
   });
   box.appendChild(ex);
 });
-
 </script>
 </body>
 </html>

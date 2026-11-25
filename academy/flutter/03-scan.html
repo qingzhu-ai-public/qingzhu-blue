@@ -172,6 +172,10 @@
   .ctl-row label{display:inline-flex;align-items:center;gap:10px;}
   .ctl-row input[type=range]{accent-color:var(--coral);width:160px;}
   .ctl-row .chk input{accent-color:var(--coral);}
+  .api-lv{display:inline-block;font-family:ui-monospace,Consolas,monospace;font-size:11.5px;font-weight:800;color:#2F58A8;background:var(--blue-soft);border:1px solid var(--blue-line);border-radius:999px;padding:0 8px;white-space:nowrap;}
+  .refs{font-size:14px;}
+  .refs li{margin:7px 0;}
+  .refs .src{font-size:12px;color:var(--faint);}
 </style>
 </head>
 <body style="--coral:#E8590C;--coral-soft:#FBEADF;--coral-line:#F2C4A4">
@@ -197,66 +201,199 @@
 <main>
   <div class="crumb">蓝牙小课堂 / Flutter 第三课 · E3</div>
   <h1>扫描：<em>scanForDevices</em> 流</h1>
-  <p class="lead">scanForDevices(withServices:) 返回 Stream，listen 收 DiscoveredDevice。这一课讲扫描流与去重。</p>
-  <div class="meta"><span>约 10 分钟</span><span>含交互演练</span><span>跨端对照</span></div>
+  <p class="lead">scanForDevices(withServices:) 返回 Stream，listen 收 DiscoveredDevice。这一课讲扫描参数、过滤命中规则与去重停扫。</p>
+  <div class="meta"><span>平台：Flutter/Dart</span><span>约 20 分钟</span><span>flutter_reactive_ble 5.6.0</span><span>含两场交互演练</span><span>跨端对照</span></div>
   <div class="journey">
     <div class="j-step"><span class="n">1</span><span class="t">扫描</span><span class="s">scanForDevices</span></div>
-    <div class="j-step"><span class="n">2</span><span class="t">去重</span><span class="s">id</span></div>
+    <div class="j-step"><span class="n">2</span><span class="t">去重停扫</span><span class="s">id + cancel</span></div>
+    <div class="j-step"><span class="n">3</span><span class="t">过滤</span><span class="s">命中规则</span></div>
+    <div class="j-step"><span class="n">4</span><span class="t">动手</span><span class="s">两场演练</span></div>
+    <div class="j-step"><span class="n">5</span><span class="t">自测</span><span class="s">六个问题</span></div>
   </div>
 
   <section id="a">
-    <h2><span class="no">第 1 步</span>扫描流</h2>
+    <h2><span class="no">第 1 步</span>扫描流与参数</h2>
     <pre>ble.scanForDevices(withServices:[Uuid.parse('1809')], scanMode:ScanMode.lowLatency)
-  .listen((d){ /* d.id, d.name, d.rssi */ })</pre><div class="recap"><b>收束：</b>Stream listen 收设备。</div>
+  .listen((d){ /* d.id, d.name, d.rssi */ })</pre>
+    <table>
+      <tr><th>参数</th><th>类型 / 默认</th><th>说明</th></tr>
+      <tr><td><code>withServices</code></td><td>List&lt;Uuid&gt;（必填）</td><td>按广播里的服务 UUID 过滤；官方建议总是指定，空列表 = 全收</td></tr>
+      <tr><td><code>scanMode</code></td><td>ScanMode.balanced</td><td>lowPower / balanced / lowLatency 三档，延迟与功耗权衡</td></tr>
+      <tr><td><code>requireLocationServicesEnabled</code></td><td>true</td><td><span class="api-lv">Android</span> 要求系统定位服务开启，否则扫描失败</td></tr>
+    </table>
+    <table>
+      <tr><th>DiscoveredDevice 字段</th><th>用途</th><th>注意</th></tr>
+      <tr><td>id</td><td>连接与去重的键</td><td>Android MAC（可能随机化）/ iOS UUID</td></tr>
+      <tr><td>name</td><td>展示</td><td>可能为空或重复，别当键</td></tr>
+      <tr><td>rssi</td><td>排序/近场判断</td><td>波动大，只配排序不配过滤</td></tr>
+      <tr><td>serviceUuids / serviceData / manufacturerData</td><td>广播数据解析</td><td>BTHome 等协议从这里取（E5/E8）</td></tr>
+    </table>
+    <pre><span class="cm">// Uuid.parse 支持 16 位短码，expanded 可扩成 128 位</span>
+final svc = Uuid.parse('1809');        <span class="cm">// Health Thermometer 短码</span>
+final full = svc.expanded;             <span class="cm">// 00001809-0000-1000-8000-00805f9b34fb</span>
+<span class="cm">// 本教学协议用自定义 128 位：476cdf45-6063-43a1-b8e2-8c1fbed00601</span></pre>
+    <figure>
+      <svg viewBox="0 0 760 180" role="img" aria-label="扫描流水线：广播到去重列表">
+        <defs><marker id="are3" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#A39B8E"/></marker></defs>
+        <rect x="20" y="40" width="150" height="60" rx="12" fill="#ECF1FB" stroke="#C9D8F2"/>
+        <text x="95" y="66" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#2F58A8">外设广播</text>
+        <text x="95" y="86" text-anchor="middle" font-size="10.5" fill="#5F7FB5">ADV 包含服务 UUID</text>
+        <rect x="215" y="40" width="150" height="60" rx="12" fill="#FBF3E4" stroke="#EDD9B4"/>
+        <text x="290" y="66" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#8A5510">withServices 过滤</text>
+        <text x="290" y="86" text-anchor="middle" font-size="10.5" fill="#A8762A">不命中 → 不上报</text>
+        <rect x="410" y="40" width="150" height="60" rx="12" fill="#E9F4F2" stroke="#BFE0DB"/>
+        <text x="485" y="66" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#1E7268">Stream 事件</text>
+        <text x="485" y="86" text-anchor="middle" font-size="10.5" fill="#4E8A80">DiscoveredDevice</text>
+        <rect x="605" y="40" width="135" height="60" rx="12" fill="#FBEDE9" stroke="#F0CFC6"/>
+        <text x="672" y="66" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#B04A35">Map 去重</text>
+        <text x="672" y="86" text-anchor="middle" font-size="10.5" fill="#C08475">键 = d.id</text>
+        <line x1="170" y1="70" x2="213" y2="70" stroke="#A39B8E" stroke-width="2" marker-end="url(#are3)"/>
+        <line x1="365" y1="70" x2="408" y2="70" stroke="#A39B8E" stroke-width="2" marker-end="url(#are3)"/>
+        <line x1="560" y1="70" x2="603" y2="70" stroke="#2A9D8F" stroke-width="2" marker-end="url(#are3)"/>
+        <text x="380" y="145" text-anchor="middle" font-size="11.5" fill="#A39B8E">同一设备反复广播 → 事件多次到达；UI 列表按 id 合并，RSSI 取最新</text>
+      </svg>
+      <figcaption>图 1 · 扫描流水线：过滤在系统侧，去重在 Dart 侧；cancel 订阅即停扫。</figcaption>
+    </figure>
+    <div class="recap"><b>收束：</b>Stream listen 收设备。</div>
   </section>
 
   <section id="b">
     <h2><span class="no">第 2 步</span>去重与停扫</h2>
-    <p>按 d.id 合并列表；页面退出取消 subscription 停扫。过滤字段须真实在广播里。</p><div class="key"><span class="tag">重点</span>及时 cancel 订阅防泄漏/费电。</div>
+    <p>按 d.id 合并列表；页面退出取消 subscription 停扫。过滤字段须真实在广播里。</p>
+    <pre>final devices = &lt;String, DiscoveredDevice&gt;{};
+final sub = ble.scanForDevices(withServices: [svc]).listen((d) {
+  devices[d.id] = d;          <span class="cm">// 同 id 覆盖：RSSI/广播数据取最新</span>
+  setState(() {});            <span class="cm">// 或交给 StreamBuilder / 状态管理</span>
+});
+<span class="cm">// 停扫 = cancel 订阅（没有单独的 stopScan API）</span>
+@override void dispose() { sub.cancel(); super.dispose(); }</pre>
+    <table>
+      <tr><th>ScanMode</th><th>延迟</th><th>功耗</th><th>适用</th></tr>
+      <tr><td>lowPower</td><td>高</td><td>低</td><td>后台偶尔发现</td></tr>
+      <tr><td>balanced（默认）</td><td>中</td><td>中</td><td>常规列表页</td></tr>
+      <tr><td>lowLatency</td><td>低</td><td>高</td><td>用户盯着等设备的短窗口</td></tr>
+    </table>
+    <div class="key"><span class="tag">重点</span>及时 cancel 订阅防泄漏/费电。扫描没有「超时自动停」，连上目标后也应立刻 cancel 扫描流。</div>
+    <div class="recap"><b>收束：</b>id 去重 + cancel 停扫；过滤字段必须在广播里真实存在。</div>
   </section>
 
   <section id="lab">
-    <h2><span class="no">动手</span>扫描 / 去重</h2>
-    <p>点按钮切换本平台写法与 Android 对照，概念一一对应。</p>
+    <h2><span class="no">动手</span>两场演练：API 对照、过滤沙盒</h2>
+    <p>演练一切换写法对照。演练二改过滤与扫描参数，看命中/漏报与功耗提示。</p>
     <div class="lab">
-      <div class="lab-head"><b>扫描 / 去重</b><span class="hint">点按钮看 API</span></div>
+      <div class="lab-head"><b>演练一 · 扫描 / 去重 API</b><span class="hint">点按钮看 API</span></div>
       <div class="controls"><div class="seg" id="e3"><button data-k="api" class="on">本平台 API</button><button data-k="cmp">对照 Android</button></div></div>
       <div class="lab-body"><div><pre id="e3code" style="margin:0;"></pre></div><div class="logcat"><div class="logcat-head"><span>说明</span><span>live</span></div><div class="logcat-body" id="e3log"></div></div></div>
       <div class="lab-foot"><span class="hint">Android: startScan + onScanResult</span></div>
     </div>
-    <div class="key"><span class="tag">看懂这场演练</span>Stream 扫描；id 去重；退出 cancel。</div>
+    <div class="lab">
+      <div class="lab-head"><b>演练二 · 过滤与参数沙盒</b><span class="hint">过滤字段须真实在广播里</span></div>
+      <div class="controls"><div class="seg" id="g3"><button data-g="hit" class="on">UUID 命中</button><button data-g="miss">UUID 不在广播</button><button data-g="all">空过滤全收</button><button data-g="fast">lowLatency 档</button><button data-g="loc">定位服务关(Android)</button></div></div>
+      <div class="lab-body"><div><div class="chips" id="g3chips"></div><div class="key" id="g3hint"></div></div><div class="logcat"><div class="logcat-head"><span>扫描日志</span><span>live</span></div><div class="logcat-body" id="g3log"></div></div></div>
+      <div class="lab-foot"><span class="hint">模拟广播：服务 476cdf45-…0601，名 Qingzhu-Sensor</span></div>
+    </div>
+    <div class="key"><span class="tag">看懂这两场演练</span>Stream 扫描；id 去重；退出 cancel。过滤不命中不是 bug，是广播里根本没有那个字段。</div>
   </section>
 
   <section id="quiz">
-    <h2><span class="no">自测</span>三个问题</h2>
+    <h2><span class="no">自测</span>六个问题</h2>
     <div class="card" id="quiz-box"></div>
     <p id="quiz-done" style="display:none;font-weight:700;color:#1E7268;">全对。下一课讲连接与发现。</p>
   </section>
 
   <section id="map">
-    <h2><span class="no">回顾</span>速查</h2>
-    <table><tr><th>项</th><th>API</th></tr><tr><td>扫描</td><td>scanForDevices</td></tr><tr><td>去重</td><td>id</td></tr></table>
-    <div class="note"><span class="tag">说明</span>本页为教学简化，工程细节以正文与官方规范为准；演练为模拟，非真实设备通信。</div>
+    <h2><span class="no">回顾</span>速查表</h2>
+    <table>
+      <tr><th>项</th><th>记住</th></tr>
+      <tr><td>扫描</td><td>scanForDevices(withServices, scanMode, requireLocationServicesEnabled)</td></tr>
+      <tr><td>结果</td><td>Stream&lt;DiscoveredDevice&gt;：id/name/rssi/serviceData/manufacturerData</td></tr>
+      <tr><td>去重</td><td>Map 键 = d.id；name 可重复、rssi 波动</td></tr>
+      <tr><td>停扫</td><td>sub.cancel()（无独立 stopScan）</td></tr>
+      <tr><td>过滤</td><td>只匹配广播里真实存在的服务 UUID</td></tr>
+      <tr><td>档位</td><td>lowPower/balanced/lowLatency，延迟换功耗</td></tr>
+      <tr><td>Android 定位</td><td>requireLocationServicesEnabled 默认 true</td></tr>
+    </table>
+    <div class="note"><span class="tag">说明</span>本页为教学整理，参数与默认值对照 pub.dev 官方类文档核实；演练为模拟，非真实设备通信。</div>
+  </section>
+
+  <section id="refs">
+    <h2><span class="no">依据</span>参考链接</h2>
+    <div class="card refs">
+      <h3 style="margin-top:0;">库官方（pub.dev）</h3>
+      <ul>
+        <li><a href="https://pub.dev/documentation/flutter_reactive_ble/latest/flutter_reactive_ble/FlutterReactiveBle-class.html" target="_blank" rel="noopener">FlutterReactiveBle class · scanForDevices</a> <span class="src">— 参数签名与默认值（scanMode=balanced、requireLocationServicesEnabled=true）</span></li>
+        <li><a href="https://pub.dev/documentation/flutter_reactive_ble/latest/flutter_reactive_ble/Uuid-class.html" target="_blank" rel="noopener">Uuid class</a> <span class="src">— parse / expanded：16 位短码扩 128 位</span></li>
+        <li><a href="https://pub.dev/packages/flutter_reactive_ble" target="_blank" rel="noopener">flutter_reactive_ble · Device discovery</a> <span class="src">— 官方建议总是指定服务过滤</span></li>
+      </ul>
+      <h3>平台官方</h3>
+      <ul>
+        <li><a href="https://developer.android.com/develop/connectivity/bluetooth/bep/ble-overview" target="_blank" rel="noopener">Android BLE overview</a> <span class="src">— ScanFilter / ScanSettings 原生对照</span></li>
+      </ul>
+    </div>
+    <div class="next-links">
+      <a href="02-permission.html">← E2 权限与状态</a>
+      <a href="04-connect-discover.html">E4 连接与发现 →</a>
+    </div>
     <footer>青竹蓝牙学堂 · 蓝牙小课堂Flutter 第三课 · E3 · <a href="../index.html">回到学堂</a></footer>
   </section>
 </main>
 <aside class="toc" id="toc">
   <div class="toc-title">本课目录</div>
-  <a href="#a">扫描流</a>
+  <a href="#a">扫描流与参数</a>
   <a href="#b">去重与停扫</a>
-  <a href="#lab">动手演练</a>
+  <a href="#lab">两场演练</a>
   <a href="#quiz">本课自测</a>
-  <a href="#map">回顾与速查</a>
+  <a href="#map">速查表</a>
+  <a href="#refs">参考链接</a>
 </aside>
 </div>
 <script>
-(function(){var API="点按钮看写法。";var CMP="scanForDevices(withServices:[uuid]).listen(cb)\n// 按 id 去重；退出 cancel";var NT="Android: startScan + onScanResult";function show(k){document.getElementById("e3code").textContent=(k==="api"?API:CMP);document.getElementById("e3log").innerHTML="<div><span class=\"ok\">"+(k==="api"?"本平台写法":"Android 对照")+"</span></div><div><span class=\"c\">// "+(k==="api"?NT:"概念相同，API 名不同")+"</span></div>";}document.querySelectorAll("#e3 button").forEach(function(b){b.addEventListener("click",function(){document.querySelectorAll("#e3 button").forEach(function(x){x.classList.remove("on");});b.classList.add("on");show(b.getAttribute("data-k"));});});show("api");})();
+(function(){
+  var API="final sub = ble.scanForDevices(\n  withServices: [Uuid.parse('476cdf45-6063-43a1-b8e2-8c1fbed00601')],\n  scanMode: ScanMode.balanced,\n).listen((d){ devices[d.id] = d; });\n// 停扫：sub.cancel();\n// 去重：Map<String, DiscoveredDevice> 键 = d.id";
+  var CMP="Android 原生:\nScanFilter filter = new ScanFilter.Builder()\n  .setServiceUuid(ParcelUuid.fromString(SVC)).build();\nscanner.startScan(List.of(filter), settings, callback);\n// onScanResult 多次到达 → 自行按 address 去重\n// scanner.stopScan(callback) ≈ sub.cancel()";
+  var NT="Android: startScan + onScanResult";
+  function show(k){document.getElementById("e3code").textContent=(k==="api"?API:CMP);document.getElementById("e3log").innerHTML="<div><span class=\"ok\">"+(k==="api"?"Flutter 扫描流":"Android 对照")+"</span></div><div><span class=\"c\">// "+(k==="api"?NT:"概念相同，API 名不同")+"</span></div>";}
+  document.querySelectorAll("#e3 button").forEach(function(b){b.addEventListener("click",function(){document.querySelectorAll("#e3 button").forEach(function(x){x.classList.remove("on");});b.classList.add("on");show(b.getAttribute("data-k"));});});
+  show("api");
+})();
 
+// 演练二：过滤沙盒
+(function(){
+  var G={
+    hit:{f:'withServices=[476c…0601]',mode:'balanced',ok:true,hint:'广播里确有该服务 UUID，命中上报。',
+      log:['<span class="api">scanForDevices(withServices:[476c…0601])</span>','<span class="ok">ADV 命中 → DiscoveredDevice(Qingzhu-Sensor, rssi=-52)</span>','<span class="ok">devices[id] 更新</span>']},
+    miss:{f:'withServices=[1809]',mode:'balanced',ok:false,hint:'设备广播的是自定义服务，不含 1809：系统侧过滤直接丢弃，不是 bug。',
+      log:['<span class="api">scanForDevices(withServices:[1809])</span>','<span class="warn">ADV 服务列表 = [476c…0601]，不含 1809</span>','<span class="err">无事件到达（过滤不命中）</span>','<span class="c">// 改过滤或让外设广播对应服务</span>']},
+    all:{f:'withServices=[]',mode:'balanced',ok:true,hint:'空过滤全收：附近所有 BLE 设备都进列表，嘈杂环境慎用。',
+      log:['<span class="api">scanForDevices(withServices:[])</span>','<span class="ok">Qingzhu-Sensor / 耳机 / 手环… 全部上报</span>','<span class="warn">列表嘈杂，建议总是指定服务</span>']},
+    fast:{f:'withServices=[476c…0601]',mode:'lowLatency',ok:true,hint:'lowLatency 发现快但费电：只在用户盯着等的短窗口用，连上即 cancel。',
+      log:['<span class="api">scanMode: ScanMode.lowLatency</span>','<span class="ok">~0.5s 内发现目标</span>','<span class="warn">功耗高：连上后立刻 sub.cancel()</span>']},
+    loc:{f:'requireLocationServicesEnabled=true',mode:'balanced',ok:false,hint:'Android 系统定位服务关闭：扫描失败。引导开定位服务，或评估后置 false（合规前提）。',
+      log:['<span class="warn">Android 定位服务 OFF</span>','<span class="err">扫描失败（requireLocationServicesEnabled=true）</span>','<span class="c">// 引导开定位服务；statusStream 可见 locationServicesDisabled</span>']}
+  };
+  function show(k){
+    var g=G[k];
+    document.getElementById('g3chips').innerHTML=
+      '<span class="chip on">过滤: '+g.f+'</span>'+
+      '<span class="chip on">档位: '+g.mode+'</span>'+
+      '<span class="chip '+(g.ok?'on':'bad')+'">'+(g.ok?'有事件':'无事件/失败')+'</span>';
+    document.getElementById('g3hint').innerHTML='<span class="tag">处理</span>'+g.hint;
+    document.getElementById('g3log').innerHTML=g.log.map(function(l){return '<div>'+l+'</div>';}).join('');
+  }
+  document.querySelectorAll('#g3 button').forEach(function(b){b.addEventListener('click',function(){
+    document.querySelectorAll('#g3 button').forEach(function(x){x.classList.remove('on');});
+    b.classList.add('on'); show(b.getAttribute('data-g'));
+  });});
+  show('hit');
+})();
+
+const QUIZ=[{"q":"1. 扫描返回？","opts":[["Stream",true,"对。"],["List 同步",false,"流。"],["句柄",false,"对象。"]]},{"q":"2. 去重用？","opts":[["d.id",true,"对。"],["rssi",false,"波动。"],["name",false,"可重复。"]]},{"q":"3. 退出页面要？","opts":[["cancel 订阅停扫",true,"对。"],["不管",false,"泄漏。"],["重启",false,"不必。"]]},{"q":"4. withServices 过滤匹配什么？","opts":[["广播里真实存在的服务 UUID",true,"对。不命中就不上报。"],["设备名",false,"名字不参与服务过滤。"],["RSSI 阈值",false,"RSSI 只配排序。"]]},{"q":"5. 用户盯着等设备时用哪档？","opts":[["lowLatency，连上即 cancel",true,"对。延迟换功耗，短窗口使用。"],["lowPower 常驻",false,"发现太慢。"],["一直 balanced 不停",false,"连上就该停扫。"]]},{"q":"6. requireLocationServicesEnabled 默认 true 意味？","opts":[["Android 定位服务关闭时扫描失败",true,"对。可引导开定位，或合规评估后置 false。"],["iOS 也要定位权限",false,"iOS 无此要求。"],["只是个提示不生效",false,"会真实拦截。"]]}];
+</script>
+<script>
 const tocLinks=[...document.querySelectorAll('.toc a')];
 const secs=tocLinks.map(a=>document.getElementById(a.getAttribute('href').slice(1)));
 const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){tocLinks.forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+e.target.id));}});},{rootMargin:'-20% 0px -70% 0px'});
 secs.forEach(s=>s&&io.observe(s));
-const QUIZ=[{"q":"1. 扫描返回？","opts":[["Stream",true,"对。"],["List 同步",false,"流。"],["句柄",false,"对象。"]]},{"q":"2. 去重用？","opts":[["d.id",true,"对。"],["rssi",false,"波动。"],["name",false,"可重复。"]]},{"q":"3. 退出页面要？","opts":[["cancel 订阅停扫",true,"对。"],["不管",false,"泄漏。"],["重启",false,"不必。"]]}];
 let solved=0; const box=document.getElementById('quiz-box');
 QUIZ.forEach((item,qi)=>{
   const h=document.createElement('div'); h.className='quiz-q'; h.textContent=item.q; box.appendChild(h);
@@ -276,7 +413,6 @@ QUIZ.forEach((item,qi)=>{
   });
   box.appendChild(ex);
 });
-
 </script>
 </body>
 </html>

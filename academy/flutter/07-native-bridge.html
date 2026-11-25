@@ -172,6 +172,10 @@
   .ctl-row label{display:inline-flex;align-items:center;gap:10px;}
   .ctl-row input[type=range]{accent-color:var(--coral);width:160px;}
   .ctl-row .chk input{accent-color:var(--coral);}
+  .api-lv{display:inline-block;font-family:ui-monospace,Consolas,monospace;font-size:11.5px;font-weight:800;color:#2F58A8;background:var(--blue-soft);border:1px solid var(--blue-line);border-radius:999px;padding:0 8px;white-space:nowrap;}
+  .refs{font-size:14px;}
+  .refs li{margin:7px 0;}
+  .refs .src{font-size:12px;color:var(--faint);}
 </style>
 </head>
 <body style="--coral:#E8590C;--coral-soft:#FBEADF;--coral-line:#F2C4A4">
@@ -197,47 +201,158 @@
 <main>
   <div class="crumb">蓝牙小课堂 / Flutter 第七课 · E7</div>
   <h1>原生桥接：<em>MethodChannel</em> 调已有蓝牙任务</h1>
-  <p class="lead">已有原生蓝牙 SDK/任务时，用 MethodChannel/EventChannel 桥接给 Dart，复用原生能力（后台/厂商兼容）。</p>
-  <div class="meta"><span>约 10 分钟</span><span>含交互演练</span><span>跨端对照</span></div>
+  <p class="lead">已有原生蓝牙 SDK/任务时，用 MethodChannel/EventChannel 桥接给 Dart，复用原生能力（后台/厂商兼容）。reactive_ble 自己就是这么实现的。</p>
+  <div class="meta"><span>平台：Flutter/Dart + Kotlin/Swift</span><span>约 22 分钟</span><span>platform channels</span><span>含两场交互演练</span><span>跨端对照</span></div>
   <div class="journey">
     <div class="j-step"><span class="n">1</span><span class="t">桥接</span><span class="s">MethodChannel</span></div>
     <div class="j-step"><span class="n">2</span><span class="t">事件</span><span class="s">EventChannel</span></div>
+    <div class="j-step"><span class="n">3</span><span class="t">边界</span><span class="s">何时自写桥</span></div>
+    <div class="j-step"><span class="n">4</span><span class="t">动手</span><span class="s">两场演练</span></div>
+    <div class="j-step"><span class="n">5</span><span class="t">自测</span><span class="s">六个问题</span></div>
   </div>
 
   <section id="a">
-    <h2><span class="no">第 1 步</span>MethodChannel</h2>
+    <h2><span class="no">第 1 步</span>MethodChannel：方法调用</h2>
     <pre>// Dart
 const MethodChannel('ble/task').invokeMethod('start', args)
-// Kotlin/Swift 侧实现 handler 调原生 SDK</pre><div class="recap"><b>收束：</b>方法调用走 MethodChannel。</div>
+// Kotlin/Swift 侧实现 handler 调原生 SDK</pre>
+    <pre><span class="cm">// Dart 侧</span>
+const channel = MethodChannel('ble/task');
+try {
+  final r = await channel.invokeMethod('start', {'mac': mac});
+} on PlatformException catch (e) {
+  <span class="cm">// 原生 result.error(code, msg, details) 到这里</span>
+}
+
+<span class="cm">// Kotlin 侧（MainActivity.configureFlutterEngine）</span>
+MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "ble/task")
+  .setMethodCallHandler { call, result -&gt;
+    when (call.method) {
+      "start" -&gt; {
+        val mac = call.argument&lt;String&gt;("mac")
+        nativeBleTask.start(mac)     <span class="cm">// 已有原生 SDK/任务</span>
+        result.success("ok")
+      }
+      else -&gt; result.notImplemented()
+    }
+  }</pre>
+    <table>
+      <tr><th>通道</th><th>形态</th><th>用途</th></tr>
+      <tr><td>MethodChannel <span class="api-lv">Flutter</span></td><td>一次调用一次结果（Future）</td><td>start/stop/config 等命令</td></tr>
+      <tr><td>EventChannel <span class="api-lv">Flutter</span></td><td>原生持续推 → Dart Stream</td><td>扫描结果/通知帧/状态事件</td></tr>
+      <tr><td>BasicMessageChannel <span class="api-lv">Flutter</span></td><td>双向消息</td><td>少用；自定义编解码场景</td></tr>
+    </table>
+    <div class="recap"><b>收束：</b>方法调用走 MethodChannel。</div>
   </section>
 
   <section id="b">
-    <h2><span class="no">第 2 步</span>EventChannel</h2>
-    <pre>// 原生回调 → EventChannel sink → Dart Stream</pre><div class="key"><span class="tag">重点</span>把原生回调转成 Dart Stream，复用原生后台/兼容能力。</div>
+    <h2><span class="no">第 2 步</span>EventChannel：回调转 Stream</h2>
+    <pre>// 原生回调 → EventChannel sink → Dart Stream</pre>
+    <pre><span class="cm">// Kotlin：StreamHandler 把 SDK 回调接到 sink</span>
+EventChannel(messenger, "ble/events").setStreamHandler(
+  object : EventChannel.StreamHandler {
+    override fun onListen(args: Any?, sink: EventChannel.EventSink) {
+      nativeBleTask.onFrame = { bytes -&gt;
+        mainHandler.post { sink.success(bytes.toList()) }
+        <span class="cm">// SDK 回调常在 binder 线程，回主线程再发</span>
+      }
+    }
+    override fun onCancel(args: Any?) {
+      nativeBleTask.onFrame = null   <span class="cm">// Dart cancel 时解绑</span>
+    }
+  })
+
+<span class="cm">// Dart：receiveBroadcastStream 就是 Stream</span>
+final sub = const EventChannel('ble/events')
+  .receiveBroadcastStream().listen((frame) { /* 解析 */ });</pre>
+    <figure>
+      <svg viewBox="0 0 760 200" role="img" aria-label="桥接时序：命令下行与事件上行">
+        <defs><marker id="are7" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#A39B8E"/></marker></defs>
+        <rect x="20" y="24" width="180" height="52" rx="12" fill="#FBEDE9" stroke="#F0CFC6"/>
+        <text x="110" y="55" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#B04A35">Dart</text>
+        <rect x="290" y="24" width="180" height="52" rx="12" fill="#ECF1FB" stroke="#C9D8F2"/>
+        <text x="380" y="55" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#2F58A8">平台通道</text>
+        <rect x="560" y="24" width="180" height="52" rx="12" fill="#E9F4F2" stroke="#BFE0DB"/>
+        <text x="650" y="55" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#1E7268">原生 SDK/任务</text>
+        <line x1="200" y1="42" x2="288" y2="42" stroke="#A39B8E" stroke-width="2" marker-end="url(#are7)"/>
+        <text x="244" y="34" text-anchor="middle" font-size="10" fill="#7A7267">invokeMethod</text>
+        <line x1="470" y1="42" x2="558" y2="42" stroke="#A39B8E" stroke-width="2" marker-end="url(#are7)"/>
+        <line x1="558" y1="62" x2="470" y2="62" stroke="#2A9D8F" stroke-width="2" marker-end="url(#are7)"/>
+        <text x="514" y="76" text-anchor="middle" font-size="10" fill="#4E8A80">result.success</text>
+        <line x1="288" y1="62" x2="200" y2="62" stroke="#2A9D8F" stroke-width="2" marker-end="url(#are7)"/>
+        <rect x="20" y="110" width="720" height="66" rx="12" fill="#FBF3E4" stroke="#EDD9B4"/>
+        <text x="40" y="136" font-size="12.5" font-weight="bold" fill="#8A5510">事件上行：SDK 回调 →（回主线程）→ sink.success → Dart Stream</text>
+        <text x="40" y="160" font-size="11.5" fill="#A8762A">onListen 绑定回调 / onCancel 解绑；reactive_ble 底层正是这套（RxAndroidBle / CoreBluetooth）</text>
+      </svg>
+      <figcaption>图 1 · 命令下行用 MethodChannel，事件上行用 EventChannel；线程与解绑是自写桥的两个坑。</figcaption>
+    </figure>
+    <ul>
+      <li><b>何时自写桥</b>：厂商私有 SDK、后台前台服务任务、库未覆盖的私有协议；常规 BLE 直接用 reactive_ble，别重复造桥。</li>
+      <li><b>线程</b>：通道调用在主线程；SDK 回调常在别的线程，post 回主线程再 sink.success。</li>
+      <li><b>错误</b>：result.error → Dart PlatformException；未注册/名字不一致 → MissingPluginException。</li>
+    </ul>
+    <div class="key"><span class="tag">重点</span>把原生回调转成 Dart Stream，复用原生后台/兼容能力。onCancel 必须解绑回调，否则 Dart 侧 cancel 后原生还在推。</div>
+    <div class="recap"><b>收束：</b>命令 MethodChannel、事件 EventChannel；线程与解绑别漏。</div>
   </section>
 
   <section id="lab">
-    <h2><span class="no">动手</span>桥接 / 事件</h2>
-    <p>点按钮切换本平台写法与 Android 对照，概念一一对应。</p>
+    <h2><span class="no">动手</span>两场演练：API 对照、桥接走查</h2>
+    <p>演练一切换写法对照。演练二选场景，看桥接各环节的成败。</p>
     <div class="lab">
-      <div class="lab-head"><b>桥接 / 事件</b><span class="hint">点按钮看 API</span></div>
+      <div class="lab-head"><b>演练一 · 桥接 / 事件 API</b><span class="hint">点按钮看 API</span></div>
       <div class="controls"><div class="seg" id="e7"><button data-k="api" class="on">本平台 API</button><button data-k="cmp">对照 Android</button></div></div>
       <div class="lab-body"><div><pre id="e7code" style="margin:0;"></pre></div><div class="logcat"><div class="logcat-head"><span>说明</span><span>live</span></div><div class="logcat-body" id="e7log"></div></div></div>
       <div class="lab-foot"><span class="hint">原生 SDK 回调 → Dart Stream</span></div>
     </div>
-    <div class="key"><span class="tag">看懂这场演练</span>复用原生能力；回调转 Stream。</div>
+    <div class="lab">
+      <div class="lab-head"><b>演练二 · 桥接调用走查</b><span class="hint">五个常见成败场景</span></div>
+      <div class="controls"><div class="seg" id="g7"><button data-g="ok" class="on">正常调用</button><button data-g="err">原生报错</button><button data-g="cancel">Dart cancel 事件流</button><button data-g="thread">binder 线程直发</button><button data-g="name">通道名不一致</button></div></div>
+      <div class="lab-body"><div><div class="chips" id="g7chips"></div><div class="key" id="g7hint"></div></div><div class="logcat"><div class="logcat-head"><span>桥接日志</span><span>live</span></div><div class="logcat-body" id="g7log"></div></div></div>
+      <div class="lab-foot"><span class="hint">下行命令 + 上行事件分开看</span></div>
+    </div>
+    <div class="key"><span class="tag">看懂这两场演练</span>复用原生能力；回调转 Stream。错误、线程、解绑、命名是自写桥四大坑。</div>
   </section>
 
   <section id="quiz">
-    <h2><span class="no">自测</span>三个问题</h2>
+    <h2><span class="no">自测</span>六个问题</h2>
     <div class="card" id="quiz-box"></div>
     <p id="quiz-done" style="display:none;font-weight:700;color:#1E7268;">全对。最后一课：综合实战。</p>
   </section>
 
   <section id="map">
-    <h2><span class="no">回顾</span>速查</h2>
-    <table><tr><th>通道</th><th>用途</th></tr><tr><td>MethodChannel</td><td>方法调用</td></tr><tr><td>EventChannel</td><td>事件流</td></tr></table>
-    <div class="note"><span class="tag">说明</span>本页为教学简化，工程细节以正文与官方规范为准；演练为模拟，非真实设备通信。</div>
+    <h2><span class="no">回顾</span>速查表</h2>
+    <table>
+      <tr><th>项</th><th>记住</th></tr>
+      <tr><td>命令</td><td>MethodChannel.invokeMethod → result.success/error/notImplemented</td></tr>
+      <tr><td>事件</td><td>EventChannel.StreamHandler：onListen 绑定 / onCancel 解绑 / sink.success</td></tr>
+      <tr><td>Dart 收事件</td><td>receiveBroadcastStream().listen</td></tr>
+      <tr><td>错误映射</td><td>result.error → PlatformException；未注册 → MissingPluginException</td></tr>
+      <tr><td>线程</td><td>SDK 回调 post 回主线程再发 sink</td></tr>
+      <tr><td>何时自写</td><td>厂商 SDK/后台任务/私有协议；常规 BLE 用库</td></tr>
+    </table>
+    <div class="note"><span class="tag">说明</span>本页为教学整理，通道机制对照 Flutter 官方 platform channels 文档核实；演练为模拟，非真实设备通信。</div>
+  </section>
+
+  <section id="refs">
+    <h2><span class="no">依据</span>参考链接</h2>
+    <div class="card refs">
+      <h3 style="margin-top:0;">框架官方</h3>
+      <ul>
+        <li><a href="https://docs.flutter.dev/platform-integration/platform-channels" target="_blank" rel="noopener">Flutter platform channels</a> <span class="src">— MethodChannel / EventChannel 机制与线程模型</span></li>
+      </ul>
+      <h3>库官方（pub.dev）</h3>
+      <ul>
+        <li><a href="https://pub.dev/packages/flutter_reactive_ble" target="_blank" rel="noopener">flutter_reactive_ble · README</a> <span class="src">— Android 侧基于 RxAndroidBle 的桥接实现与线程坑（UndeliverableException）</span></li>
+      </ul>
+      <h3>平台官方</h3>
+      <ul>
+        <li><a href="https://developer.android.com/develop/connectivity/bluetooth/bep/ble-overview" target="_blank" rel="noopener">Android BLE overview</a> <span class="src">— 原生回调线程与 GATT 队列对照</span></li>
+      </ul>
+    </div>
+    <div class="next-links">
+      <a href="06-lifecycle.html">← E6 生命周期</a>
+      <a href="08-project.html">E8 综合实战 →</a>
+    </div>
     <footer>青竹蓝牙学堂 · 蓝牙小课堂Flutter 第七课 · E7 · <a href="../index.html">回到学堂</a></footer>
   </section>
 </main>
@@ -245,19 +360,59 @@ const MethodChannel('ble/task').invokeMethod('start', args)
   <div class="toc-title">本课目录</div>
   <a href="#a">MethodChannel</a>
   <a href="#b">EventChannel</a>
-  <a href="#lab">动手演练</a>
+  <a href="#lab">两场演练</a>
   <a href="#quiz">本课自测</a>
-  <a href="#map">回顾与速查</a>
+  <a href="#map">速查表</a>
+  <a href="#refs">参考链接</a>
 </aside>
 </div>
 <script>
-(function(){var API="点按钮看写法。";var CMP="MethodChannel('ble/task').invokeMethod('start')\nEventChannel('ble/events').receiveBroadcastStream()";var NT="原生 SDK 回调 → Dart Stream";function show(k){document.getElementById("e7code").textContent=(k==="api"?API:CMP);document.getElementById("e7log").innerHTML="<div><span class=\"ok\">"+(k==="api"?"本平台写法":"Android 对照")+"</span></div><div><span class=\"c\">// "+(k==="api"?NT:"概念相同，API 名不同")+"</span></div>";}document.querySelectorAll("#e7 button").forEach(function(b){b.addEventListener("click",function(){document.querySelectorAll("#e7 button").forEach(function(x){x.classList.remove("on");});b.classList.add("on");show(b.getAttribute("data-k"));});});show("api");})();
+(function(){
+  var API="// Dart\nconst MethodChannel('ble/task')\n  .invokeMethod('start', {'mac': mac});\nconst EventChannel('ble/events')\n  .receiveBroadcastStream().listen(onFrame);\n// Kotlin: setMethodCallHandler / StreamHandler\n// onListen 绑定 SDK 回调 → sink.success\n// onCancel 解绑";
+  var CMP="Android 原生直接调 SDK:\nnativeBleTask.start(mac);\nnativeBleTask.onFrame = cb;\n// 桥接只是把这两件事跨语言搬运：\n// 命令下行 MethodChannel，事件上行 EventChannel\n// iOS 侧对应 FlutterMethodChannel / FlutterEventChannel";
+  var NT="原生 SDK 回调 → Dart Stream";
+  function show(k){document.getElementById("e7code").textContent=(k==="api"?API:CMP);document.getElementById("e7log").innerHTML="<div><span class=\"ok\">"+(k==="api"?"Flutter 桥接":"原生对照")+"</span></div><div><span class=\"c\">// "+(k==="api"?NT:"概念相同，多一层通道")+"</span></div>";}
+  document.querySelectorAll("#e7 button").forEach(function(b){b.addEventListener("click",function(){document.querySelectorAll("#e7 button").forEach(function(x){x.classList.remove("on");});b.classList.add("on");show(b.getAttribute("data-k"));});});
+  show("api");
+})();
 
+// 演练二：桥接走查
+(function(){
+  var G={
+    ok:{ch:'ble/task ✓',ev:'ble/events ✓',ok:true,hint:'正常链路：invokeMethod → handler → SDK → result.success；事件经 sink 上行。',
+      log:['<span class="api">invokeMethod("start")</span>','<span class="ok">handler → nativeBleTask.start</span>','<span class="ok">result.success("ok") → Dart Future 完成</span>','<span class="ok">SDK 回调 → sink.success → Dart Stream</span>']},
+    err:{ch:'result.error',ev:'—',ok:false,hint:'原生失败用 result.error(code,msg,details)，Dart 侧捕获 PlatformException；别让异常吞掉。',
+      log:['<span class="api">invokeMethod("start")</span>','<span class="err">SDK 返回失败</span>','<span class="err">result.error("START_FAIL", …)</span>','<span class="warn">Dart: on PlatformException catch (e)</span>']},
+    cancel:{ch:'—',ev:'onCancel',ok:true,hint:'Dart cancel 事件流 → StreamHandler.onCancel 触发；必须解绑 SDK 回调，否则原生继续推。',
+      log:['<span class="api">sub.cancel()</span>','<span class="ok">onCancel(args) 触发</span>','<span class="ok">nativeBleTask.onFrame = null</span>','<span class="c">// 漏解绑 = 原生泄漏</span>']},
+    thread:{ch:'—',ev:'线程错',ok:false,hint:'SDK 回调在 binder 线程直接 sink.success：可能崩溃/丢事件。post 回主线程再发。',
+      log:['<span class="warn">SDK 回调线程 = Binder-xxx</span>','<span class="err">直接 sink.success → 线程违规</span>','<span class="c">// 修复：mainHandler.post { sink.success(...) }</span>']},
+    name:{ch:'名字不一致',ev:'—',ok:false,hint:'Dart 与原生通道名必须逐字符一致；未注册 handler 也会 MissingPluginException。',
+      log:['<span class="api">Dart: MethodChannel("ble/task")</span>','<span class="err">原生注册的是 "ble/tasks"</span>','<span class="err">MissingPluginException</span>','<span class="c">// 对照两端字符串常量</span>']}
+  };
+  function show(k){
+    var g=G[k];
+    document.getElementById('g7chips').innerHTML=
+      '<span class="chip '+(g.ok?'on':'bad')+'">命令: '+g.ch+'</span>'+
+      '<span class="chip '+(g.ok?'on':'bad')+'">事件: '+g.ev+'</span>'+
+      '<span class="chip '+(g.ok?'on':'bad')+'">'+(g.ok?'链路正常':'需要处理')+'</span>';
+    document.getElementById('g7hint').innerHTML='<span class="tag">处理</span>'+g.hint;
+    document.getElementById('g7log').innerHTML=g.log.map(function(l){return '<div>'+l+'</div>';}).join('');
+  }
+  document.querySelectorAll('#g7 button').forEach(function(b){b.addEventListener('click',function(){
+    document.querySelectorAll('#g7 button').forEach(function(x){x.classList.remove('on');});
+    b.classList.add('on'); show(b.getAttribute('data-g'));
+  });});
+  show('ok');
+})();
+
+const QUIZ=[{"q":"1. 方法调用走？","opts":[["MethodChannel",true,"对。"],["EventChannel",false,"那是事件流。"],["HTTP",false,"本地桥接。"]]},{"q":"2. 原生回调转？","opts":[["Dart Stream(EventChannel)",true,"对。"],["同步",false,"流。"],["句柄",false,"Stream。"]]},{"q":"3. 桥接复用原生什么？","opts":[["后台/厂商兼容能力",true,"对。"],["UI",false,"能力。"],["无需",false,"要桥接。"]]},{"q":"4. MissingPluginException 常见原因？","opts":[["通道名不一致或未注册 handler",true,"对。两端字符串逐字符对照。"],["权限不足",false,"那是另一类错。"],["蓝牙没开",false,"无关。"]]},{"q":"5. SDK 回调在 binder 线程怎么办？","opts":[["post 回主线程再 sink.success",true,"对。通道发送要在主线程。"],["直接发",false,"线程违规。"],["新开 isolate",false,"isolate 不能发通道。"]]},{"q":"6. Dart cancel 事件流后原生要？","opts":[["onCancel 里解绑 SDK 回调",true,"对。否则原生继续推、泄漏。"],["不用管",false,"泄漏。"],["destroy 整个引擎",false,"过度。"]]}];
+</script>
+<script>
 const tocLinks=[...document.querySelectorAll('.toc a')];
 const secs=tocLinks.map(a=>document.getElementById(a.getAttribute('href').slice(1)));
 const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){tocLinks.forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+e.target.id));}});},{rootMargin:'-20% 0px -70% 0px'});
 secs.forEach(s=>s&&io.observe(s));
-const QUIZ=[{"q":"1. 方法调用走？","opts":[["MethodChannel",true,"对。"],["EventChannel",false,"那是事件流。"],["HTTP",false,"本地桥接。"]]},{"q":"2. 原生回调转？","opts":[["Dart Stream(EventChannel)",true,"对。"],["同步",false,"流。"],["句柄",false,"Stream。"]]},{"q":"3. 桥接复用原生什么？","opts":[["后台/厂商兼容能力",true,"对。"],["UI",false,"能力。"],["无需",false,"要桥接。"]]}];
 let solved=0; const box=document.getElementById('quiz-box');
 QUIZ.forEach((item,qi)=>{
   const h=document.createElement('div'); h.className='quiz-q'; h.textContent=item.q; box.appendChild(h);
@@ -277,7 +432,6 @@ QUIZ.forEach((item,qi)=>{
   });
   box.appendChild(ex);
 });
-
 </script>
 </body>
 </html>

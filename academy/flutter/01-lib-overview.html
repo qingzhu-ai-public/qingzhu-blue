@@ -172,6 +172,10 @@
   .ctl-row label{display:inline-flex;align-items:center;gap:10px;}
   .ctl-row input[type=range]{accent-color:var(--coral);width:160px;}
   .ctl-row .chk input{accent-color:var(--coral);}
+  .api-lv{display:inline-block;font-family:ui-monospace,Consolas,monospace;font-size:11.5px;font-weight:800;color:#2F58A8;background:var(--blue-soft);border:1px solid var(--blue-line);border-radius:999px;padding:0 8px;white-space:nowrap;}
+  .refs{font-size:14px;}
+  .refs li{margin:7px 0;}
+  .refs .src{font-size:12px;color:var(--faint);}
 </style>
 </head>
 <body style="--coral:#E8590C;--coral-soft:#FBEADF;--coral-line:#F2C4A4">
@@ -197,67 +201,224 @@
 <main>
   <div class="crumb">蓝牙小课堂 / Flutter 第一课 · E1</div>
   <h1>Flutter 蓝牙全景：<em>flutter_reactive_ble</em> 选型</h1>
-  <p class="lead">Flutter 用跨端库屏蔽平台差异。flutter_reactive_ble 提供响应式流 API。这一课讲选型与对象模型，对照原生。</p>
-  <div class="meta"><span>约 10 分钟</span><span>含交互演练</span><span>跨端对照</span></div>
+  <p class="lead">Flutter 用跨端库屏蔽平台差异。flutter_reactive_ble 提供响应式流 API。这一课讲选型与对象模型，对照原生，并建立「Stream 订阅必须成对清理」的工程直觉。</p>
+  <div class="meta"><span>平台：Flutter/Dart</span><span>约 20 分钟</span><span>flutter_reactive_ble 5.6.0</span><span>含两场交互演练</span><span>跨端对照</span></div>
   <div class="journey">
     <div class="j-step"><span class="n">1</span><span class="t">选型</span><span class="s">reactive_ble</span></div>
-    <div class="j-step"><span class="n">2</span><span class="t">模型</span><span class="s">流 API</span></div>
+    <div class="j-step"><span class="n">2</span><span class="t">模型与 API</span><span class="s">逐 API</span></div>
+    <div class="j-step"><span class="n">3</span><span class="t">生命周期</span><span class="s">订阅清理</span></div>
+    <div class="j-step"><span class="n">4</span><span class="t">动手</span><span class="s">两场演练</span></div>
+    <div class="j-step"><span class="n">5</span><span class="t">自测</span><span class="s">六个问题</span></div>
   </div>
 
   <section id="a">
     <h2><span class="no">第 1 步</span>库选型</h2>
-    <p>flutter_reactive_ble（响应式、维护活跃）vs flutter_blue_plus（功能全）。传感器读写订阅两者皆可；本板用 reactive_ble。</p><div class="recap"><b>收束：</b>按维护/ API 风格选型。</div>
+    <p>flutter_reactive_ble（响应式、维护活跃）vs flutter_blue_plus（功能全）。传感器读写订阅两者皆可；本板用 reactive_ble。</p>
+    <table>
+      <tr><th>候选库</th><th>API 风格</th><th>多设备</th><th>平台</th><th>适合</th></tr>
+      <tr><td><b>flutter_reactive_ble</b> <span class="api-lv">5.6.0</span></td><td>全 Stream（扫描/连接/订阅）</td><td>原生支持，connectedDeviceStream 汇总</td><td>Android + iOS</td><td>本板：流式 UI、多外设</td></tr>
+      <tr><td>flutter_blue_plus</td><td>回调 + Stream 混合</td><td>支持</td><td>Android + iOS</td><td>习惯命令式写法的团队</td></tr>
+      <tr><td>自写 MethodChannel</td><td>自定义</td><td>自己实现</td><td>双端原生各写一遍</td><td>仅当库无法满足的私有协议（E7）</td></tr>
+    </table>
+    <ul>
+      <li><b>维护方</b>：pub.dev  publisher 为 meethue.com（Philips Hue 团队），BSD-3-Clause；配套样例工程 <code>examples/flutter/thermometer-mvp</code> 锁定 5.6.0，与本课一致。</li>
+      <li><b>选型判据</b>：看「结果以什么形态回来」。reactive_ble 把一切结果做成 Stream，UI 用 <code>StreamBuilder</code> 或 <code>listen</code> 消费；代价是必须管理订阅生命周期（第 2 步末）。</li>
+    </ul>
+    <div class="recap"><b>收束：</b>按维护/ API 风格选型。</div>
   </section>
 
   <section id="b">
-    <h2><span class="no">第 2 步</span>流 API</h2>
+    <h2><span class="no">第 2 步</span>流 API：对象模型与逐 API 讲解</h2>
     <pre>final ble = FlutterReactiveBle();
 ble.scanForDevices(withServices: []).listen((d){})
-ble.connect(id:, servicesWithCharacteristicsToDiscover:).listen((s){})</pre><div class="key"><span class="tag">对照</span>原生回调 ≈ Dart Stream；订阅即 listen。</div>
+ble.connectToDevice(id: deviceId).listen((s){})</pre>
+    <pre><span class="cm">// 完整链路（flutter_reactive_ble 5.6.0，签名对照官方类文档）</span>
+<span class="cm">// 注意：连接方法叫 connectToDevice，不是 connect</span>
+final ble = FlutterReactiveBle();
+await ble.initialize();
+ble.statusStream.listen((s) =&gt; print(s)); <span class="cm">// 等 BleStatus.ready（E2）</span>
+
+final scanSub = ble.scanForDevices(
+  withServices: [Uuid.parse('476cdf45-6063-43a1-b8e2-8c1fbed00601')],
+).listen((d) =&gt; print('${d.id} ${d.name} ${d.rssi}'));
+
+final connSub = ble.connectToDevice(id: deviceId)
+  .listen((u) =&gt; print(u.connectionState));
+
+final ch = QualifiedCharacteristic(
+  characteristicId: Uuid.parse('476cdf45-6063-43a1-b8e2-8c1fbed00602'),
+  serviceId:        Uuid.parse('476cdf45-6063-43a1-b8e2-8c1fbed00601'),
+  deviceId: deviceId);
+final notifySub = ble.subscribeToCharacteristic(ch)
+  .listen((bytes) =&gt; print(bytes)); <span class="cm">// List&lt;int&gt; 原始字节</span></pre>
+    <table>
+      <tr><th>API / 对象</th><th>职责</th><th>参数与结果来源</th><th>版本 / 平台</th></tr>
+      <tr><td><code>FlutterReactiveBle()</code> / <code>initialize()</code></td><td>门面实例与平台栈初始化</td><td>工厂单例；initialize 完成前操作会失败</td><td><span class="api-lv">5.x</span> 双端</td></tr>
+      <tr><td><code>statusStream</code> / <code>status</code></td><td>蓝牙子系统状态流 / 当前值</td><td>BleStatus 六态（E2 逐态讲）</td><td><span class="api-lv">5.x</span> 双端</td></tr>
+      <tr><td><code>scanForDevices(withServices:…)</code></td><td>扫描流</td><td>服务 UUID 列表（官方建议总是指定）；Stream&lt;DiscoveredDevice&gt;</td><td><span class="api-lv">5.x</span> 双端</td></tr>
+      <tr><td><code>connectToDevice(id:…)</code></td><td>连接流</td><td>Stream&lt;ConnectionStateUpdate&gt;；id 在 Android 是 MAC、iOS 是 UUID</td><td><span class="api-lv">5.x</span> 双端</td></tr>
+      <tr><td><code>discoverServices(deviceId)</code></td><td>服务发现</td><td>Future&lt;List&lt;DiscoveredService&gt;&gt;；连接后调用（E4）</td><td><span class="api-lv">5.x</span> 双端</td></tr>
+      <tr><td><code>readCharacteristic(ch)</code></td><td>读一次</td><td>Future&lt;List&lt;int&gt;&gt; 原始字节</td><td><span class="api-lv">5.x</span> 双端</td></tr>
+      <tr><td><code>writeCharacteristicWithResponse(ch, value:…)</code></td><td>带应答写</td><td>Future&lt;void&gt;；WithoutResponse 版不等应答（E5）</td><td><span class="api-lv">5.x</span> 双端</td></tr>
+      <tr><td><code>subscribeToCharacteristic(ch)</code></td><td>订阅 notify/indicate</td><td>Stream&lt;List&lt;int&gt;&gt;；库内部写 CCCD</td><td><span class="api-lv">5.x</span> 双端</td></tr>
+      <tr><td><code>requestMtu(deviceId:…, mtu:…)</code></td><td>协商 MTU</td><td>Future&lt;int&gt; 实际值；iOS 不能协商但可查询当前值</td><td><span class="api-lv">5.x</span> Android 协商 / iOS 只读</td></tr>
+      <tr><td><code>QualifiedCharacteristic</code> / <code>Uuid.parse</code></td><td>三元定位（deviceId+serviceId+characteristicId）</td><td>Uuid 支持 16/32/128 位；<code>expanded</code> 扩成 128 位</td><td><span class="api-lv">5.x</span> 双端</td></tr>
+    </table>
+    <div class="key"><span class="tag">对照</span>原生回调 ≈ Dart Stream；订阅即 listen。Android 侧底层走 RxAndroidBle、iOS 侧走 CoreBluetooth，插件用平台通道把两端统一成同一套 Dart 流。</div>
+    <figure>
+      <svg viewBox="0 0 760 210" role="img" aria-label="Flutter BLE 三层数据流与订阅清理">
+        <defs><marker id="are1" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#A39B8E"/></marker></defs>
+        <rect x="20" y="24" width="210" height="70" rx="12" fill="#FBEDE9" stroke="#F0CFC6"/>
+        <text x="125" y="52" text-anchor="middle" font-size="13.5" font-weight="bold" fill="#B04A35">Dart UI / ViewModel</text>
+        <text x="125" y="74" text-anchor="middle" font-size="11" fill="#C08475">listen → StreamSubscription</text>
+        <rect x="275" y="24" width="210" height="70" rx="12" fill="#ECF1FB" stroke="#C9D8F2"/>
+        <text x="380" y="52" text-anchor="middle" font-size="13.5" font-weight="bold" fill="#2F58A8">flutter_reactive_ble</text>
+        <text x="380" y="74" text-anchor="middle" font-size="11" fill="#5F7FB5">MethodChannel / EventChannel</text>
+        <rect x="530" y="24" width="210" height="70" rx="12" fill="#E9F4F2" stroke="#BFE0DB"/>
+        <text x="635" y="52" text-anchor="middle" font-size="13.5" font-weight="bold" fill="#1E7268">原生 BLE 栈</text>
+        <text x="635" y="74" text-anchor="middle" font-size="11" fill="#4E8A80">RxAndroidBle / CoreBluetooth</text>
+        <line x1="230" y1="59" x2="273" y2="59" stroke="#A39B8E" stroke-width="2" marker-end="url(#are1)"/>
+        <line x1="485" y1="59" x2="528" y2="59" stroke="#A39B8E" stroke-width="2" marker-end="url(#are1)"/>
+        <rect x="20" y="124" width="720" height="66" rx="12" fill="#FBF3E4" stroke="#EDD9B4"/>
+        <text x="40" y="150" font-size="12.5" font-weight="bold" fill="#8A5510">清理纪律：cancel 的语义逐层传递</text>
+        <text x="40" y="174" font-size="11.5" fill="#A8762A">扫描流 cancel = 停扫 · 连接流 cancel = 断开 · 订阅流 cancel = 退订 CCCD；dispose() 里逐个 cancel</text>
+      </svg>
+      <figcaption>图 1 · 三层数据流：Dart 订阅 ↔ 插件通道 ↔ 原生栈；每次 listen 都要有配对的 cancel。</figcaption>
+    </figure>
+    <table>
+      <tr><th>流</th><th>listen 得到</th><th>cancel 的语义</th></tr>
+      <tr><td>scanForDevices</td><td>DiscoveredDevice 事件</td><td>停止扫描</td></tr>
+      <tr><td>connectToDevice</td><td>ConnectionStateUpdate（connecting/connected/disconnected）</td><td>主动断开该连接</td></tr>
+      <tr><td>subscribeToCharacteristic</td><td>List&lt;int&gt; 通知字节</td><td>退订（库写回 CCCD）</td></tr>
+    </table>
+    <div class="recap"><b>收束：</b>三元定位 + 全 Stream；每个 API 的结果形态（Stream / Future / 字节）决定 UI 怎么接，cancel 不只是停刷新而是真停扫/断连/退订。</div>
   </section>
 
   <section id="lab">
-    <h2><span class="no">动手</span>库 / 流 API</h2>
-    <p>点按钮切换本平台写法与 Android 对照，概念一一对应。</p>
+    <h2><span class="no">动手</span>两场演练：API 对照、订阅清理走查</h2>
+    <p>演练一切换写法对照。演练二建立/清理订阅，看「不 cancel 就退页面」的幽灵回调。</p>
     <div class="lab">
-      <div class="lab-head"><b>库 / 流 API</b><span class="hint">点按钮看 API</span></div>
+      <div class="lab-head"><b>演练一 · 库 / 流 API</b><span class="hint">点按钮看 API</span></div>
       <div class="controls"><div class="seg" id="e1"><button data-k="api" class="on">本平台 API</button><button data-k="cmp">对照 Android</button></div></div>
       <div class="lab-body"><div><pre id="e1code" style="margin:0;"></pre></div><div class="logcat"><div class="logcat-head"><span>说明</span><span>live</span></div><div class="logcat-body" id="e1log"></div></div></div>
       <div class="lab-foot"><span class="hint">Android: startScan/connectGatt/setNotify</span></div>
     </div>
-    <div class="key"><span class="tag">看懂这场演练</span>跨端库把回调变 Stream；概念同原生。</div>
+    <div class="lab">
+      <div class="lab-head"><b>演练二 · Stream 订阅与清理</b><span class="hint">活跃订阅计数就是泄漏风险表</span></div>
+      <div class="controls"><div class="seg" id="g1"><button data-g="scan">listen 扫描流</button><button data-g="conn">listen 连接流</button><button data-g="notify">listen 订阅流</button><button data-g="dispose">dispose 全部 cancel</button><button data-g="leak">不 cancel 就退页面</button></div></div>
+      <div class="lab-body"><div><div class="chips" id="g1chips"></div><div class="key" id="g1hint"></div></div><div class="logcat"><div class="logcat-head"><span>订阅日志</span><span>live</span></div><div class="logcat-body" id="g1log"></div></div></div>
+      <div class="lab-foot"><span class="hint">dispose 之后仍收到的每一帧都是 bug</span></div>
+    </div>
+    <div class="key"><span class="tag">看懂这两场演练</span>跨端库把回调变 Stream，概念同原生；但订阅不随页面自动取消，dispose 必须逐个 cancel。</div>
   </section>
 
   <section id="quiz">
-    <h2><span class="no">自测</span>三个问题</h2>
+    <h2><span class="no">自测</span>六个问题</h2>
     <div class="card" id="quiz-box"></div>
     <p id="quiz-done" style="display:none;font-weight:700;color:#1E7268;">全对。下一课讲权限与状态。</p>
   </section>
 
   <section id="map">
-    <h2><span class="no">回顾</span>速查</h2>
-    <table><tr><th>库</th><th>风格</th></tr><tr><td>reactive_ble</td><td>Stream</td></tr><tr><td>blue_plus</td><td>功能全</td></tr></table>
-    <div class="note"><span class="tag">说明</span>本页为教学简化，工程细节以正文与官方规范为准；演练为模拟，非真实设备通信。</div>
+    <h2><span class="no">回顾</span>速查表</h2>
+    <table>
+      <tr><th>概念</th><th>API</th><th>结果形态</th></tr>
+      <tr><td>门面/初始化</td><td>FlutterReactiveBle() / initialize()</td><td>实例 / Future&lt;void&gt;</td></tr>
+      <tr><td>状态</td><td>statusStream / status</td><td>Stream&lt;BleStatus&gt; / BleStatus</td></tr>
+      <tr><td>扫描</td><td>scanForDevices(withServices)</td><td>Stream&lt;DiscoveredDevice&gt;</td></tr>
+      <tr><td>连接</td><td>connectToDevice(id)</td><td>Stream&lt;ConnectionStateUpdate&gt;</td></tr>
+      <tr><td>发现</td><td>discoverServices(deviceId)</td><td>Future&lt;List&lt;DiscoveredService&gt;&gt;</td></tr>
+      <tr><td>读/写</td><td>readCharacteristic / writeCharacteristicWithResponse</td><td>Future&lt;List&lt;int&gt;&gt; / Future&lt;void&gt;</td></tr>
+      <tr><td>订阅</td><td>subscribeToCharacteristic</td><td>Stream&lt;List&lt;int&gt;&gt;</td></tr>
+      <tr><td>MTU</td><td>requestMtu</td><td>Future&lt;int&gt;（iOS 只读）</td></tr>
+      <tr><td>清理</td><td>StreamSubscription.cancel()</td><td>停扫 / 断连 / 退订</td></tr>
+    </table>
+    <div class="note"><span class="tag">说明</span>本页为教学整理，API 签名对照 pub.dev 官方类文档核实；演练为模拟，非真实设备通信。</div>
+  </section>
+
+  <section id="refs">
+    <h2><span class="no">依据</span>参考链接</h2>
+    <div class="card refs">
+      <h3 style="margin-top:0;">库官方（pub.dev）</h3>
+      <ul>
+        <li><a href="https://pub.dev/packages/flutter_reactive_ble" target="_blank" rel="noopener">flutter_reactive_ble 5.6.0</a> <span class="src">— README：维护方、Android/iOS 权限清单、MTU/Android 专属操作说明</span></li>
+        <li><a href="https://pub.dev/documentation/flutter_reactive_ble/latest/flutter_reactive_ble/FlutterReactiveBle-class.html" target="_blank" rel="noopener">FlutterReactiveBle class · Dart API</a> <span class="src">— 逐 API 签名：connectToDevice / scanForDevices / subscribeToCharacteristic 等</span></li>
+        <li><a href="https://pub.dev/documentation/flutter_reactive_ble/latest/flutter_reactive_ble/Uuid-class.html" target="_blank" rel="noopener">Uuid class · Dart API</a> <span class="src">— Uuid.parse / expanded，16/32/128 位</span></li>
+      </ul>
+      <h3>平台官方</h3>
+      <ul>
+        <li><a href="https://docs.flutter.dev/platform-integration/platform-channels" target="_blank" rel="noopener">Flutter platform channels</a> <span class="src">— 插件底层通道机制（E7 展开）</span></li>
+        <li><a href="https://developer.android.com/develop/connectivity/bluetooth/bep/ble-overview" target="_blank" rel="noopener">Android BLE overview</a> <span class="src">— 原生对照基准</span></li>
+        <li><a href="https://developer.apple.com/documentation/corebluetooth" target="_blank" rel="noopener">Apple CoreBluetooth</a> <span class="src">— iOS 侧行为基准</span></li>
+      </ul>
+    </div>
+    <div class="next-links">
+      <a href="02-permission.html">E2 权限与状态 →</a>
+    </div>
     <footer>青竹蓝牙学堂 · 蓝牙小课堂Flutter 第一课 · E1 · <a href="../index.html">回到学堂</a></footer>
   </section>
 </main>
 <aside class="toc" id="toc">
   <div class="toc-title">本课目录</div>
   <a href="#a">库选型</a>
-  <a href="#b">流 API</a>
-  <a href="#lab">动手演练</a>
+  <a href="#b">流 API 与对象模型</a>
+  <a href="#lab">两场演练</a>
   <a href="#quiz">本课自测</a>
-  <a href="#map">回顾与速查</a>
+  <a href="#map">速查表</a>
+  <a href="#refs">参考链接</a>
 </aside>
 </div>
 <script>
-(function(){var API="点按钮看写法。";var CMP="FlutterReactiveBle()\n.scanForDevices(withServices:[uuid])\n.connect(id:)\n.subscribeToCharacteristic(ch)";var NT="Android: startScan/connectGatt/setNotify";function show(k){document.getElementById("e1code").textContent=(k==="api"?API:CMP);document.getElementById("e1log").innerHTML="<div><span class=\"ok\">"+(k==="api"?"本平台写法":"Android 对照")+"</span></div><div><span class=\"c\">// "+(k==="api"?NT:"概念相同，API 名不同")+"</span></div>";}document.querySelectorAll("#e1 button").forEach(function(b){b.addEventListener("click",function(){document.querySelectorAll("#e1 button").forEach(function(x){x.classList.remove("on");});b.classList.add("on");show(b.getAttribute("data-k"));});});show("api");})();
+(function(){
+  var API="final ble = FlutterReactiveBle();\nawait ble.initialize();\nble.scanForDevices(withServices: [uuid])\n   .listen((d) => print(d.name));\nble.connectToDevice(id: id)\n   .listen((u) => print(u.connectionState));\nble.subscribeToCharacteristic(ch)\n   .listen((bytes) => print(bytes));";
+  var CMP="// Android 原生\nBluetoothLeScanner.startScan(filters, settings, callback);\nBluetoothGatt gatt = device.connectGatt(ctx, false, gattCallback);\ngatt.setCharacteristicNotification(ch, true);\n// 对照：startScan≈scanForDevices；connectGatt≈connectToDevice；setNotify≈subscribe";
+  var NT="Android: startScan/connectGatt/setNotify";
+  function show(k){document.getElementById("e1code").textContent=(k==="api"?API:CMP);document.getElementById("e1log").innerHTML="<div><span class=\"ok\">"+(k==="api"?"Flutter 全 Stream":"Android 回调对照")+"</span></div><div><span class=\"c\">// "+(k==="api"?NT:"概念相同，形态不同")+"</span></div>";}
+  document.querySelectorAll("#e1 button").forEach(function(b){b.addEventListener("click",function(){document.querySelectorAll("#e1 button").forEach(function(x){x.classList.remove("on");});b.classList.add("on");show(b.getAttribute("data-k"));});});
+  show("api");
+})();
 
+// 演练二：订阅与清理
+(function(){
+  var subs={scan:false,conn:false,notify:false}, leak=0;
+  function active(){return Object.keys(subs).filter(function(k){return subs[k];}).length;}
+  function render(hint,log){
+    document.getElementById('g1chips').innerHTML=
+      '<span class="chip '+(subs.scan?'on':'')+'">scanSub</span>'+
+      '<span class="chip '+(subs.conn?'on':'')+'">connSub</span>'+
+      '<span class="chip '+(subs.notify?'on':'')+'">notifySub</span>'+
+      '<span class="chip '+(active()===0?'on':'bad')+'">活跃 '+active()+'</span>';
+    document.getElementById('g1hint').innerHTML='<span class="tag">处理</span>'+hint;
+    document.getElementById('g1log').innerHTML=log.map(function(l){return '<div>'+l+'</div>';}).join('');
+  }
+  var MSG={
+    scan:['<span class="api">scanSub = scanForDevices(...).listen(...)</span>','<span class="ok">DiscoveredDevice 事件到达</span>'],
+    conn:['<span class="api">connSub = connectToDevice(id).listen(...)</span>','<span class="ok">connecting → connected</span>'],
+    notify:['<span class="api">notifySub = subscribeToCharacteristic(ch).listen(...)</span>','<span class="ok">收到 40 02 C4 09 03 BF 13</span>']
+  };
+  function show(k){
+    if(k==='dispose'){subs={scan:false,conn:false,notify:false};leak=0;
+      render('dispose()：三个 sub.cancel() → 停扫 + 断连 + 退订，活跃 0。',['<span class="api">scanSub.cancel(); connSub.cancel(); notifySub.cancel();</span>','<span class="ok">原生侧：stopScan / disconnect / CCCD 退订</span>']);return;}
+    if(k==='leak'){
+      if(active()===0){render('先建立至少一个订阅再试。',['<span class="c">// 当前活跃订阅 0</span>']);return;}
+      leak++;
+      render('页面已 dispose 但未 cancel：旧闭包仍被回调持有（setState on disposed widget）。',['<span class="warn">页面已退出，订阅仍活跃（'+active()+' 个）</span>','<span class="err">幽灵回调第 '+leak+' 帧进入旧闭包</span>','<span class="c">// 修复：dispose 里逐个 cancel</span>']);return;}
+    subs[k]=true;
+    render('已建立 '+k+' 订阅；记住 cancel 的语义：停扫/断连/退订。',MSG[k]);
+  }
+  document.querySelectorAll('#g1 button').forEach(function(b){b.addEventListener('click',function(){
+    document.querySelectorAll('#g1 button').forEach(function(x){x.classList.remove('on');});
+    b.classList.add('on'); show(b.getAttribute('data-g'));
+  });});
+  render('点按钮建立订阅，再试「不 cancel 就退页面」。',['<span class="c">// 当前活跃订阅 0</span>']);
+})();
+
+const QUIZ=[{"q":"1. 本板用哪个库？","opts":[["flutter_reactive_ble",true,"对。"],["CoreBluetooth",false,"iOS 原生。"],["ble-plx",false,"RN。"]]},{"q":"2. 结果以什么形式？","opts":[["Stream",true,"对。"],["同步",false,"异步流。"],["句柄",false,"对象。"]]},{"q":"3. 订阅即？","opts":[["listen",true,"对。"],["poll",false,"流。"],["sleep",false,"不堵。"]]},{"q":"4. 建立连接的正确 API？","opts":[["connectToDevice(id:…)，返回 Stream<ConnectionStateUpdate>",true,"对。官方类文档签名；cancel 该订阅即断开。"],["connect(id:…)",false,"reactive_ble 没有 connect 方法。"],["startConnect(id:…)",false,"不存在。"]]},{"q":"5. 同一设备 id 在两端含义？","opts":[["Android 是 MAC（可能随机化），iOS 是系统分配的 UUID",true,"对。官方 README 明确；跨端不能硬编码 id。"],["都是 MAC",false,"iOS 不暴露 MAC。"],["都是 UUID",false,"Android 是 MAC。"]]},{"q":"6. dispose 忘记 cancel 订阅流会？","opts":[["通知回调继续进入旧闭包，且退订未发生",true,"对。cancel 订阅流才会写回 CCCD 退订。"],["只是 UI 不刷新",false,"cancel 有真实副作用。"],["系统自动回收",false,"Dart 订阅不随页面自动取消。"]]}];
+</script>
+<script>
 const tocLinks=[...document.querySelectorAll('.toc a')];
 const secs=tocLinks.map(a=>document.getElementById(a.getAttribute('href').slice(1)));
 const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){tocLinks.forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+e.target.id));}});},{rootMargin:'-20% 0px -70% 0px'});
 secs.forEach(s=>s&&io.observe(s));
-const QUIZ=[{"q":"1. 本板用哪个库？","opts":[["flutter_reactive_ble",true,"对。"],["CoreBluetooth",false,"iOS 原生。"],["ble-plx",false,"RN。"]]},{"q":"2. 结果以什么形式？","opts":[["Stream",true,"对。"],["同步",false,"异步流。"],["句柄",false,"对象。"]]},{"q":"3. 订阅即？","opts":[["listen",true,"对。"],["poll",false,"流。"],["sleep",false,"不堵。"]]}];
 let solved=0; const box=document.getElementById('quiz-box');
 QUIZ.forEach((item,qi)=>{
   const h=document.createElement('div'); h.className='quiz-q'; h.textContent=item.q; box.appendChild(h);
@@ -277,7 +438,6 @@ QUIZ.forEach((item,qi)=>{
   });
   box.appendChild(ex);
 });
-
 </script>
 </body>
 </html>

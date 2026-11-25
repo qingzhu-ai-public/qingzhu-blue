@@ -172,6 +172,10 @@
   .ctl-row label{display:inline-flex;align-items:center;gap:10px;}
   .ctl-row input[type=range]{accent-color:var(--coral);width:160px;}
   .ctl-row .chk input{accent-color:var(--coral);}
+  .api-lv{display:inline-block;font-family:ui-monospace,Consolas,monospace;font-size:11.5px;font-weight:800;color:#2F58A8;background:var(--blue-soft);border:1px solid var(--blue-line);border-radius:999px;padding:0 8px;white-space:nowrap;}
+  .refs{font-size:14px;}
+  .refs li{margin:7px 0;}
+  .refs .src{font-size:12px;color:var(--faint);}
 </style>
 </head>
 <body style="--coral:#E8590C;--coral-soft:#FBEADF;--coral-line:#F2C4A4">
@@ -197,66 +201,196 @@
 <main>
   <div class="crumb">蓝牙小课堂 / Flutter 第五课 · E5</div>
   <h1>读写与订阅：<em>read/write/subscribe</em></h1>
-  <p class="lead">readCharacteristic、writeCharacteristicWithResponse/WithoutResponse、subscribeToCharacteristic。这一课讲三种操作。</p>
-  <div class="meta"><span>约 10 分钟</span><span>含交互演练</span><span>跨端对照</span></div>
+  <p class="lead">readCharacteristic、writeCharacteristicWithResponse/WithoutResponse、subscribeToCharacteristic。这一课讲三种操作与字节解析。</p>
+  <div class="meta"><span>平台：Flutter/Dart</span><span>约 22 分钟</span><span>flutter_reactive_ble 5.6.0</span><span>含两场交互演练</span><span>跨端对照</span></div>
   <div class="journey">
     <div class="j-step"><span class="n">1</span><span class="t">读写</span><span class="s">read/write</span></div>
     <div class="j-step"><span class="n">2</span><span class="t">订阅</span><span class="s">subscribe</span></div>
+    <div class="j-step"><span class="n">3</span><span class="t">解析</span><span class="s">小端+符号</span></div>
+    <div class="j-step"><span class="n">4</span><span class="t">动手</span><span class="s">两场演练</span></div>
+    <div class="j-step"><span class="n">5</span><span class="t">自测</span><span class="s">六个问题</span></div>
   </div>
 
   <section id="a">
     <h2><span class="no">第 1 步</span>读写</h2>
     <pre>await ble.readCharacteristic(ch)
-await ble.writeCharacteristicWithResponse(ch, value: bytes)</pre><div class="recap"><b>收束：</b>有/无响应两种写。</div>
+await ble.writeCharacteristicWithResponse(ch, value: bytes)</pre>
+    <pre><span class="cm">// ch 是三元定位（E1）；值是 List&lt;int&gt; 原始字节</span>
+final ch = QualifiedCharacteristic(
+  characteristicId: Uuid.parse('476cdf45-6063-43a1-b8e2-8c1fbed00602'),
+  serviceId:        Uuid.parse('476cdf45-6063-43a1-b8e2-8c1fbed00601'),
+  deviceId: deviceId);
+
+final bytes = await ble.readCharacteristic(ch);   <span class="cm">// Future&lt;List&lt;int&gt;&gt;</span>
+await ble.writeCharacteristicWithResponse(ch, value: [0x01]);
+<span class="cm">// 教学协议：写 0x01 → 外设回一帧 40 02 &lt;temp&gt; 03 BF 13</span>
+await ble.writeCharacteristicWithoutResponse(ch, value: payload);
+<span class="cm">// 无应答：快，但丢了不知道</span></pre>
+    <table>
+      <tr><th>操作</th><th>返回</th><th>可靠性</th><th>适用</th></tr>
+      <tr><td>readCharacteristic <span class="api-lv">5.x</span></td><td>Future&lt;List&lt;int&gt;&gt;</td><td>一次快照</td><td>初值/低频量</td></tr>
+      <tr><td>writeCharacteristicWithResponse <span class="api-lv">5.x</span></td><td>Future&lt;void&gt;（等 ATT 应答）</td><td>失败会抛错</td><td><b>关键命令</b>（如 0x01 请求帧）</td></tr>
+      <tr><td>writeCharacteristicWithoutResponse <span class="api-lv">5.x</span></td><td>Future&lt;void&gt;（不等应答）</td><td>丢包无感知</td><td>高频流数据、可容忍丢失</td></tr>
+    </table>
+    <div class="recap"><b>收束：</b>有/无响应两种写。</div>
   </section>
 
   <section id="b">
-    <h2><span class="no">第 2 步</span>订阅</h2>
-    <pre>ble.subscribeToCharacteristic(ch).listen((bytes){ /* 解析 */ })</pre><div class="key"><span class="tag">重点</span>订阅流 listen 收值；解析小端+符号同通用。</div>
+    <h2><span class="no">第 2 步</span>订阅与字节解析</h2>
+    <pre>ble.subscribeToCharacteristic(ch).listen((bytes){ /* 解析 */ })</pre>
+    <p>订阅的本质是写 CCCD（0x2902 描述符）开启 notify/indicate，reactive_ble 在库内替你完成；cancel 订阅流时库写回 CCCD 退订。notify 无应答、indicate 有应答，库按特征属性自动选择。</p>
+    <figure>
+      <svg viewBox="0 0 760 170" role="img" aria-label="教学协议回帧字节布局">
+        <rect x="20" y="40" width="90" height="56" rx="10" fill="#ECF1FB" stroke="#C9D8F2"/>
+        <text x="65" y="64" text-anchor="middle" font-size="13" font-weight="bold" fill="#2F58A8">40</text>
+        <text x="65" y="84" text-anchor="middle" font-size="10" fill="#5F7FB5">BTHome 头</text>
+        <rect x="120" y="40" width="90" height="56" rx="10" fill="#FBF3E4" stroke="#EDD9B4"/>
+        <text x="165" y="64" text-anchor="middle" font-size="13" font-weight="bold" fill="#8A5510">02</text>
+        <text x="165" y="84" text-anchor="middle" font-size="10" fill="#A8762A">温度对象 id</text>
+        <rect x="220" y="40" width="150" height="56" rx="10" fill="#E9F4F2" stroke="#BFE0DB"/>
+        <text x="295" y="64" text-anchor="middle" font-size="13" font-weight="bold" fill="#1E7268">C4 09</text>
+        <text x="295" y="84" text-anchor="middle" font-size="10" fill="#4E8A80">sint16 小端 = 2500</text>
+        <rect x="380" y="40" width="90" height="56" rx="10" fill="#FBF3E4" stroke="#EDD9B4"/>
+        <text x="425" y="64" text-anchor="middle" font-size="13" font-weight="bold" fill="#8A5510">03</text>
+        <text x="425" y="84" text-anchor="middle" font-size="10" fill="#A8762A">湿度对象 id</text>
+        <rect x="480" y="40" width="150" height="56" rx="10" fill="#E9F4F2" stroke="#BFE0DB"/>
+        <text x="555" y="64" text-anchor="middle" font-size="13" font-weight="bold" fill="#1E7268">BF 13</text>
+        <text x="555" y="84" text-anchor="middle" font-size="10" fill="#4E8A80">uint16 小端 = 5055</text>
+        <text x="380" y="135" text-anchor="middle" font-size="12" fill="#7A7267">2500 × 0.01 = 25.00 °C · 5055 × 0.01 = 50.55 %（BTHome 官方样例帧）</text>
+      </svg>
+      <figcaption>图 1 · 一帧七字节：对象 id + 小端数值 × 0.01；温度是有符号 sint16，湿度是无符号 uint16。</figcaption>
+    </figure>
+    <pre>final sub = ble.subscribeToCharacteristic(ch).listen((bytes) {
+  if (bytes.length &lt; 7 || bytes[0] != 0x40) return; <span class="cm">// 防截断/异帧</span>
+  final bd = ByteData.sublistView(Uint8List.fromList(bytes));
+  final t = bd.getInt16(2, Endian.little) / 100.0;  <span class="cm">// sint16：零下靠补码</span>
+  final h = bd.getUint16(5, Endian.little) / 100.0;
+  setState(() { temp = t; hum = h; });
+});
+<span class="cm">// dispose: sub.cancel() → 库写回 CCCD 退订</span></pre>
+    <div class="key"><span class="tag">重点</span>订阅流 listen 收值；解析小端+符号同通用。大端读 C4 09 会得 50185（501.85°C）——字节序错是 BLE 解析第一大坑。</div>
+    <div class="recap"><b>收束：</b>三种操作 + 小端解析；订阅的开关由库代写 CCCD。</div>
   </section>
 
   <section id="lab">
-    <h2><span class="no">动手</span>读写 / 订阅</h2>
-    <p>点按钮切换本平台写法与 Android 对照，概念一一对应。</p>
+    <h2><span class="no">动手</span>两场演练：API 对照、解码工坊</h2>
+    <p>演练一切换写法对照。演练二选帧，看小端/符号/截断各自的结果。</p>
     <div class="lab">
-      <div class="lab-head"><b>读写 / 订阅</b><span class="hint">点按钮看 API</span></div>
+      <div class="lab-head"><b>演练一 · 读写 / 订阅 API</b><span class="hint">点按钮看 API</span></div>
       <div class="controls"><div class="seg" id="e5"><button data-k="api" class="on">本平台 API</button><button data-k="cmp">对照 Android</button></div></div>
       <div class="lab-body"><div><pre id="e5code" style="margin:0;"></pre></div><div class="logcat"><div class="logcat-head"><span>说明</span><span>live</span></div><div class="logcat-body" id="e5log"></div></div></div>
       <div class="lab-foot"><span class="hint">Android: read/write/setNotify</span></div>
     </div>
-    <div class="key"><span class="tag">看懂这场演练</span>三种操作；订阅流收值。</div>
+    <div class="lab">
+      <div class="lab-head"><b>演练二 · 解码工坊</b><span class="hint">同一套字节，五种读法</span></div>
+      <div class="controls"><div class="seg" id="g5"><button data-g="std" class="on">官方样例帧</button><button data-g="alt">教学交替帧</button><button data-g="neg">零下帧</button><button data-g="be">误用大端</button><button data-g="cut">截断帧</button></div></div>
+      <div class="lab-body"><div><div class="chips" id="g5chips"></div><div class="key" id="g5hint"></div></div><div class="logcat"><div class="logcat-head"><span>解析日志</span><span>live</span></div><div class="logcat-body" id="g5log"></div></div></div>
+      <div class="lab-foot"><span class="hint">帧布局：40 02 &lt;temp LE&gt; 03 &lt;hum LE&gt;</span></div>
+    </div>
+    <div class="key"><span class="tag">看懂这两场演练</span>三种操作；订阅流收值。先验长度与帧头，再小端+符号解析，最后乘 0.01。</div>
   </section>
 
   <section id="quiz">
-    <h2><span class="no">自测</span>三个问题</h2>
+    <h2><span class="no">自测</span>六个问题</h2>
     <div class="card" id="quiz-box"></div>
     <p id="quiz-done" style="display:none;font-weight:700;color:#1E7268;">全对。下一课讲生命周期清理。</p>
   </section>
 
   <section id="map">
-    <h2><span class="no">回顾</span>速查</h2>
-    <table><tr><th>操作</th><th>API</th></tr><tr><td>读</td><td>readCharacteristic</td></tr><tr><td>订阅</td><td>subscribeToCharacteristic</td></tr></table>
-    <div class="note"><span class="tag">说明</span>本页为教学简化，工程细节以正文与官方规范为准；演练为模拟，非真实设备通信。</div>
+    <h2><span class="no">回顾</span>速查表</h2>
+    <table>
+      <tr><th>项</th><th>记住</th></tr>
+      <tr><td>读</td><td>readCharacteristic(ch) → Future&lt;List&lt;int&gt;&gt;</td></tr>
+      <tr><td>关键写</td><td>writeCharacteristicWithResponse（等应答，失败抛错）</td></tr>
+      <tr><td>流式写</td><td>WithoutResponse（快，丢包无感知）</td></tr>
+      <tr><td>订阅</td><td>subscribeToCharacteristic → Stream&lt;List&lt;int&gt;&gt;；库代写 CCCD</td></tr>
+      <tr><td>退订</td><td>cancel 订阅流（库写回 CCCD）</td></tr>
+      <tr><td>解析</td><td>ByteData + Endian.little；温度 getInt16、湿度 getUint16；×0.01</td></tr>
+      <tr><td>防坑</td><td>先验长度/帧头；大端误读、零下补码是两大坑</td></tr>
+    </table>
+    <div class="note"><span class="tag">说明</span>本页为教学整理，API 签名对照 pub.dev 官方类文档、帧格式对照 BTHome 规范核实；演练为模拟，非真实设备通信。</div>
+  </section>
+
+  <section id="refs">
+    <h2><span class="no">依据</span>参考链接</h2>
+    <div class="card refs">
+      <h3 style="margin-top:0;">库官方（pub.dev）</h3>
+      <ul>
+        <li><a href="https://pub.dev/documentation/flutter_reactive_ble/latest/flutter_reactive_ble/FlutterReactiveBle-class.html" target="_blank" rel="noopener">FlutterReactiveBle class</a> <span class="src">— read/write/subscribe 签名与返回类型</span></li>
+      </ul>
+      <h3>协议规范</h3>
+      <ul>
+        <li><a href="https://bthome.io/format/" target="_blank" rel="noopener">BTHome v2 格式规范</a> <span class="src">— 0x40 头、对象 id 02/03、sint16/uint16 小端 ×0.01、官方样例帧</span></li>
+      </ul>
+      <h3>平台官方</h3>
+      <ul>
+        <li><a href="https://developer.android.com/develop/connectivity/bluetooth/bep/ble-overview" target="_blank" rel="noopener">Android BLE overview</a> <span class="src">— CCCD / notify vs indicate 机制对照</span></li>
+      </ul>
+    </div>
+    <div class="next-links">
+      <a href="04-connect-discover.html">← E4 连接与发现</a>
+      <a href="06-lifecycle.html">E6 生命周期 →</a>
+    </div>
     <footer>青竹蓝牙学堂 · 蓝牙小课堂Flutter 第五课 · E5 · <a href="../index.html">回到学堂</a></footer>
   </section>
 </main>
 <aside class="toc" id="toc">
   <div class="toc-title">本课目录</div>
   <a href="#a">读写</a>
-  <a href="#b">订阅</a>
-  <a href="#lab">动手演练</a>
+  <a href="#b">订阅与解析</a>
+  <a href="#lab">两场演练</a>
   <a href="#quiz">本课自测</a>
-  <a href="#map">回顾与速查</a>
+  <a href="#map">速查表</a>
+  <a href="#refs">参考链接</a>
 </aside>
 </div>
 <script>
-(function(){var API="点按钮看写法。";var CMP="readCharacteristic(ch)\nwriteCharacteristicWithResponse(ch,value)\nsubscribeToCharacteristic(ch).listen(cb)";var NT="Android: read/write/setNotify";function show(k){document.getElementById("e5code").textContent=(k==="api"?API:CMP);document.getElementById("e5log").innerHTML="<div><span class=\"ok\">"+(k==="api"?"本平台写法":"Android 对照")+"</span></div><div><span class=\"c\">// "+(k==="api"?NT:"概念相同，API 名不同")+"</span></div>";}document.querySelectorAll("#e5 button").forEach(function(b){b.addEventListener("click",function(){document.querySelectorAll("#e5 button").forEach(function(x){x.classList.remove("on");});b.classList.add("on");show(b.getAttribute("data-k"));});});show("api");})();
+(function(){
+  var API="final bytes = await ble.readCharacteristic(ch);\nawait ble.writeCharacteristicWithResponse(ch, value:[0x01]);\nfinal sub = ble.subscribeToCharacteristic(ch)\n  .listen((bytes){\n    final bd = ByteData.sublistView(Uint8List.fromList(bytes));\n    final t = bd.getInt16(2, Endian.little)/100.0;\n  });\n// 退订：sub.cancel()";
+  var CMP="Android 原生:\ngatt.readCharacteristic(ch);\nch.setValue(new byte[]{0x01});\nch.setWriteType(WRITE_TYPE_DEFAULT); // 带应答\ngatt.writeCharacteristic(ch);\ngatt.setCharacteristicNotification(ch, true);\n// + 写 CCCD 0x2902 = ENABLE_NOTIFICATION_VALUE\n// Flutter 库把 CCCD 这步代劳了";
+  var NT="Android: read/write/setNotify";
+  function show(k){document.getElementById("e5code").textContent=(k==="api"?API:CMP);document.getElementById("e5log").innerHTML="<div><span class=\"ok\">"+(k==="api"?"Flutter 三操作":"Android 对照")+"</span></div><div><span class=\"c\">// "+(k==="api"?NT:"概念相同，CCCD 库代写")+"</span></div>";}
+  document.querySelectorAll("#e5 button").forEach(function(b){b.addEventListener("click",function(){document.querySelectorAll("#e5 button").forEach(function(x){x.classList.remove("on");});b.classList.add("on");show(b.getAttribute("data-k"));});});
+  show("api");
+})();
 
+// 演练二：解码工坊
+(function(){
+  var G={
+    std:{frame:'40 02 C4 09 03 BF 13',t:'25.00 °C',h:'50.55 %',ok:true,hint:'BTHome 官方样例帧：C4 09 小端 = 0x09C4 = 2500。',
+      log:['<span class="api">bytes = [40,02,C4,09,03,BF,13]</span>','<span class="ok">长度 7 ✓ 帧头 40 ✓</span>','<span class="ok">getInt16(2,LE) = 2500 → 25.00 °C</span>','<span class="ok">getUint16(5,LE) = 5055 → 50.55 %</span>']},
+    alt:{frame:'40 02 5A 0A 03 BF 13',t:'26.50 °C',h:'50.55 %',ok:true,hint:'教学外设交替帧：5A 0A 小端 = 0x0A5A = 2650。湿度固定 50.55%。',
+      log:['<span class="api">bytes = [40,02,5A,0A,03,BF,13]</span>','<span class="ok">getInt16(2,LE) = 2650 → 26.50 °C</span>','<span class="ok">getUint16(5,LE) = 5055 → 50.55 %</span>','<span class="c">// 写 0x01 一次，温度在 25.00/26.50 间交替</span>']},
+    neg:{frame:'40 02 0C FE 03 BF 13',t:'-5.00 °C',h:'50.55 %',ok:true,hint:'零下靠 sint16 补码：0C FE 小端 = 0xFE0C = -500。用 getUint16 会读成 65036。',
+      log:['<span class="api">bytes = [40,02,0C,FE,03,BF,13]</span>','<span class="ok">getInt16(2,LE) = -500 → -5.00 °C</span>','<span class="warn">若误用 getUint16 → 65036 → 650.36 °C ✗</span>']},
+    be:{frame:'40 02 C4 09 03 BF 13（大端读）',t:'501.85 °C ✗',h:'489.15 % ✗',ok:false,hint:'同一帧用大端读：0xC409 = 50185。数值离谱就是字节序错了。',
+      log:['<span class="api">Endian.big 误用</span>','<span class="err">0xC409 = 50185 → 501.85 °C ✗</span>','<span class="err">0xBF13 = 48915 → 489.15 % ✗</span>','<span class="c">// BLE 数值一律小端</span>']},
+    cut:{frame:'40 02 C4',t:'—',h:'—',ok:false,hint:'截断帧：长度不足 7。先验长度再解析，否则 RangeError。',
+      log:['<span class="api">bytes = [40,02,C4]</span>','<span class="err">长度 3 &lt; 7 → 丢弃</span>','<span class="c">// 若直接 getInt16(2) → RangeError</span>']}
+  };
+  function show(k){
+    var g=G[k];
+    document.getElementById('g5chips').innerHTML=
+      '<span class="chip on">帧: '+g.frame+'</span>'+
+      '<span class="chip '+(g.ok?'on':'bad')+'">温度: '+g.t+'</span>'+
+      '<span class="chip '+(g.ok?'on':'bad')+'">湿度: '+g.h+'</span>';
+    document.getElementById('g5hint').innerHTML='<span class="tag">处理</span>'+g.hint;
+    document.getElementById('g5log').innerHTML=g.log.map(function(l){return '<div>'+l+'</div>';}).join('');
+  }
+  document.querySelectorAll('#g5 button').forEach(function(b){b.addEventListener('click',function(){
+    document.querySelectorAll('#g5 button').forEach(function(x){x.classList.remove('on');});
+    b.classList.add('on'); show(b.getAttribute('data-g'));
+  });});
+  show('std');
+})();
+
+const QUIZ=[{"q":"1. 订阅用？","opts":[["subscribeToCharacteristic",true,"对。"],["setNotifyValue",false,"iOS。"],["monitor",false,"RN 名。"]]},{"q":"2. 关键命令写用？","opts":[["WithResponse",true,"对。"],["WithoutResponse",false,"无确认。"],["随便",false,"取舍。"]]},{"q":"3. 值解析？","opts":[["小端+符号",true,"对。"],["大端",false,"错。"],["字符串",false,"字节。"]]},{"q":"4. CCCD 开关谁写？","opts":[["reactive_ble 库内代写/代退",true,"对。subscribe/cancel 时自动处理 0x2902。"],["必须自己写描述符",false,"原生才要手动。"],["不用写",false,"机制上必须写。"]]},{"q":"5. 0C FE 小端按 sint16 读是？","opts":[["-500（-5.00 °C）",true,"对。0xFE0C 补码 = -500。"],["65036",false,"那是 uint16 读法。"],["500",false,"符号丢了。"]]},{"q":"6. 收到 3 字节帧怎么办？","opts":[["先验长度，不足即丢弃",true,"对。防 RangeError 与脏数据。"],["照样解析",false,"越界崩溃。"],["补零再解析",false,"伪造数据。"]]}];
+</script>
+<script>
 const tocLinks=[...document.querySelectorAll('.toc a')];
 const secs=tocLinks.map(a=>document.getElementById(a.getAttribute('href').slice(1)));
 const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){tocLinks.forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+e.target.id));}});},{rootMargin:'-20% 0px -70% 0px'});
 secs.forEach(s=>s&&io.observe(s));
-const QUIZ=[{"q":"1. 订阅用？","opts":[["subscribeToCharacteristic",true,"对。"],["setNotifyValue",false,"iOS。"],["monitor",false,"RN 名。"]]},{"q":"2. 关键命令写用？","opts":[["WithResponse",true,"对。"],["WithoutResponse",false,"无确认。"],["随便",false,"取舍。"]]},{"q":"3. 值解析？","opts":[["小端+符号",true,"对。"],["大端",false,"错。"],["字符串",false,"字节。"]]}];
 let solved=0; const box=document.getElementById('quiz-box');
 QUIZ.forEach((item,qi)=>{
   const h=document.createElement('div'); h.className='quiz-q'; h.textContent=item.q; box.appendChild(h);
@@ -276,7 +410,6 @@ QUIZ.forEach((item,qi)=>{
   });
   box.appendChild(ex);
 });
-
 </script>
 </body>
 </html>

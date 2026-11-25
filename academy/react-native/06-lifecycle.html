@@ -172,6 +172,10 @@
   .ctl-row label{display:inline-flex;align-items:center;gap:10px;}
   .ctl-row input[type=range]{accent-color:var(--coral);width:160px;}
   .ctl-row .chk input{accent-color:var(--coral);}
+  .api-lv{display:inline-block;font-family:ui-monospace,Consolas,monospace;font-size:11.5px;font-weight:800;color:#2F58A8;background:var(--blue-soft);border:1px solid var(--blue-line);border-radius:999px;padding:0 8px;white-space:nowrap;}
+  .refs{font-size:14px;}
+  .refs li{margin:7px 0;}
+  .refs .src{font-size:12px;color:var(--faint);}
 </style>
 </head>
 <body style="--coral:#E8590C;--coral-soft:#FBEADF;--coral-line:#F2C4A4">
@@ -197,68 +201,195 @@
 <main>
   <div class="crumb">蓝牙小课堂 / RN 第六课 · F6</div>
   <h1>生命周期：<em>移除订阅</em>与断连销毁</h1>
-  <p class="lead">RN 离开页面要 remove 订阅、cancelDeviceConnection、必要时 manager.destroy。这一课讲清理。</p>
-  <div class="meta"><span>约 10 分钟</span><span>含交互演练</span><span>跨端对照</span></div>
+  <p class="lead">RN 离开页面要 remove 订阅、cancelDeviceConnection、必要时 manager.destroy。这一课讲三级清理与前后台切换。</p>
+  <div class="meta"><span>平台：React Native/TS</span><span>约 20 分钟</span><span>ble-plx 3.x</span><span>含两场交互演练</span><span>跨端对照</span></div>
   <div class="journey">
     <div class="j-step"><span class="n">1</span><span class="t">清理</span><span class="s">remove</span></div>
     <div class="j-step"><span class="n">2</span><span class="t">断连</span><span class="s">cancel</span></div>
+    <div class="j-step"><span class="n">3</span><span class="t">销毁</span><span class="s">destroy 边界</span></div>
+    <div class="j-step"><span class="n">4</span><span class="t">动手</span><span class="s">两场演练</span></div>
+    <div class="j-step"><span class="n">5</span><span class="t">自测</span><span class="s">六个问题</span></div>
   </div>
 
   <section id="a">
-    <h2><span class="no">第 1 步</span>移除订阅</h2>
+    <h2><span class="no">第 1 步</span>移除订阅：三级清理清单</h2>
     <pre>const sub = d.monitor(...);
 // 退出: sub.remove();
-await manager.cancelDeviceConnection(id)</pre><div class="recap"><b>收束：</b>remove+cancel。</div>
+await manager.cancelDeviceConnection(id)</pre>
+    <pre><span class="cm">// 完整清单：订阅 → 连接 → 扫描，逐级清</span>
+useEffect(() =&gt; {
+  return () =&gt; {                    <span class="cm">// 组件卸载</span>
+    monitorSub?.remove();           <span class="cm">// 1 退订 CCCD</span>
+    discSub?.remove();              <span class="cm">// 2 移除 onDisconnected 监听</span>
+    stateSub?.remove();             <span class="cm">// 3 移除 onStateChange 监听</span>
+    manager.stopDeviceScan();       <span class="cm">// 4 停扫</span>
+    manager.cancelDeviceConnection(id); <span class="cm">// 5 断连</span>
+  };
+}, []);</pre>
+    <table>
+      <tr><th>级</th><th>对象</th><th>动作</th><th>漏掉的后果</th></tr>
+      <tr><td>1</td><td>Subscription（monitor/onDisconnected/onStateChange）</td><td>sub.remove() <span class="api-lv">3.x</span></td><td>幽灵回调进已卸载组件</td></tr>
+      <tr><td>2</td><td>连接</td><td>cancelDeviceConnection / device.cancelConnection <span class="api-lv">3.x</span></td><td>孤儿连接费电、占对端连接槽</td></tr>
+      <tr><td>3</td><td>扫描</td><td>stopDeviceScan() <span class="api-lv">3.x</span></td><td>射频常驻费电</td></tr>
+      <tr><td>App 退出</td><td>BleManager</td><td>manager.destroy() <span class="api-lv">3.x</span></td><td>原生资源不释放</td></tr>
+    </table>
+    <figure>
+      <svg viewBox="0 0 760 170" role="img" aria-label="三级清理：订阅、连接、扫描">
+        <defs><marker id="arf6" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#A39B8E"/></marker></defs>
+        <rect x="20" y="40" width="210" height="60" rx="12" fill="#E9F4F2" stroke="#BFE0DB"/>
+        <text x="125" y="66" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#1E7268">1 各 Subscription.remove()</text>
+        <text x="125" y="86" text-anchor="middle" font-size="10.5" fill="#4E8A80">退订 + 移除监听</text>
+        <rect x="285" y="40" width="210" height="60" rx="12" fill="#FBEDE9" stroke="#F0CFC6"/>
+        <text x="390" y="66" text-anchor="middle" font-size="12" font-weight="bold" fill="#B04A35">2 cancelDeviceConnection</text>
+        <text x="390" y="86" text-anchor="middle" font-size="10.5" fill="#C08475">断开连接</text>
+        <rect x="550" y="40" width="190" height="60" rx="12" fill="#FBF3E4" stroke="#EDD9B4"/>
+        <text x="645" y="66" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#8A5510">3 stopDeviceScan</text>
+        <text x="645" y="86" text-anchor="middle" font-size="10.5" fill="#A8762A">射频安静</text>
+        <line x1="230" y1="70" x2="283" y2="70" stroke="#A39B8E" stroke-width="2" marker-end="url(#arf6)"/>
+        <line x1="495" y1="70" x2="548" y2="70" stroke="#A39B8E" stroke-width="2" marker-end="url(#arf6)"/>
+        <text x="380" y="140" text-anchor="middle" font-size="11.5" fill="#A39B8E">destroy() 只在 App 级退出用；页面级清理别 destroy（别的页面还在用 manager）</text>
+      </svg>
+      <figcaption>图 1 · 三级清理 + App 级 destroy；页面卸载用 useEffect 返回函数兜底。</figcaption>
+    </figure>
+    <div class="recap"><b>收束：</b>remove+cancel。</div>
   </section>
 
   <section id="b">
-    <h2><span class="no">第 2 步</span>销毁</h2>
+    <h2><span class="no">第 2 步</span>销毁与前后台</h2>
     <pre>// App 退出 manager.destroy()
-// 后台持续传输靠原生模块（F7）</pre><div class="key"><span class="tag">重点</span>不清理泄漏连接/费电。</div>
+// 后台持续传输靠原生模块（F7）</pre>
+    <ul>
+      <li><b>destroy 的边界</b>：销毁原生 manager 与全部连接；destroy 后该实例不可再用，要重新 <code>new BleManager()</code>。多页面共享单例时，只在 App 退出销毁。</li>
+      <li><b>前后台</b>：用 RN <code>AppState</code> 监听；退后台停扫/按需断连，回前台先过权限门×状态门（F2）再恢复。</li>
+      <li><b>后台持续传输</b>：iOS 挂起 JS、Android 受调度；要原生前台服务/后台模式 + 原生模块事件回传（F7）。</li>
+    </ul>
+    <pre>AppState.addEventListener('change', (state) =&gt; {
+  if (state === 'background') {
+    manager.stopDeviceScan();
+  } else if (state === 'active') {
+    <span class="cm">// 过两道门 → 恢复扫描/重连（新会话，F4）</span>
+  }
+});</pre>
+    <div class="key"><span class="tag">重点</span>不清理泄漏连接/费电。remove 管订阅、cancel 管连接、destroy 管实例——三个动词三个层级，别混用。</div>
+    <div class="recap"><b>收束：</b>页面级 remove+cancel+stop；App 级 destroy；后台靠原生。</div>
   </section>
 
   <section id="lab">
-    <h2><span class="no">动手</span>清理 / 断连</h2>
-    <p>点按钮切换本平台写法与 Android 对照，概念一一对应。</p>
+    <h2><span class="no">动手</span>两场演练：API 对照、清理走查</h2>
+    <p>演练一切换写法对照。演练二选清理策略，看残留与后果。</p>
     <div class="lab">
-      <div class="lab-head"><b>清理 / 断连</b><span class="hint">点按钮看 API</span></div>
+      <div class="lab-head"><b>演练一 · 清理 / 断连 API</b><span class="hint">点按钮看 API</span></div>
       <div class="controls"><div class="seg" id="f6"><button data-k="api" class="on">本平台 API</button><button data-k="cmp">对照 Android</button></div></div>
       <div class="lab-body"><div><pre id="f6code" style="margin:0;"></pre></div><div class="logcat"><div class="logcat-head"><span>说明</span><span>live</span></div><div class="logcat-body" id="f6log"></div></div></div>
       <div class="lab-foot"><span class="hint">Android: stopScan/close</span></div>
     </div>
-    <div class="key"><span class="tag">看懂这场演练</span>remove+cancel+destroy；后台靠原生。</div>
+    <div class="lab">
+      <div class="lab-head"><b>演练二 · 清理策略走查</b><span class="hint">漏一步就留一个坑</span></div>
+      <div class="controls"><div class="seg" id="g6"><button data-g="full" class="on">完整清理</button><button data-g="noremove">漏 remove 订阅</button><button data-g="nocancel">漏断连</button><button data-g="earlydestroy">页面级误 destroy</button><button data-g="bg">后台想持续传输</button></div></div>
+      <div class="lab-body"><div><div class="chips" id="g6chips"></div><div class="key" id="g6hint"></div></div><div class="logcat"><div class="logcat-head"><span>清理日志</span><span>live</span></div><div class="logcat-body" id="g6log"></div></div></div>
+      <div class="lab-foot"><span class="hint">订阅/连接/扫描的残留状态一目了然</span></div>
+    </div>
+    <div class="key"><span class="tag">看懂这两场演练</span>remove+cancel+destroy；后台靠原生。三个动词三个层级。</div>
   </section>
 
   <section id="quiz">
-    <h2><span class="no">自测</span>三个问题</h2>
+    <h2><span class="no">自测</span>六个问题</h2>
     <div class="card" id="quiz-box"></div>
     <p id="quiz-done" style="display:none;font-weight:700;color:#1E7268;">全对。下一课讲原生模块桥接。</p>
   </section>
 
   <section id="map">
-    <h2><span class="no">回顾</span>速查</h2>
-    <table><tr><th>时机</th><th>动作</th></tr><tr><td>退出页面</td><td>remove+cancel</td></tr><tr><td>App 退出</td><td>destroy</td></tr></table>
-    <div class="note"><span class="tag">说明</span>本页为教学简化，工程细节以正文与官方规范为准；演练为模拟，非真实设备通信。</div>
+    <h2><span class="no">回顾</span>速查表</h2>
+    <table>
+      <tr><th>时机</th><th>动作</th></tr>
+      <tr><td>组件卸载</td><td>useEffect 返回函数：各 sub.remove() + stop + cancel</td></tr>
+      <tr><td>退后台</td><td>AppState → background：停扫/按需断连</td></tr>
+      <tr><td>回前台</td><td>权限门×状态门 → 恢复（新会话）</td></tr>
+      <tr><td>App 退出</td><td>manager.destroy()；之后须 new 新实例</td></tr>
+      <tr><td>后台持续传输</td><td>原生模块 + 前台服务/后台模式（F7）</td></tr>
+      <tr><td>三动词</td><td>remove 管订阅 / cancel 管连接 / destroy 管实例</td></tr>
+    </table>
+    <div class="note"><span class="tag">说明</span>本页为教学整理，清理 API 对照 dotintent 官方文档、AppState 对照 RN 官方文档核实；演练为模拟，非真实设备通信。</div>
+  </section>
+
+  <section id="refs">
+    <h2><span class="no">依据</span>参考链接</h2>
+    <div class="card refs">
+      <h3 style="margin-top:0;">库官方</h3>
+      <ul>
+        <li><a href="https://dotintent.github.io/react-native-ble-plx/" target="_blank" rel="noopener">react-native-ble-plx 官方文档</a> <span class="src">— Subscription.remove / cancelDeviceConnection / destroy 语义</span></li>
+      </ul>
+      <h3>框架官方</h3>
+      <ul>
+        <li><a href="https://reactnative.dev/docs/appstate" target="_blank" rel="noopener">RN · AppState</a> <span class="src">— active/background 前后台监听</span></li>
+        <li><a href="https://reactnative.dev/docs/headless-js-android" target="_blank" rel="noopener">RN · Headless JS（Android）</a> <span class="src">— 后台无 UI 任务的官方机制与限制</span></li>
+      </ul>
+    </div>
+    <div class="next-links">
+      <a href="05-read-write-monitor.html">← F5 读写与 monitor</a>
+      <a href="07-native-bridge.html">F7 原生模块 →</a>
+    </div>
     <footer>青竹蓝牙学堂 · 蓝牙小课堂RN 第六课 · F6 · <a href="../index.html">回到学堂</a></footer>
   </section>
 </main>
 <aside class="toc" id="toc">
   <div class="toc-title">本课目录</div>
   <a href="#a">移除订阅</a>
-  <a href="#b">销毁</a>
-  <a href="#lab">动手演练</a>
+  <a href="#b">销毁与前后台</a>
+  <a href="#lab">两场演练</a>
   <a href="#quiz">本课自测</a>
-  <a href="#map">回顾与速查</a>
+  <a href="#map">速查表</a>
+  <a href="#refs">参考链接</a>
 </aside>
 </div>
 <script>
-(function(){var API="点按钮看写法。";var CMP="sub.remove()\nmanager.cancelDeviceConnection(id)\nmanager.destroy()";var NT="Android: stopScan/close";function show(k){document.getElementById("f6code").textContent=(k==="api"?API:CMP);document.getElementById("f6log").innerHTML="<div><span class=\"ok\">"+(k==="api"?"本平台写法":"Android 对照")+"</span></div><div><span class=\"c\">// "+(k==="api"?NT:"概念相同，API 名不同")+"</span></div>";}document.querySelectorAll("#f6 button").forEach(function(b){b.addEventListener("click",function(){document.querySelectorAll("#f6 button").forEach(function(x){x.classList.remove("on");});b.classList.add("on");show(b.getAttribute("data-k"));});});show("api");})();
+(function(){
+  var API="// 组件卸载（useEffect 返回）\nmonitorSub.remove(); discSub.remove(); stateSub.remove();\nmanager.stopDeviceScan();\nawait manager.cancelDeviceConnection(id);\n// App 退出才：manager.destroy();\n// 前后台：AppState.addEventListener('change', ...)";
+  var CMP="Android 原生:\nscanner.stopScan(callback);\ngatt.disconnect(); gatt.close();\n// Activity.onDestroy 里做\n// 后台持续：Foreground Service + 通知\niOS 原生:\ncentralManager.stopScan();\ncancelPeripheralConnection(p);\n// 后台：bluetooth-central 后台模式";
+  var NT="Android: stopScan/close";
+  function show(k){document.getElementById("f6code").textContent=(k==="api"?API:CMP);document.getElementById("f6log").innerHTML="<div><span class=\"ok\">"+(k==="api"?"RN 三级清理":"原生对照")+"</span></div><div><span class=\"c\">// "+(k==="api"?NT:"概念相同，钩子名不同")+"</span></div>";}
+  document.querySelectorAll("#f6 button").forEach(function(b){b.addEventListener("click",function(){document.querySelectorAll("#f6 button").forEach(function(x){x.classList.remove("on");});b.classList.add("on");show(b.getAttribute("data-k"));});});
+  show("api");
+})();
 
+// 演练二：清理策略
+(function(){
+  var G={
+    full:{s:false,c:false,scan:false,ok:true,hint:'三级全清 + 扫描停：无幽灵回调、无孤儿连接。',
+      log:['<span class="api">monitorSub.remove() → CCCD 退订</span>','<span class="api">discSub/stateSub.remove()</span>','<span class="api">cancelDeviceConnection + stopDeviceScan</span>','<span class="ok">残留 0</span>']},
+    noremove:{s:true,c:false,scan:false,ok:false,hint:'漏 remove：monitor 回调继续进已卸载组件（setState on unmounted）。',
+      log:['<span class="warn">monitorSub 未 remove</span>','<span class="err">通知帧继续回调旧闭包</span>','<span class="err">Warning: setState on unmounted component</span>']},
+    nocancel:{s:false,c:true,scan:false,ok:false,hint:'漏断连：连接挂着，对端耗电维持链路，占连接槽。',
+      log:['<span class="ok">订阅已 remove ✓</span>','<span class="warn">cancelDeviceConnection 未调</span>','<span class="err">孤儿连接：费电 + 占对端连接槽</span>']},
+    earlydestroy:{s:false,c:false,scan:false,ok:false,hint:'页面级误 destroy：共享单例被销毁，其它页面/后续调用全报错。destroy 只属于 App 退出。',
+      log:['<span class="api">页面卸载时 manager.destroy()</span>','<span class="err">另一页面 startDeviceScan → manager 已销毁</span>','<span class="c">// 修复：页面级只 remove/cancel/stop</span>']},
+    bg:{s:true,c:true,scan:true,ok:false,hint:'后台想持续传输：iOS 挂起 JS、Android 受调度。要原生模块 + 前台服务/后台模式（F7）。',
+      log:['<span class="warn">App 退后台</span>','<span class="err">iOS：JS 停跑，monitor 不再回调</span>','<span class="err">Android：无前台服务则受限</span>','<span class="c">// 方案：原生任务 + 事件发射器回传</span>']}
+  };
+  function show(k){
+    var g=G[k];
+    document.getElementById('g6chips').innerHTML=
+      '<span class="chip '+(g.s?'bad':'on')+'">订阅 '+(g.s?'残留':'已清')+'</span>'+
+      '<span class="chip '+(g.c?'bad':'on')+'">连接 '+(g.c?'残留':'已清')+'</span>'+
+      '<span class="chip '+(g.scan?'bad':'on')+'">扫描 '+(g.scan?'残留':'已停')+'</span>'+
+      '<span class="chip '+(g.ok?'on':'bad')+'">'+(g.ok?'干净':'有坑')+'</span>';
+    document.getElementById('g6hint').innerHTML='<span class="tag">处理</span>'+g.hint;
+    document.getElementById('g6log').innerHTML=g.log.map(function(l){return '<div>'+l+'</div>';}).join('');
+  }
+  document.querySelectorAll('#g6 button').forEach(function(b){b.addEventListener('click',function(){
+    document.querySelectorAll('#g6 button').forEach(function(x){x.classList.remove('on');});
+    b.classList.add('on'); show(b.getAttribute('data-g'));
+  });});
+  show('full');
+})();
+
+const QUIZ=[{"q":"1. 移除订阅用？","opts":[["sub.remove()",true,"对。"],["cancel",false,"Flutter。"],["dispose",false,"Flutter。"]]},{"q":"2. 断连用？","opts":[["cancelDeviceConnection",true,"对。"],["disconnect",false,"鸿蒙。"],["close",false,"Android。"]]},{"q":"3. App 退出？","opts":[["manager.destroy",true,"对。"],["不管",false,"泄漏。"],["stopScan 即可",false,"还要 destroy。"]]},{"q":"4. 页面卸载时能 destroy 共享 manager 吗？","opts":[["不能：其它页面还在用；只 remove/cancel/stop",true,"对。destroy 属于 App 级。"],["能，顺手销毁",false,"会害其它页面。"],["destroy 后自动重建",false,"要手动 new。"]]},{"q":"5. 前后台监听用？","opts":[["AppState.addEventListener('change')",true,"对。active/background 分支。"],["onStateChange",false,"那是蓝牙状态。"],["Navigation 事件",false,"不管前后台。"]]},{"q":"6. remove / cancel / destroy 各管什么？","opts":[["订阅 / 连接 / manager 实例",true,"对。三个动词三个层级。"],["都管连接",false,"层级不同。"],["随便混用",false,"语义不同。"]]}];
+</script>
+<script>
 const tocLinks=[...document.querySelectorAll('.toc a')];
 const secs=tocLinks.map(a=>document.getElementById(a.getAttribute('href').slice(1)));
 const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){tocLinks.forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+e.target.id));}});},{rootMargin:'-20% 0px -70% 0px'});
 secs.forEach(s=>s&&io.observe(s));
-const QUIZ=[{"q":"1. 移除订阅用？","opts":[["sub.remove()",true,"对。"],["cancel",false,"Flutter。"],["dispose",false,"Flutter。"]]},{"q":"2. 断连用？","opts":[["cancelDeviceConnection",true,"对。"],["disconnect",false,"鸿蒙。"],["close",false,"Android。"]]},{"q":"3. App 退出？","opts":[["manager.destroy",true,"对。"],["不管",false,"泄漏。"],["stopScan 即可",false,"还要 destroy。"]]}];
 let solved=0; const box=document.getElementById('quiz-box');
 QUIZ.forEach((item,qi)=>{
   const h=document.createElement('div'); h.className='quiz-q'; h.textContent=item.q; box.appendChild(h);
@@ -278,7 +409,6 @@ QUIZ.forEach((item,qi)=>{
   });
   box.appendChild(ex);
 });
-
 </script>
 </body>
 </html>

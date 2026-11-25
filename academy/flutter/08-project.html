@@ -172,6 +172,10 @@
   .ctl-row label{display:inline-flex;align-items:center;gap:10px;}
   .ctl-row input[type=range]{accent-color:var(--coral);width:160px;}
   .ctl-row .chk input{accent-color:var(--coral);}
+  .api-lv{display:inline-block;font-family:ui-monospace,Consolas,monospace;font-size:11.5px;font-weight:800;color:#2F58A8;background:var(--blue-soft);border:1px solid var(--blue-line);border-radius:999px;padding:0 8px;white-space:nowrap;}
+  .refs{font-size:14px;}
+  .refs li{margin:7px 0;}
+  .refs .src{font-size:12px;color:var(--faint);}
 </style>
 </head>
 <body style="--coral:#E8590C;--coral-soft:#FBEADF;--coral-line:#F2C4A4">
@@ -197,46 +201,130 @@
 <main>
   <div class="crumb">蓝牙小课堂 / Flutter 第八课 · E8</div>
   <h1>综合实战：<em>温湿度计</em> 双端对照</h1>
-  <p class="lead">把 E1–E7 串成温湿度计：扫描流→连接→发现→订阅→解析→UI，双端（Android/iOS）对照验收。</p>
-  <div class="meta"><span>约 10 分钟</span><span>含交互演练</span><span>跨端对照</span></div>
+  <p class="lead">把 E1–E7 串成温湿度计：扫描流→连接→发现→订阅→解析→UI，双端（Android/iOS）对照验收。配套样例工程与本课同版本。</p>
+  <div class="meta"><span>平台：Flutter/Dart</span><span>约 24 分钟</span><span>flutter_reactive_ble 5.6.0</span><span>含两场交互演练</span><span>跨端对照</span></div>
   <div class="journey">
     <div class="j-step"><span class="n">1</span><span class="t">流程</span><span class="s">六步</span></div>
-    <div class="j-step"><span class="n">2</span><span class="t">验收</span><span class="s">双端</span></div>
+    <div class="j-step"><span class="n">2</span><span class="t">验收</span><span class="s">双端双机</span></div>
+    <div class="j-step"><span class="n">3</span><span class="t">工程</span><span class="s">样例对照</span></div>
+    <div class="j-step"><span class="n">4</span><span class="t">动手</span><span class="s">两场演练</span></div>
+    <div class="j-step"><span class="n">5</span><span class="t">自测</span><span class="s">六个问题</span></div>
   </div>
 
   <section id="a">
     <h2><span class="no">第 1 步</span>六步流程</h2>
-    <pre>scanForDevices → connect → discoverServices
-→ subscribeToCharacteristic → 解析 → UI</pre><div class="recap"><b>收束：</b>全 Stream 链。</div>
+    <pre>scanForDevices → connectToDevice → discoverServices
+→ subscribeToCharacteristic → 解析 → UI</pre>
+    <table>
+      <tr><th>步</th><th>API</th><th>课</th><th>验收点</th></tr>
+      <tr><td>1 扫描</td><td>scanForDevices(withServices:[476c…0601]) <span class="api-lv">5.x</span></td><td>E3</td><td>过滤命中、id 去重</td></tr>
+      <tr><td>2 连接</td><td>connectToDevice(id) <span class="api-lv">5.x</span></td><td>E4</td><td>connected 才下一步；cancel 旧流再重连</td></tr>
+      <tr><td>3 发现</td><td>discoverServices(deviceId) <span class="api-lv">5.x</span></td><td>E4</td><td>拿到 …0602 特征（READ+WRITE）</td></tr>
+      <tr><td>4 订阅/请求</td><td>subscribeToCharacteristic + write 0x01 <span class="api-lv">5.x</span></td><td>E5</td><td>关键命令带应答写；收帧</td></tr>
+      <tr><td>5 解析</td><td>ByteData 小端 getInt16/getUint16 ×0.01</td><td>E5</td><td>25.00/26.50 交替、湿度 50.55</td></tr>
+      <tr><td>6 UI/清理</td><td>setState + dispose 三 cancel</td><td>E6</td><td>退页无幽灵回调、无孤儿连接</td></tr>
+    </table>
+    <figure>
+      <svg viewBox="0 0 760 150" role="img" aria-label="温湿度计六步流水线">
+        <defs><marker id="are8" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#A39B8E"/></marker></defs>
+        <rect x="10" y="40" width="110" height="52" rx="10" fill="#ECF1FB" stroke="#C9D8F2"/><text x="65" y="70" text-anchor="middle" font-size="11.5" font-weight="bold" fill="#2F58A8">扫描流</text>
+        <rect x="135" y="40" width="110" height="52" rx="10" fill="#E9F4F2" stroke="#BFE0DB"/><text x="190" y="70" text-anchor="middle" font-size="11.5" font-weight="bold" fill="#1E7268">连接流</text>
+        <rect x="260" y="40" width="110" height="52" rx="10" fill="#E9F4F2" stroke="#BFE0DB"/><text x="315" y="70" text-anchor="middle" font-size="11.5" font-weight="bold" fill="#1E7268">发现</text>
+        <rect x="385" y="40" width="110" height="52" rx="10" fill="#FBF3E4" stroke="#EDD9B4"/><text x="440" y="70" text-anchor="middle" font-size="11.5" font-weight="bold" fill="#8A5510">订阅+写01</text>
+        <rect x="510" y="40" width="110" height="52" rx="10" fill="#FBF3E4" stroke="#EDD9B4"/><text x="565" y="70" text-anchor="middle" font-size="11.5" font-weight="bold" fill="#8A5510">小端解析</text>
+        <rect x="635" y="40" width="115" height="52" rx="10" fill="#FBEDE9" stroke="#F0CFC6"/><text x="692" y="70" text-anchor="middle" font-size="11.5" font-weight="bold" fill="#B04A35">UI+清理</text>
+        <line x1="120" y1="66" x2="133" y2="66" stroke="#A39B8E" stroke-width="2" marker-end="url(#are8)"/>
+        <line x1="245" y1="66" x2="258" y2="66" stroke="#A39B8E" stroke-width="2" marker-end="url(#are8)"/>
+        <line x1="370" y1="66" x2="383" y2="66" stroke="#A39B8E" stroke-width="2" marker-end="url(#are8)"/>
+        <line x1="495" y1="66" x2="508" y2="66" stroke="#A39B8E" stroke-width="2" marker-end="url(#are8)"/>
+        <line x1="620" y1="66" x2="633" y2="66" stroke="#A39B8E" stroke-width="2" marker-end="url(#are8)"/>
+        <text x="380" y="125" text-anchor="middle" font-size="11.5" fill="#A39B8E">权限门×状态门（E2）贯穿全程；任一环节失败回对应课排查</text>
+      </svg>
+      <figcaption>图 1 · 六步全 Stream 链；配套工程 examples/flutter/thermometer-mvp 即此流程。</figcaption>
+    </figure>
+    <div class="recap"><b>收束：</b>全 Stream 链。</div>
   </section>
 
   <section id="b">
-    <h2><span class="no">第 2 步</span>双端验收</h2>
-    <p>同一 Dart 代码跑 Android+iOS，对照权限/后台差异；第二设备当外设发值验收。</p><div class="recap"><b>收束：</b>双端+双机验收。</div>
+    <h2><span class="no">第 2 步</span>双端验收与样例工程</h2>
+    <p>同一 Dart 代码跑 Android+iOS，对照权限/后台差异；第二设备当外设发值验收。</p>
+    <table>
+      <tr><th>对照项</th><th>Android</th><th>iOS</th></tr>
+      <tr><td>权限</td><td>12+ SCAN/CONNECT 弹窗；旧系统位置</td><td>plist 两键，首次自动弹窗</td></tr>
+      <tr><td>设备 id</td><td>MAC（可能随机化）</td><td>系统 UUID，<b>不能硬编码</b></td></tr>
+      <tr><td>MTU</td><td>requestMtu 可协商</td><td>不能协商，只能查询</td></tr>
+      <tr><td>专属操作</td><td>requestConnectionPriority / clearGattCache</td><td>调用抛 UnSupportedOperationException</td></tr>
+      <tr><td>后台</td><td>原生前台服务</td><td>挂起；后台模式是原生能力</td></tr>
+    </table>
+    <ul>
+      <li><b>双机验收</b>：第二台设备跑教学外设（服务 476cdf45-…0601，特征 …0602 READ+WRITE）；手机写 0x01，外设回帧 40 02 &lt;temp&gt; 03 BF 13，温度 25.00/26.50 交替、湿度固定 50.55%。</li>
+      <li><b>对日志不看 UI</b>：每步打印 API 结果与原始字节；UI 数字必须能从日志字节复算。</li>
+      <li><b>样例工程</b>：<code>examples/flutter/thermometer-mvp</code>（pubspec 锁 reactive_ble 5.6.0 / permission_handler 12.0.3 / device_info_plus 11.5.0），lib 下 main.dart / frame.dart / permissions.dart 与本课一一对应；附浏览器原型可先演练流程。</li>
+    </ul>
+    <div class="recap"><b>收束：</b>双端+双机验收。</div>
   </section>
 
   <section id="lab">
-    <h2><span class="no">动手</span>实战流程</h2>
-    <p>点按钮切换本平台写法与 Android 对照，概念一一对应。</p>
+    <h2><span class="no">动手</span>两场演练：API 对照、六步走查</h2>
+    <p>演练一切换写法对照。演练二逐步点完六步，看每步的日志与验收点。</p>
     <div class="lab">
-      <div class="lab-head"><b>实战流程</b><span class="hint">点按钮看 API</span></div>
+      <div class="lab-head"><b>演练一 · 实战流程 API</b><span class="hint">点按钮看 API</span></div>
       <div class="controls"><div class="seg" id="e8"><button data-k="api" class="on">本平台 API</button><button data-k="cmp">对照 Android</button></div></div>
       <div class="lab-body"><div><pre id="e8code" style="margin:0;"></pre></div><div class="logcat"><div class="logcat-head"><span>说明</span><span>live</span></div><div class="logcat-body" id="e8log"></div></div></div>
       <div class="lab-foot"><span class="hint">原生同流程</span></div>
     </div>
-    <div class="key"><span class="tag">看懂这场演练</span>全 Stream 链+双端对照验收。</div>
+    <div class="lab">
+      <div class="lab-head"><b>演练二 · 六步走查</b><span class="hint">点一步走一步，日志累积</span></div>
+      <div class="controls"><div class="seg" id="g8"><button data-g="1" class="on">1 扫描</button><button data-g="2">2 连接</button><button data-g="3">3 发现</button><button data-g="4">4 订阅+写01</button><button data-g="5">5 解析</button><button data-g="6">6 UI+清理</button></div></div>
+      <div class="lab-body"><div><div class="chips" id="g8chips"></div><div class="key" id="g8hint"></div></div><div class="logcat"><div class="logcat-head"><span>实战日志</span><span>live</span></div><div class="logcat-body" id="g8log"></div></div></div>
+      <div class="lab-foot"><span class="hint">教学外设：写 0x01 回帧，温度交替</span></div>
+    </div>
+    <div class="key"><span class="tag">看懂这两场演练</span>全 Stream 链+双端对照验收。每一步的验收点就是对应课的自测点。</div>
   </section>
 
   <section id="quiz">
-    <h2><span class="no">自测</span>三个问题</h2>
+    <h2><span class="no">自测</span>六个问题</h2>
     <div class="card" id="quiz-box"></div>
     <p id="quiz-done" style="display:none;font-weight:700;color:#1E7268;">全对。Flutter 板八课完成。接下来 RN。</p>
   </section>
 
   <section id="map">
-    <h2><span class="no">回顾</span>速查</h2>
-    <table><tr><th>步</th><th>API</th></tr><tr><td>扫描</td><td>scanForDevices</td></tr><tr><td>订阅</td><td>subscribeToCharacteristic</td></tr></table>
-    <div class="note"><span class="tag">说明</span>本页为教学简化，工程细节以正文与官方规范为准；演练为模拟，非真实设备通信。</div>
+    <h2><span class="no">回顾</span>速查表</h2>
+    <table>
+      <tr><th>步</th><th>API / 要点</th></tr>
+      <tr><td>扫描</td><td>scanForDevices(withServices)；id 去重</td></tr>
+      <tr><td>连接</td><td>connectToDevice；connected 才发现</td></tr>
+      <tr><td>发现</td><td>discoverServices；重连重发现</td></tr>
+      <tr><td>订阅</td><td>subscribeToCharacteristic；写 0x01 用 WithResponse</td></tr>
+      <tr><td>解析</td><td>小端 getInt16/getUint16 ×0.01；先验长度帧头</td></tr>
+      <tr><td>清理</td><td>dispose 三 cancel；后台靠原生桥</td></tr>
+      <tr><td>验收</td><td>双端对照 + 双机对日志；样例工程同版本</td></tr>
+    </table>
+    <div class="note"><span class="tag">说明</span>本页为教学整理，API 与版本对照 pub.dev 官方文档及样例工程 pubspec 核实；演练为模拟，非真实设备通信。</div>
+  </section>
+
+  <section id="refs">
+    <h2><span class="no">依据</span>参考链接</h2>
+    <div class="card refs">
+      <h3 style="margin-top:0;">库官方（pub.dev）</h3>
+      <ul>
+        <li><a href="https://pub.dev/packages/flutter_reactive_ble" target="_blank" rel="noopener">flutter_reactive_ble 5.6.0</a> <span class="src">— 双端差异（id/MTU/专属操作）官方说明</span></li>
+        <li><a href="https://pub.dev/documentation/flutter_reactive_ble/latest/flutter_reactive_ble/FlutterReactiveBle-class.html" target="_blank" rel="noopener">FlutterReactiveBle class</a> <span class="src">— 六步所用全部 API 签名</span></li>
+      </ul>
+      <h3>协议规范</h3>
+      <ul>
+        <li><a href="https://bthome.io/format/" target="_blank" rel="noopener">BTHome v2 格式规范</a> <span class="src">— 帧布局与官方样例值</span></li>
+      </ul>
+      <h3>配套工程（本仓库）</h3>
+      <ul>
+        <li><a href="../../examples/flutter/thermometer-mvp/prototype/index.html">thermometer-mvp 浏览器原型</a> <span class="src">— 先演练流程再上真机</span></li>
+      </ul>
+    </div>
+    <div class="next-links">
+      <a href="07-native-bridge.html">← E7 原生桥接</a>
+      <a href="../../examples/flutter/thermometer-mvp/prototype/index.html">样例原型 →</a>
+      <a href="../index.html">回到学堂</a>
+    </div>
     <footer>青竹蓝牙学堂 · 蓝牙小课堂Flutter 第八课 · E8 · <a href="../index.html">回到学堂</a></footer>
   </section>
 </main>
@@ -244,19 +332,55 @@
   <div class="toc-title">本课目录</div>
   <a href="#a">六步流程</a>
   <a href="#b">双端验收</a>
-  <a href="#lab">动手演练</a>
+  <a href="#lab">两场演练</a>
   <a href="#quiz">本课自测</a>
-  <a href="#map">回顾与速查</a>
+  <a href="#map">速查表</a>
+  <a href="#refs">参考链接</a>
 </aside>
 </div>
 <script>
-(function(){var API="点按钮看流程。";var CMP="scanForDevices([1809]) → connect → discoverServices\n→ subscribeToCharacteristic → 6A 09→24.10°C";var NT="原生同流程";function show(k){document.getElementById("e8code").textContent=(k==="api"?API:CMP);document.getElementById("e8log").innerHTML="<div><span class=\"ok\">"+(k==="api"?"本平台写法":"Android 对照")+"</span></div><div><span class=\"c\">// "+(k==="api"?NT:"概念相同，API 名不同")+"</span></div>";}document.querySelectorAll("#e8 button").forEach(function(b){b.addEventListener("click",function(){document.querySelectorAll("#e8 button").forEach(function(x){x.classList.remove("on");});b.classList.add("on");show(b.getAttribute("data-k"));});});show("api");})();
+(function(){
+  var API="scanForDevices(withServices:[476c…0601])\n→ connectToDevice(id)\n→ discoverServices(deviceId)\n→ subscribeToCharacteristic(ch)\n→ write 0x01 (WithResponse)\n→ 40 02 C4 09 03 BF 13 → 25.00°C / 50.55%\n→ setState + dispose 三 cancel";
+  var CMP="Android 原生同流程:\nstartScan(filter) → connectGatt\n→ discoverServices → setNotify+CCCD\n→ writeCharacteristic(0x01)\n→ onCharacteristicChanged 解析\n// 概念一一对应，形态回调 vs Stream";
+  var NT="原生同流程";
+  function show(k){document.getElementById("e8code").textContent=(k==="api"?API:CMP);document.getElementById("e8log").innerHTML="<div><span class=\"ok\">"+(k==="api"?"Flutter 六步":"Android 对照")+"</span></div><div><span class=\"c\">// "+(k==="api"?NT:"概念相同，API 名不同")+"</span></div>";}
+  document.querySelectorAll("#e8 button").forEach(function(b){b.addEventListener("click",function(){document.querySelectorAll("#e8 button").forEach(function(x){x.classList.remove("on");});b.classList.add("on");show(b.getAttribute("data-k"));});});
+  show("api");
+})();
 
+// 演练二：六步走查
+(function(){
+  var S=[
+    {t:'扫描',log:'<span class="api">scanForDevices(withServices:[476c…0601])</span> → <span class="ok">Qingzhu-Sensor id=AA:BB:… rssi=-52</span>',hint:'过滤命中、id 去重（E3）。'},
+    {t:'连接',log:'<span class="api">connectToDevice(id)</span> → <span class="ok">connecting → connected</span>',hint:'connected 才下一步；cancel 即断开（E4）。'},
+    {t:'发现',log:'<span class="api">discoverServices</span> → <span class="ok">…0601 服务 / …0602 特征 READ+WRITE</span>',hint:'拿到目标特征（E4）。'},
+    {t:'订阅+写01',log:'<span class="api">subscribeToCharacteristic + write [0x01] WithResponse</span> → <span class="ok">收帧 40 02 C4 09 03 BF 13</span>',hint:'关键命令带应答写（E5）。'},
+    {t:'解析',log:'<span class="ok">getInt16(2,LE)=2500 → 25.00°C；getUint16(5,LE)=5055 → 50.55%</span> → <span class="ok">再写 0x01 → 5A 0A → 26.50°C 交替</span>',hint:'小端+符号×0.01（E5）。'},
+    {t:'UI+清理',log:'<span class="ok">setState 刷新</span> → <span class="api">dispose: notifySub/connSub/scanSub.cancel()</span> → <span class="ok">活跃 0</span>',hint:'退页无幽灵回调（E6）。'}
+  ];
+  function show(n){
+    var chips='';
+    for(var i=0;i<6;i++){chips+='<span class="chip '+(i<n?'on':'')+'">'+(i+1)+' '+S[i].t+'</span>';}
+    document.getElementById('g8chips').innerHTML=chips;
+    document.getElementById('g8hint').innerHTML='<span class="tag">验收点</span>'+S[n-1].hint;
+    var logs=[];
+    for(var j=0;j<n;j++){logs.push('<div>'+S[j].log+'</div>');}
+    document.getElementById('g8log').innerHTML=logs.join('');
+  }
+  document.querySelectorAll('#g8 button').forEach(function(b){b.addEventListener('click',function(){
+    document.querySelectorAll('#g8 button').forEach(function(x){x.classList.remove('on');});
+    b.classList.add('on'); show(parseInt(b.getAttribute('data-g'),10));
+  });});
+  show(1);
+})();
+
+const QUIZ=[{"q":"1. 订阅 API？","opts":[["subscribeToCharacteristic",true,"对。"],["monitor",false,"RN。"],["setNotify",false,"原生。"]]},{"q":"2. 温度解析？","opts":[["小端×0.01",true,"对。"],["大端",false,"错。"],["不乘",false,"要乘。"]]},{"q":"3. 验收？","opts":[["双端+双机",true,"对。"],["单端",false,"要对照。"],["只看 UI",false,"对日志。"]]},{"q":"4. iOS 上设备 id 能硬编码吗？","opts":[["不能：系统分配 UUID，换机/重装会变",true,"对。每次从扫描结果取。"],["能：和 MAC 一样固定",false,"iOS 不暴露 MAC。"],["能：写死 UUID 即可",false,"不同手机看到的不同。"]]},{"q":"5. 请求外设回帧的 0x01 用哪种写？","opts":[["WithResponse：关键命令要确认",true,"对。丢了要能知道。"],["WithoutResponse",false,"无确认。"],["read 代替",false,"方向反了。"]]},{"q":"6. 退页验收看什么？","opts":[["日志确认三订阅 cancel、无孤儿连接",true,"对。E6 清理清单。"],["UI 不报错就行",false,"幽灵回调可能延迟出现。"],["重启 App",false,"不必。"]]}];
+</script>
+<script>
 const tocLinks=[...document.querySelectorAll('.toc a')];
 const secs=tocLinks.map(a=>document.getElementById(a.getAttribute('href').slice(1)));
 const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){tocLinks.forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+e.target.id));}});},{rootMargin:'-20% 0px -70% 0px'});
 secs.forEach(s=>s&&io.observe(s));
-const QUIZ=[{"q":"1. 订阅 API？","opts":[["subscribeToCharacteristic",true,"对。"],["monitor",false,"RN。"],["setNotify",false,"原生。"]]},{"q":"2. 温度解析？","opts":[["小端×0.01",true,"对。"],["大端",false,"错。"],["不乘",false,"要乘。"]]},{"q":"3. 验收？","opts":[["双端+双机",true,"对。"],["单端",false,"要对照。"],["只看 UI",false,"对日志。"]]}];
 let solved=0; const box=document.getElementById('quiz-box');
 QUIZ.forEach((item,qi)=>{
   const h=document.createElement('div'); h.className='quiz-q'; h.textContent=item.q; box.appendChild(h);
@@ -276,7 +400,6 @@ QUIZ.forEach((item,qi)=>{
   });
   box.appendChild(ex);
 });
-
 </script>
 </body>
 </html>

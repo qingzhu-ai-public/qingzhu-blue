@@ -172,6 +172,10 @@
   .ctl-row label{display:inline-flex;align-items:center;gap:10px;}
   .ctl-row input[type=range]{accent-color:var(--coral);width:160px;}
   .ctl-row .chk input{accent-color:var(--coral);}
+  .api-lv{display:inline-block;font-family:ui-monospace,Consolas,monospace;font-size:11.5px;font-weight:800;color:#2F58A8;background:var(--blue-soft);border:1px solid var(--blue-line);border-radius:999px;padding:0 8px;white-space:nowrap;}
+  .refs{font-size:14px;}
+  .refs li{margin:7px 0;}
+  .refs .src{font-size:12px;color:var(--faint);}
 </style>
 </head>
 <body style="--coral:#E8590C;--coral-soft:#FBEADF;--coral-line:#F2C4A4">
@@ -197,49 +201,135 @@
 <main>
   <div class="crumb">蓝牙小课堂 / Flutter 第六课 · E6</div>
   <h1>生命周期：<em>退出页面</em>取消订阅与断连</h1>
-  <p class="lead">Flutter 页面退出要取消 Stream 订阅、断连释放，防泄漏与后台费电。这一课讲生命周期清理。</p>
-  <div class="meta"><span>约 10 分钟</span><span>含交互演练</span><span>跨端对照</span></div>
+  <p class="lead">Flutter 页面退出要取消 Stream 订阅、断连释放，防泄漏与后台费电。这一课讲清理顺序、前后台切换与后台能力的边界。</p>
+  <div class="meta"><span>平台：Flutter/Dart</span><span>约 20 分钟</span><span>flutter_reactive_ble 5.6.0</span><span>含两场交互演练</span><span>跨端对照</span></div>
   <div class="journey">
-    <div class="j-step"><span class="n">1</span><span class="t">清理</span><span class="s">cancel</span></div>
-    <div class="j-step"><span class="n">2</span><span class="t">断连</span><span class="s">disconnect</span></div>
+    <div class="j-step"><span class="n">1</span><span class="t">清理</span><span class="s">cancel 顺序</span></div>
+    <div class="j-step"><span class="n">2</span><span class="t">断连</span><span class="s">释放连接</span></div>
+    <div class="j-step"><span class="n">3</span><span class="t">前后台</span><span class="s">能力边界</span></div>
+    <div class="j-step"><span class="n">4</span><span class="t">动手</span><span class="s">两场演练</span></div>
+    <div class="j-step"><span class="n">5</span><span class="t">自测</span><span class="s">六个问题</span></div>
   </div>
 
   <section id="a">
-    <h2><span class="no">第 1 步</span>取消订阅</h2>
+    <h2><span class="no">第 1 步</span>取消订阅：顺序与清单</h2>
     <pre>@override void dispose() {
   scanSub?.cancel(); notifySub?.cancel();
   super.dispose();
-}</pre><div class="recap"><b>收束：</b>dispose 取消所有订阅。</div>
+}</pre>
+    <pre><span class="cm">// 完整清理清单：先退订、再断连、最后停扫</span>
+@override void dispose() {
+  notifySub?.cancel();   <span class="cm">// 1 退订 CCCD，不再收帧</span>
+  connSub?.cancel();     <span class="cm">// 2 cancel 连接流 = 主动断开</span>
+  scanSub?.cancel();     <span class="cm">// 3 停扫</span>
+  super.dispose();
+}
+<span class="cm">// 重连场景同理：先 cancel 旧 connSub，再建新流（E4）</span></pre>
+    <table>
+      <tr><th>时机</th><th>钩子</th><th>动作</th></tr>
+      <tr><td>页面销毁</td><td>State.dispose() <span class="api-lv">Flutter</span></td><td>三个订阅逐个 cancel</td></tr>
+      <tr><td>App 退后台</td><td>WidgetsBindingObserver.didChangeAppLifecycleState <span class="api-lv">Flutter</span></td><td>paused：停扫/按需断连；resumed：按状态门恢复</td></tr>
+      <tr><td>蓝牙被关</td><td>statusStream ≠ ready（E2） <span class="api-lv">5.x</span></td><td>清会话，等 ready 恢复</td></tr>
+      <tr><td>对端断开</td><td>ConnectionStateUpdate.disconnected（E4） <span class="api-lv">5.x</span></td><td>清订阅与队列，按策略重连</td></tr>
+    </table>
+    <figure>
+      <svg viewBox="0 0 760 170" role="img" aria-label="清理顺序：退订、断连、停扫">
+        <defs><marker id="are6" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#A39B8E"/></marker></defs>
+        <rect x="20" y="40" width="200" height="60" rx="12" fill="#E9F4F2" stroke="#BFE0DB"/>
+        <text x="120" y="66" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#1E7268">1 notifySub.cancel()</text>
+        <text x="120" y="86" text-anchor="middle" font-size="10.5" fill="#4E8A80">退订 CCCD，不再收帧</text>
+        <rect x="280" y="40" width="200" height="60" rx="12" fill="#FBEDE9" stroke="#F0CFC6"/>
+        <text x="380" y="66" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#B04A35">2 connSub.cancel()</text>
+        <text x="380" y="86" text-anchor="middle" font-size="10.5" fill="#C08475">主动断开连接</text>
+        <rect x="540" y="40" width="200" height="60" rx="12" fill="#FBF3E4" stroke="#EDD9B4"/>
+        <text x="640" y="66" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#8A5510">3 scanSub.cancel()</text>
+        <text x="640" y="86" text-anchor="middle" font-size="10.5" fill="#A8762A">停扫，射频安静</text>
+        <line x1="220" y1="70" x2="278" y2="70" stroke="#A39B8E" stroke-width="2" marker-end="url(#are6)"/>
+        <line x1="480" y1="70" x2="538" y2="70" stroke="#A39B8E" stroke-width="2" marker-end="url(#are6)"/>
+        <text x="380" y="140" text-anchor="middle" font-size="11.5" fill="#A39B8E">漏掉任何一步：幽灵回调 / 连接挂着费电 / 扫描常驻</text>
+      </svg>
+      <figcaption>图 1 · dispose 三步清理：退订 → 断连 → 停扫；cancel 都有真实原生副作用。</figcaption>
+    </figure>
+    <div class="recap"><b>收束：</b>dispose 取消所有订阅。</div>
   </section>
 
   <section id="b">
-    <h2><span class="no">第 2 步</span>断连与后台</h2>
+    <h2><span class="no">第 2 步</span>断连与后台：能力边界</h2>
     <pre>// 离开页面断开连接释放
-// 后台持续传输需原生前台服务/桥接（E7）</pre><div class="key"><span class="tag">重点</span>跨端库后台能力有限，持续传输靠原生桥接。</div>
+// 后台持续传输需原生前台服务/桥接（E7）</pre>
+    <ul>
+      <li><b>iOS</b>：App 退后台很快被挂起，Dart 代码停跑；CoreBluetooth 的后台模式与状态恢复是原生能力，跨端库不替你保活。</li>
+      <li><b>Android</b>：后台扫描/连接受系统限制；持续传输要原生前台服务（foreground service）+ 通知，同样在原生侧。</li>
+      <li><b>结论</b>：reactive_ble 适合「前台交互」；后台持续采集 = 原生任务 + EventChannel 回传（E7），或干脆把采集放外设侧缓存。</li>
+    </ul>
+    <pre><span class="cm">// 前后台切换监听（WidgetsBindingObserver）</span>
+@override void didChangeAppLifecycleState(AppLifecycleState state) {
+  if (state == AppLifecycleState.paused) {
+    scanSub?.cancel();            <span class="cm">// 后台别扫</span>
+  } else if (state == AppLifecycleState.resumed) {
+    <span class="cm">// 回前台：先查权限门×状态门（E2），再恢复扫描/重连</span>
+  }
+}</pre>
+    <div class="key"><span class="tag">重点</span>跨端库后台能力有限，持续传输靠原生桥接。别指望 Dart 定时器在后台跑——iOS 挂起、Android 受调度。</div>
+    <div class="recap"><b>收束：</b>前台用库、后台靠原生；恢复前先过两道门。</div>
   </section>
 
   <section id="lab">
-    <h2><span class="no">动手</span>清理 / 断连</h2>
-    <p>点按钮切换本平台写法与 Android 对照，概念一一对应。</p>
+    <h2><span class="no">动手</span>两场演练：API 对照、清理走查</h2>
+    <p>演练一切换写法对照。演练二选清理策略，看残留与后果。</p>
     <div class="lab">
-      <div class="lab-head"><b>清理 / 断连</b><span class="hint">点按钮看 API</span></div>
+      <div class="lab-head"><b>演练一 · 清理 / 断连 API</b><span class="hint">点按钮看 API</span></div>
       <div class="controls"><div class="seg" id="e6"><button data-k="api" class="on">本平台 API</button><button data-k="cmp">对照 Android</button></div></div>
       <div class="lab-body"><div><pre id="e6code" style="margin:0;"></pre></div><div class="logcat"><div class="logcat-head"><span>说明</span><span>live</span></div><div class="logcat-body" id="e6log"></div></div></div>
       <div class="lab-foot"><span class="hint">Android: stopScan/close</span></div>
     </div>
-    <div class="key"><span class="tag">看懂这场演练</span>dispose 取消订阅+断连；后台靠桥接。</div>
+    <div class="lab">
+      <div class="lab-head"><b>演练二 · 清理策略走查</b><span class="hint">漏一步就留一个坑</span></div>
+      <div class="controls"><div class="seg" id="g6"><button data-g="full" class="on">完整 dispose</button><button data-g="nonotify">只退订不断连</button><button data-g="noconn">漏 cancel 连接流</button><button data-g="resume">回前台恢复</button><button data-g="bg">后台想持续传输</button></div></div>
+      <div class="lab-body"><div><div class="chips" id="g6chips"></div><div class="key" id="g6hint"></div></div><div class="logcat"><div class="logcat-head"><span>清理日志</span><span>live</span></div><div class="logcat-body" id="g6log"></div></div></div>
+      <div class="lab-foot"><span class="hint">三个订阅的残留状态一目了然</span></div>
+    </div>
+    <div class="key"><span class="tag">看懂这两场演练</span>dispose 取消订阅+断连；后台靠桥接。恢复不是直接重扫，要先过权限门×状态门。</div>
   </section>
 
   <section id="quiz">
-    <h2><span class="no">自测</span>三个问题</h2>
+    <h2><span class="no">自测</span>六个问题</h2>
     <div class="card" id="quiz-box"></div>
     <p id="quiz-done" style="display:none;font-weight:700;color:#1E7268;">全对。下一课讲原生桥接。</p>
   </section>
 
   <section id="map">
-    <h2><span class="no">回顾</span>速查</h2>
-    <table><tr><th>时机</th><th>动作</th></tr><tr><td>dispose</td><td>cancel+断连</td></tr><tr><td>后台</td><td>原生桥接</td></tr></table>
-    <div class="note"><span class="tag">说明</span>本页为教学简化，工程细节以正文与官方规范为准；演练为模拟，非真实设备通信。</div>
+    <h2><span class="no">回顾</span>速查表</h2>
+    <table>
+      <tr><th>时机</th><th>动作</th></tr>
+      <tr><td>dispose</td><td>notifySub → connSub → scanSub 逐个 cancel</td></tr>
+      <tr><td>退后台 paused</td><td>停扫；按需断连</td></tr>
+      <tr><td>回前台 resumed</td><td>权限门×状态门 → 恢复扫描/重连（新会话）</td></tr>
+      <tr><td>蓝牙被关</td><td>statusStream 驱动清理，ready 后恢复</td></tr>
+      <tr><td>后台持续传输</td><td>原生前台服务/后台模式 + 桥接（E7）</td></tr>
+      <tr><td>前后台监听</td><td>WidgetsBindingObserver.didChangeAppLifecycleState</td></tr>
+    </table>
+    <div class="note"><span class="tag">说明</span>本页为教学整理，cancel 语义对照 pub.dev 官方文档、生命周期钩子对照 Flutter API 文档核实；演练为模拟，非真实设备通信。</div>
+  </section>
+
+  <section id="refs">
+    <h2><span class="no">依据</span>参考链接</h2>
+    <div class="card refs">
+      <h3 style="margin-top:0;">库与框架官方</h3>
+      <ul>
+        <li><a href="https://pub.dev/documentation/flutter_reactive_ble/latest/flutter_reactive_ble/FlutterReactiveBle-class.html" target="_blank" rel="noopener">FlutterReactiveBle class</a> <span class="src">— 各流 cancel 的原生副作用</span></li>
+        <li><a href="https://api.flutter.dev/flutter/widgets/WidgetsBindingObserver-class.html" target="_blank" rel="noopener">WidgetsBindingObserver · Flutter API</a> <span class="src">— didChangeAppLifecycleState 前后台钩子</span></li>
+      </ul>
+      <h3>平台官方</h3>
+      <ul>
+        <li><a href="https://developer.apple.com/documentation/corebluetooth" target="_blank" rel="noopener">Apple CoreBluetooth</a> <span class="src">— iOS 后台模式与状态恢复（原生能力）</span></li>
+        <li><a href="https://developer.android.com/develop/connectivity/bluetooth/bep/ble-overview" target="_blank" rel="noopener">Android BLE overview</a> <span class="src">— 后台扫描限制对照</span></li>
+      </ul>
+    </div>
+    <div class="next-links">
+      <a href="05-read-write-notify.html">← E5 读写与订阅</a>
+      <a href="07-native-bridge.html">E7 原生桥接 →</a>
+    </div>
     <footer>青竹蓝牙学堂 · 蓝牙小课堂Flutter 第六课 · E6 · <a href="../index.html">回到学堂</a></footer>
   </section>
 </main>
@@ -247,19 +337,60 @@
   <div class="toc-title">本课目录</div>
   <a href="#a">取消订阅</a>
   <a href="#b">断连与后台</a>
-  <a href="#lab">动手演练</a>
+  <a href="#lab">两场演练</a>
   <a href="#quiz">本课自测</a>
-  <a href="#map">回顾与速查</a>
+  <a href="#map">速查表</a>
+  <a href="#refs">参考链接</a>
 </aside>
 </div>
 <script>
-(function(){var API="点按钮看写法。";var CMP="dispose(){ scanSub.cancel(); notifySub.cancel(); }\n// 断连释放";var NT="Android: stopScan/close";function show(k){document.getElementById("e6code").textContent=(k==="api"?API:CMP);document.getElementById("e6log").innerHTML="<div><span class=\"ok\">"+(k==="api"?"本平台写法":"Android 对照")+"</span></div><div><span class=\"c\">// "+(k==="api"?NT:"概念相同，API 名不同")+"</span></div>";}document.querySelectorAll("#e6 button").forEach(function(b){b.addEventListener("click",function(){document.querySelectorAll("#e6 button").forEach(function(x){x.classList.remove("on");});b.classList.add("on");show(b.getAttribute("data-k"));});});show("api");})();
+(function(){
+  var API="@override void dispose() {\n  notifySub?.cancel();  // 退订 CCCD\n  connSub?.cancel();    // 主动断开\n  scanSub?.cancel();    // 停扫\n  super.dispose();\n}\n// 前后台：WidgetsBindingObserver\n// paused → 停扫；resumed → 过两道门再恢复";
+  var CMP="Android 原生:\nscanner.stopScan(callback);\ngatt.disconnect();\ngatt.close();\n// Activity.onDestroy / onStop 里做\n// 后台持续：Foreground Service + 通知\niOS 原生:\ncentralManager.stopScan();\ncancelPeripheralConnection(p);\n// 后台：bluetooth-central 后台模式 + 状态恢复";
+  var NT="Android: stopScan/close";
+  function show(k){document.getElementById("e6code").textContent=(k==="api"?API:CMP);document.getElementById("e6log").innerHTML="<div><span class=\"ok\">"+(k==="api"?"Flutter 清理":"原生对照")+"</span></div><div><span class=\"c\">// "+(k==="api"?NT:"概念相同，钩子名不同")+"</span></div>";}
+  document.querySelectorAll("#e6 button").forEach(function(b){b.addEventListener("click",function(){document.querySelectorAll("#e6 button").forEach(function(x){x.classList.remove("on");});b.classList.add("on");show(b.getAttribute("data-k"));});});
+  show("api");
+})();
 
+// 演练二：清理策略
+(function(){
+  var G={
+    full:{n:false,c:false,s:false,ok:true,hint:'三步全做：退订、断连、停扫，射频安静、无幽灵回调。',
+      log:['<span class="api">notifySub.cancel() → CCCD 退订</span>','<span class="api">connSub.cancel() → 断开</span>','<span class="api">scanSub.cancel() → 停扫</span>','<span class="ok">活跃订阅 0，连接 0</span>']},
+    nonotify:{n:false,c:true,s:false,ok:false,hint:'只退订不断连：连接挂着，对端仍耗电维持链路；页面已走，连接无人管。',
+      log:['<span class="ok">notifySub.cancel() ✓</span>','<span class="warn">connSub 未 cancel：连接保持</span>','<span class="err">孤儿连接：费电 + 占对端连接槽</span>']},
+    noconn:{n:true,c:true,s:false,ok:false,hint:'漏 cancel 连接流：连接与订阅都活着，回调进旧闭包（幽灵回调）。',
+      log:['<span class="warn">notifySub / connSub 均未 cancel</span>','<span class="err">通知帧继续进入已 dispose 的闭包</span>','<span class="err">setState() called after dispose()</span>']},
+    resume:{n:false,c:false,s:false,ok:true,hint:'回前台恢复：先权限门×状态门（E2），再重扫/重连（新会话，E4）。',
+      log:['<span class="api">didChangeAppLifecycleState(resumed)</span>','<span class="ok">权限门 ✓ 状态门 ready ✓</span>','<span class="api">重新 scanForDevices / connectToDevice</span>','<span class="c">// 重连后重新发现+订阅</span>']},
+    bg:{n:true,c:true,s:true,ok:false,hint:'后台想持续传输：iOS 挂起 Dart、Android 受调度。要原生前台服务/后台模式 + 桥接（E7）。',
+      log:['<span class="warn">App 退后台</span>','<span class="err">iOS：Dart 代码停跑，流不再回调</span>','<span class="err">Android：无前台服务则扫描/连接受限</span>','<span class="c">// 方案：原生任务 + EventChannel 回传</span>']}
+  };
+  function show(k){
+    var g=G[k];
+    document.getElementById('g6chips').innerHTML=
+      '<span class="chip '+(g.n?'bad':'on')+'">notifySub '+(g.n?'残留':'已清')+'</span>'+
+      '<span class="chip '+(g.c?'bad':'on')+'">connSub '+(g.c?'残留':'已清')+'</span>'+
+      '<span class="chip '+(g.s?'bad':'on')+'">scanSub '+(g.s?'残留':'已清')+'</span>'+
+      '<span class="chip '+(g.ok?'on':'bad')+'">'+(g.ok?'干净':'有坑')+'</span>';
+    document.getElementById('g6hint').innerHTML='<span class="tag">处理</span>'+g.hint;
+    document.getElementById('g6log').innerHTML=g.log.map(function(l){return '<div>'+l+'</div>';}).join('');
+  }
+  document.querySelectorAll('#g6 button').forEach(function(b){b.addEventListener('click',function(){
+    document.querySelectorAll('#g6 button').forEach(function(x){x.classList.remove('on');});
+    b.classList.add('on'); show(b.getAttribute('data-g'));
+  });});
+  show('full');
+})();
+
+const QUIZ=[{"q":"1. 退出页面要？","opts":[["cancel 订阅+断连",true,"对。"],["不管",false,"泄漏。"],["只 cancel",false,"还要断连。"]]},{"q":"2. 在哪清理？","opts":[["dispose",true,"对。"],["build",false,"dispose。"],["initState",false,"退出时。"]]},{"q":"3. 后台持续传输靠？","opts":[["原生桥接/前台服务",true,"对。"],["跨端库常驻",false,"有限。"],["定时器",false,"受调度。"]]},{"q":"4. cancel 连接流的语义？","opts":[["主动断开该连接",true,"对。E4 讲过的库语义。"],["只停 UI 刷新",false,"真断开。"],["退订通知",false,"那是订阅流。"]]},{"q":"5. 前后台切换监听用？","opts":[["WidgetsBindingObserver.didChangeAppLifecycleState",true,"对。paused/resumed 分支。"],["Timer 轮询",false,"有官方钩子。"],["Navigator 回调",false,"不管前后台。"]]},{"q":"6. 回前台恢复扫描前要先？","opts":[["过权限门×状态门（ready）",true,"对。后台期间用户可能关蓝牙/撤权限。"],["直接重扫",false,"可能失败。"],["重启 App",false,"不必。"]]}];
+</script>
+<script>
 const tocLinks=[...document.querySelectorAll('.toc a')];
 const secs=tocLinks.map(a=>document.getElementById(a.getAttribute('href').slice(1)));
 const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){tocLinks.forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+e.target.id));}});},{rootMargin:'-20% 0px -70% 0px'});
 secs.forEach(s=>s&&io.observe(s));
-const QUIZ=[{"q":"1. 退出页面要？","opts":[["cancel 订阅+断连",true,"对。"],["不管",false,"泄漏。"],["只 cancel",false,"还要断连。"]]},{"q":"2. 在哪清理？","opts":[["dispose",true,"对。"],["build",false,"dispose。"],["initState",false,"退出时。"]]},{"q":"3. 后台持续传输靠？","opts":[["原生桥接/前台服务",true,"对。"],["跨端库常驻",false,"有限。"],["定时器",false,"受调度。"]]}];
 let solved=0; const box=document.getElementById('quiz-box');
 QUIZ.forEach((item,qi)=>{
   const h=document.createElement('div'); h.className='quiz-q'; h.textContent=item.q; box.appendChild(h);
@@ -279,7 +410,6 @@ QUIZ.forEach((item,qi)=>{
   });
   box.appendChild(ex);
 });
-
 </script>
 </body>
 </html>

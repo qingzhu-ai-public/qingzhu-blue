@@ -172,6 +172,10 @@
   .ctl-row label{display:inline-flex;align-items:center;gap:10px;}
   .ctl-row input[type=range]{accent-color:var(--coral);width:160px;}
   .ctl-row .chk input{accent-color:var(--coral);}
+  .api-lv{display:inline-block;font-family:ui-monospace,Consolas,monospace;font-size:11.5px;font-weight:800;color:#2F58A8;background:var(--blue-soft);border:1px solid var(--blue-line);border-radius:999px;padding:0 8px;white-space:nowrap;}
+  .refs{font-size:14px;}
+  .refs li{margin:7px 0;}
+  .refs .src{font-size:12px;color:var(--faint);}
 </style>
 </head>
 <body style="--coral:#E8590C;--coral-soft:#FBEADF;--coral-line:#F2C4A4">
@@ -197,66 +201,209 @@
 <main>
   <div class="crumb">蓝牙小课堂 / RN 第七课 · F7</div>
   <h1>原生模块桥接：<em>复用原生</em>蓝牙任务</h1>
-  <p class="lead">已有原生蓝牙 SDK 时写 RN 原生模块（Kotlin/Swift）+ 事件发射器给 JS，复用后台/厂商兼容能力。</p>
-  <div class="meta"><span>约 10 分钟</span><span>含交互演练</span><span>跨端对照</span></div>
+  <p class="lead">已有原生蓝牙 SDK 时写 RN 原生模块（Kotlin/Swift）+ 事件发射器给 JS，复用后台/厂商兼容能力。ble-plx 自己就是这么实现的。</p>
+  <div class="meta"><span>平台：RN/TS + Kotlin/Swift</span><span>约 22 分钟</span><span>NativeModules / TurboModules</span><span>含两场交互演练</span><span>跨端对照</span></div>
   <div class="journey">
     <div class="j-step"><span class="n">1</span><span class="t">模块</span><span class="s">NativeModule</span></div>
     <div class="j-step"><span class="n">2</span><span class="t">事件</span><span class="s">EventEmitter</span></div>
+    <div class="j-step"><span class="n">3</span><span class="t">新架构</span><span class="s">Turbo 边界</span></div>
+    <div class="j-step"><span class="n">4</span><span class="t">动手</span><span class="s">两场演练</span></div>
+    <div class="j-step"><span class="n">5</span><span class="t">自测</span><span class="s">六个问题</span></div>
   </div>
 
   <section id="a">
-    <h2><span class="no">第 1 步</span>原生模块</h2>
+    <h2><span class="no">第 1 步</span>原生模块：方法暴露</h2>
     <pre>// Kotlin: ReactContextBaseJavaModule @ReactMethod
-// JS: NativeModules.BleTask.start(args)</pre><div class="recap"><b>收束：</b>@ReactMethod 暴露方法。</div>
+// JS: NativeModules.BleTask.start(args)</pre>
+    <pre><span class="cm">// Kotlin 模块</span>
+class BleTaskModule(ctx: ReactApplicationContext)
+  : ReactContextBaseJavaModule(ctx) {
+  override fun getName() = "BleTask"
+
+  @ReactMethod
+  fun start(mac: String, promise: Promise) {
+    try {
+      nativeBleTask.start(mac)      <span class="cm">// 已有原生 SDK/任务</span>
+      promise.resolve("ok")
+    } catch (e: Exception) {
+      promise.reject("START_FAIL", e.message)
+    }
+  }
+}
+<span class="cm">// 注册：Package.createNativeModules 返回该模块</span>
+
+<span class="cm">// JS 侧</span>
+import { NativeModules } from 'react-native';
+await NativeModules.BleTask.start(mac); <span class="cm">// Promise 对应原生 Promise</span></pre>
+    <table>
+      <tr><th>机制</th><th>形态</th><th>适用</th></tr>
+      <tr><td>NativeModules（旧桥） <span class="api-lv">Bridge</span></td><td>@ReactMethod + Promise/回调</td><td>存量工程、简单命令</td></tr>
+      <tr><td>TurboModules（新架构） <span class="api-lv">New Arch</span></td><td>Codegen spec + JSI 同步/异步</td><td>新工程默认；类型安全、懒加载</td></tr>
+      <tr><td>事件发射器</td><td>原生 emit → JS DeviceEventEmitter</td><td>扫描/通知帧等持续事件</td></tr>
+    </table>
+    <div class="recap"><b>收束：</b>@ReactMethod 暴露方法。</div>
   </section>
 
   <section id="b">
-    <h2><span class="no">第 2 步</span>事件</h2>
-    <pre>// 原生回调 → RCTDeviceEventEmitter → JS DeviceEventEmitter.addListener</pre><div class="key"><span class="tag">重点</span>原生回调转 JS 事件，复用原生能力。</div>
+    <h2><span class="no">第 2 步</span>事件：回调转 JS 事件</h2>
+    <pre>// 原生回调 → RCTDeviceEventEmitter → JS DeviceEventEmitter.addListener</pre>
+    <pre><span class="cm">// Kotlin：SDK 回调 → emit</span>
+nativeBleTask.onFrame = { bytes -&gt;
+  reactContext
+    .getJSModule(RCTDeviceEventEmitter::class.java)
+    .emit("onBleFrame", Arguments.fromList(bytes.toList()))
+}
+
+<span class="cm">// JS：addListener 收事件；卸载必须 remove</span>
+const sub = DeviceEventEmitter.addListener('onBleFrame', (frame) =&gt; {
+  <span class="cm">// 解析（帧若以 base64 传，先解码，F5）</span>
+});
+<span class="cm">// useEffect 返回：sub.remove()</span></pre>
+    <figure>
+      <svg viewBox="0 0 760 200" role="img" aria-label="原生模块桥接：命令下行与事件上行">
+        <defs><marker id="arf7" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#A39B8E"/></marker></defs>
+        <rect x="20" y="24" width="180" height="52" rx="12" fill="#FBEDE9" stroke="#F0CFC6"/>
+        <text x="110" y="55" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#B04A35">JS</text>
+        <rect x="290" y="24" width="180" height="52" rx="12" fill="#ECF1FB" stroke="#C9D8F2"/>
+        <text x="380" y="55" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#2F58A8">Bridge / JSI</text>
+        <rect x="560" y="24" width="180" height="52" rx="12" fill="#E9F4F2" stroke="#BFE0DB"/>
+        <text x="650" y="55" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#1E7268">原生 SDK/任务</text>
+        <line x1="200" y1="42" x2="288" y2="42" stroke="#A39B8E" stroke-width="2" marker-end="url(#arf7)"/>
+        <text x="244" y="34" text-anchor="middle" font-size="10" fill="#7A7267">@ReactMethod</text>
+        <line x1="470" y1="42" x2="558" y2="42" stroke="#A39B8E" stroke-width="2" marker-end="url(#arf7)"/>
+        <line x1="558" y1="62" x2="470" y2="62" stroke="#2A9D8F" stroke-width="2" marker-end="url(#arf7)"/>
+        <text x="514" y="76" text-anchor="middle" font-size="10" fill="#4E8A80">promise.resolve</text>
+        <line x1="288" y1="62" x2="200" y2="62" stroke="#2A9D8F" stroke-width="2" marker-end="url(#arf7)"/>
+        <rect x="20" y="110" width="720" height="66" rx="12" fill="#FBF3E4" stroke="#EDD9B4"/>
+        <text x="40" y="136" font-size="12.5" font-weight="bold" fill="#8A5510">事件上行：SDK 回调 → RCTDeviceEventEmitter.emit → DeviceEventEmitter.addListener</text>
+        <text x="40" y="160" font-size="11.5" fill="#A8762A">addListener 返回 subscription，卸载 remove；ble-plx 底层正是原生模块 + 事件这套</text>
+      </svg>
+      <figcaption>图 1 · 命令下行用模块方法，事件上行用发射器；监听与原生回调都要成对解绑。</figcaption>
+    </figure>
+    <ul>
+      <li><b>何时自写</b>：厂商私有 SDK、后台前台服务任务、库未覆盖的私有协议；常规 BLE 直接用 ble-plx。</li>
+      <li><b>新架构</b>：TurboModule 用 Codegen 从 TS spec 生成原生接口；事件仍走 EventEmitter 或 Codegen 事件发射器。迁移时方法签名以 spec 为准。</li>
+      <li><b>线程</b>：旧桥 @ReactMethod 默认在原生模块线程队列；UI 相关操作 post 主线程；SDK 回调线程注意切换。</li>
+    </ul>
+    <div class="key"><span class="tag">重点</span>原生回调转 JS 事件，复用原生能力。JS 侧 addListener 的 subscription 与原生侧回调绑定都要成对清理（F6 同纪律）。</div>
+    <div class="recap"><b>收束：</b>命令走模块方法、事件走发射器；新架构换 JSI 不换心智。</div>
   </section>
 
   <section id="lab">
-    <h2><span class="no">动手</span>模块 / 事件</h2>
-    <p>点按钮切换本平台写法与 Android 对照，概念一一对应。</p>
+    <h2><span class="no">动手</span>两场演练：API 对照、桥接走查</h2>
+    <p>演练一切换写法对照。演练二选场景，看桥接各环节的成败。</p>
     <div class="lab">
-      <div class="lab-head"><b>模块 / 事件</b><span class="hint">点按钮看 API</span></div>
+      <div class="lab-head"><b>演练一 · 模块 / 事件 API</b><span class="hint">点按钮看 API</span></div>
       <div class="controls"><div class="seg" id="f7"><button data-k="api" class="on">本平台 API</button><button data-k="cmp">对照 Android</button></div></div>
       <div class="lab-body"><div><pre id="f7code" style="margin:0;"></pre></div><div class="logcat"><div class="logcat-head"><span>说明</span><span>live</span></div><div class="logcat-body" id="f7log"></div></div></div>
       <div class="lab-foot"><span class="hint">原生 SDK 回调 → JS 事件</span></div>
     </div>
-    <div class="key"><span class="tag">看懂这场演练</span>复用原生后台/兼容；回调转事件。</div>
+    <div class="lab">
+      <div class="lab-head"><b>演练二 · 桥接调用走查</b><span class="hint">五个常见成败场景</span></div>
+      <div class="controls"><div class="seg" id="g7"><button data-g="ok" class="on">正常调用</button><button data-g="reject">原生 reject</button><button data-g="leak">监听未 remove</button><button data-g="noreg">模块未注册</button><button data-g="turbo">Turbo spec 不一致</button></div></div>
+      <div class="lab-body"><div><div class="chips" id="g7chips"></div><div class="key" id="g7hint"></div></div><div class="logcat"><div class="logcat-head"><span>桥接日志</span><span>live</span></div><div class="logcat-body" id="g7log"></div></div></div>
+      <div class="lab-foot"><span class="hint">下行命令 + 上行事件分开看</span></div>
+    </div>
+    <div class="key"><span class="tag">看懂这两场演练</span>复用原生后台/兼容；回调转事件。注册、错误、解绑、spec 一致是自写桥四大坑。</div>
   </section>
 
   <section id="quiz">
-    <h2><span class="no">自测</span>三个问题</h2>
+    <h2><span class="no">自测</span>六个问题</h2>
     <div class="card" id="quiz-box"></div>
     <p id="quiz-done" style="display:none;font-weight:700;color:#1E7268;">全对。最后一课：综合实战。</p>
   </section>
 
   <section id="map">
-    <h2><span class="no">回顾</span>速查</h2>
-    <table><tr><th>通道</th><th>用途</th></tr><tr><td>NativeModule</td><td>方法</td></tr><tr><td>EventEmitter</td><td>事件</td></tr></table>
-    <div class="note"><span class="tag">说明</span>本页为教学简化，工程细节以正文与官方规范为准；演练为模拟，非真实设备通信。</div>
+    <h2><span class="no">回顾</span>速查表</h2>
+    <table>
+      <tr><th>项</th><th>记住</th></tr>
+      <tr><td>暴露方法</td><td>@ReactMethod + getName；Package 注册</td></tr>
+      <tr><td>异步结果</td><td>原生 Promise → JS await；reject(code, msg)</td></tr>
+      <tr><td>事件上行</td><td>RCTDeviceEventEmitter.emit → DeviceEventEmitter.addListener</td></tr>
+      <tr><td>清理</td><td>listener subscription.remove()；原生回调同步解绑</td></tr>
+      <tr><td>新架构</td><td>TurboModule + Codegen spec；JSI 直调</td></tr>
+      <tr><td>何时自写</td><td>厂商 SDK/后台任务/私有协议；常规 BLE 用库</td></tr>
+    </table>
+    <div class="note"><span class="tag">说明</span>本页为教学整理，模块与事件机制对照 RN 官方原生模块文档核实；演练为模拟，非真实设备通信。</div>
+  </section>
+
+  <section id="refs">
+    <h2><span class="no">依据</span>参考链接</h2>
+    <div class="card refs">
+      <h3 style="margin-top:0;">框架官方</h3>
+      <ul>
+        <li><a href="https://reactnative.dev/docs/native-modules-intro" target="_blank" rel="noopener">RN · Native Modules intro</a> <span class="src">— 模块机制总览</span></li>
+        <li><a href="https://reactnative.dev/docs/native-modules-android" target="_blank" rel="noopener">RN · Android Native Modules</a> <span class="src">— @ReactMethod / Promise / 事件发射器 / 线程</span></li>
+      </ul>
+      <h3>库官方（对照实现）</h3>
+      <ul>
+        <li><a href="https://github.com/dotintent/react-native-ble-plx" target="_blank" rel="noopener">ble-plx 源码</a> <span class="src">— 原生模块 + 事件发射器的真实实现（含 Expo 插件）</span></li>
+      </ul>
+    </div>
+    <div class="next-links">
+      <a href="06-lifecycle.html">← F6 生命周期</a>
+      <a href="08-project.html">F8 综合实战 →</a>
+    </div>
     <footer>青竹蓝牙学堂 · 蓝牙小课堂RN 第七课 · F7 · <a href="../index.html">回到学堂</a></footer>
   </section>
 </main>
 <aside class="toc" id="toc">
   <div class="toc-title">本课目录</div>
   <a href="#a">原生模块</a>
-  <a href="#b">事件</a>
-  <a href="#lab">动手演练</a>
+  <a href="#b">事件发射器</a>
+  <a href="#lab">两场演练</a>
   <a href="#quiz">本课自测</a>
-  <a href="#map">回顾与速查</a>
+  <a href="#map">速查表</a>
+  <a href="#refs">参考链接</a>
 </aside>
 </div>
 <script>
-(function(){var API="点按钮看写法。";var CMP="NativeModules.BleTask.start(args)\nDeviceEventEmitter.addListener('ble',cb)";var NT="原生 SDK 回调 → JS 事件";function show(k){document.getElementById("f7code").textContent=(k==="api"?API:CMP);document.getElementById("f7log").innerHTML="<div><span class=\"ok\">"+(k==="api"?"本平台写法":"Android 对照")+"</span></div><div><span class=\"c\">// "+(k==="api"?NT:"概念相同，API 名不同")+"</span></div>";}document.querySelectorAll("#f7 button").forEach(function(b){b.addEventListener("click",function(){document.querySelectorAll("#f7 button").forEach(function(x){x.classList.remove("on");});b.classList.add("on");show(b.getAttribute("data-k"));});});show("api");})();
+(function(){
+  var API="// Kotlin\nclass BleTaskModule : ReactContextBaseJavaModule {\n  @ReactMethod fun start(mac: String, promise: Promise)\n}\n// JS\nNativeModules.BleTask.start(mac);\nDeviceEventEmitter.addListener('onBleFrame', cb);\n// 卸载：sub.remove()";
+  var CMP="Android 原生直接调 SDK:\nnativeBleTask.start(mac);\nnativeBleTask.onFrame = cb;\n// 桥接只是跨语言搬运：\n// 命令下行 @ReactMethod，事件上行 emit/addListener\n// iOS 侧对应 RCT_EXPORT_METHOD / RCTEventEmitter";
+  var NT="原生 SDK 回调 → JS 事件";
+  function show(k){document.getElementById("f7code").textContent=(k==="api"?API:CMP);document.getElementById("f7log").innerHTML="<div><span class=\"ok\">"+(k==="api"?"RN 桥接":"原生对照")+"</span></div><div><span class=\"c\">// "+(k==="api"?NT:"概念相同，多一层桥")+"</span></div>";}
+  document.querySelectorAll("#f7 button").forEach(function(b){b.addEventListener("click",function(){document.querySelectorAll("#f7 button").forEach(function(x){x.classList.remove("on");});b.classList.add("on");show(b.getAttribute("data-k"));});});
+  show("api");
+})();
 
+// 演练二：桥接走查
+(function(){
+  var G={
+    ok:{m:'BleTask ✓',ev:'onBleFrame ✓',ok:true,hint:'正常链路：start → @ReactMethod → SDK → resolve；事件经 emit 上行。',
+      log:['<span class="api">NativeModules.BleTask.start(mac)</span>','<span class="ok">@ReactMethod → nativeBleTask.start</span>','<span class="ok">promise.resolve("ok")</span>','<span class="ok">emit("onBleFrame") → addListener 回调</span>']},
+    reject:{m:'reject',ev:'—',ok:false,hint:'原生失败 promise.reject(code,msg)，JS 侧 catch；别让异常吞掉。',
+      log:['<span class="api">start(mac)</span>','<span class="err">SDK 抛异常</span>','<span class="err">promise.reject("START_FAIL", msg)</span>','<span class="warn">JS: try/catch 或 .catch</span>']},
+    leak:{m:'—',ev:'监听残留',ok:false,hint:'组件卸载未 remove：事件继续进旧闭包；原生回调也要同步解绑。',
+      log:['<span class="warn">addListener 的 sub 未 remove</span>','<span class="err">onBleFrame 继续回调已卸载组件</span>','<span class="c">// useEffect 返回 sub.remove()</span>']},
+    noreg:{m:'未注册',ev:'—',ok:false,hint:'Package 没注册模块 / getName 与 JS 名不一致：NativeModules.BleTask 为 undefined。',
+      log:['<span class="api">NativeModules.BleTask.start(...)</span>','<span class="err">Cannot read property start of undefined</span>','<span class="c">// 对照 Package.createNativeModules 与 getName</span>']},
+    turbo:{m:'spec 不一致',ev:'—',ok:false,hint:'新架构 Codegen：TS spec 与原生实现签名不一致会编译/运行报错；以 spec 为准重新生成。',
+      log:['<span class="warn">TurboModule spec 改了参数</span>','<span class="err">原生实现未同步 → Codegen 校验失败</span>','<span class="c">// 重新 codegen + 对齐实现</span>']}
+  };
+  function show(k){
+    var g=G[k];
+    document.getElementById('g7chips').innerHTML=
+      '<span class="chip '+(g.ok?'on':'bad')+'">模块: '+g.m+'</span>'+
+      '<span class="chip '+(g.ok?'on':'bad')+'">事件: '+g.ev+'</span>'+
+      '<span class="chip '+(g.ok?'on':'bad')+'">'+(g.ok?'链路正常':'需要处理')+'</span>';
+    document.getElementById('g7hint').innerHTML='<span class="tag">处理</span>'+g.hint;
+    document.getElementById('g7log').innerHTML=g.log.map(function(l){return '<div>'+l+'</div>';}).join('');
+  }
+  document.querySelectorAll('#g7 button').forEach(function(b){b.addEventListener('click',function(){
+    document.querySelectorAll('#g7 button').forEach(function(x){x.classList.remove('on');});
+    b.classList.add('on'); show(b.getAttribute('data-g'));
+  });});
+  show('ok');
+})();
+
+const QUIZ=[{"q":"1. 暴露方法用？","opts":[["@ReactMethod",true,"对。"],["MethodChannel",false,"Flutter。"],["EventChannel",false,"Flutter。"]]},{"q":"2. 事件到 JS 用？","opts":[["DeviceEventEmitter",true,"对。"],["Stream",false,"Flutter。"],["Promise",false,"方法才用。"]]},{"q":"3. 桥接复用？","opts":[["原生后台/兼容",true,"对。"],["UI",false,"能力。"],["无需",false,"要桥接。"]]},{"q":"4. NativeModules.BleTask 是 undefined 常见原因？","opts":[["Package 未注册或 getName 不一致",true,"对。两端名字逐字符对照。"],["权限不足",false,"另一类错。"],["蓝牙没开",false,"无关。"]]},{"q":"5. addListener 返回的 subscription 何时 remove？","opts":[["组件卸载（useEffect 返回函数）",true,"对。否则幽灵回调。"],["App 退出才",false,"太晚。"],["不用 remove",false,"泄漏。"]]},{"q":"6. 新架构 TurboModule 的接口以什么为准？","opts":[["Codegen 的 TS spec",true,"对。spec 生成原生接口，签名须一致。"],["随手写原生",false,"会校验失败。"],["旧桥文档",false,"机制不同。"]]}];
+</script>
+<script>
 const tocLinks=[...document.querySelectorAll('.toc a')];
 const secs=tocLinks.map(a=>document.getElementById(a.getAttribute('href').slice(1)));
 const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){tocLinks.forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+e.target.id));}});},{rootMargin:'-20% 0px -70% 0px'});
 secs.forEach(s=>s&&io.observe(s));
-const QUIZ=[{"q":"1. 暴露方法用？","opts":[["@ReactMethod",true,"对。"],["MethodChannel",false,"Flutter。"],["EventChannel",false,"Flutter。"]]},{"q":"2. 事件到 JS 用？","opts":[["DeviceEventEmitter",true,"对。"],["Stream",false,"Flutter。"],["Promise",false,"方法才用。"]]},{"q":"3. 桥接复用？","opts":[["原生后台/兼容",true,"对。"],["UI",false,"能力。"],["无需",false,"要桥接。"]]}];
 let solved=0; const box=document.getElementById('quiz-box');
 QUIZ.forEach((item,qi)=>{
   const h=document.createElement('div'); h.className='quiz-q'; h.textContent=item.q; box.appendChild(h);
@@ -276,7 +423,6 @@ QUIZ.forEach((item,qi)=>{
   });
   box.appendChild(ex);
 });
-
 </script>
 </body>
 </html>
