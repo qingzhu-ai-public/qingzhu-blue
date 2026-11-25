@@ -1,208 +1,70 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>青竹蓝牙学堂 · 看得懂、动得了手的蓝牙课</title>
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>青竹蓝牙学堂</title>
 <style>
-  :root{
-    --bg:#F7F6F2; --card:#FFFFFF; --ink:#2B2620; --muted:#7A7267; --faint:#A39B8E;
-    --line:#E8E4DC; --line-soft:#F1EEE7;
-    --coral:#D95B43; --coral-soft:#FBEDE9; --coral-line:#F0CFC6;
-    --teal:#2A9D8F; --teal-soft:#E9F4F2; --teal-line:#BFE0DB;
-    --amber:#C07A1E; --amber-soft:#FBF3E4; --amber-line:#EDD9B4;
-    --blue:#3B6FD4; --blue-soft:#ECF1FB; --blue-line:#C9D8F2;
-    --radius:14px;
-  }
-  *{box-sizing:border-box;margin:0;padding:0;}
-  html{scroll-behavior:smooth;}
-  body{background:var(--bg);color:var(--ink);font-size:16px;line-height:1.8;
-    font-family:"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",system-ui,sans-serif;}
-  a{color:var(--blue);text-decoration:none;}
-  .topbar{background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:50;}
-  .topbar-in{max-width:1080px;margin:0 auto;padding:0 20px;height:56px;display:flex;align-items:center;gap:14px;}
-  .logo{font-weight:800;font-size:17px;color:var(--ink);text-decoration:none;}
-  .logo span{color:var(--coral);}
-  .topnav{margin-left:auto;display:flex;gap:18px;font-size:14px;}
-  .topnav a{color:var(--muted);} .topnav a:hover{color:var(--coral);}
-  .wrap{max-width:1080px;margin:0 auto;padding:0 20px 80px;}
-  /* hero */
-  .hero{padding:52px 0 30px;text-align:center;}
-  .hero .badge{display:inline-block;font-size:13px;font-weight:700;color:var(--teal);background:var(--teal-soft);border:1px solid var(--teal-line);border-radius:999px;padding:4px 16px;margin-bottom:18px;}
-  .hero h1{font-size:42px;letter-spacing:2px;margin-bottom:14px;}
-  .hero h1 em{font-style:normal;color:var(--coral);}
-  .hero p{font-size:17px;color:var(--muted);max-width:640px;margin:0 auto 22px;}
-  .hero .cta{display:inline-flex;gap:12px;flex-wrap:wrap;justify-content:center;}
-  .btn{display:inline-block;font-size:15px;font-weight:600;border-radius:10px;padding:11px 26px;border:1px solid var(--coral);background:var(--coral);color:#fff;}
-  .btn:hover{background:#C24E38;}
-  .btn.ghost{background:var(--card);color:var(--ink);border-color:var(--line);}
-  .btn.ghost:hover{border-color:var(--faint);}
-  /* 路线 */
-  .path{display:flex;flex-wrap:wrap;gap:14px;justify-content:center;margin:8px 0 10px;}
-  .path .p{flex:1 1 220px;max-width:300px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;text-align:left;}
-  .path .p .n{font-size:12px;font-weight:800;color:var(--coral);letter-spacing:1px;}
-  .path .p b{display:block;font-size:16px;margin:4px 0;}
-  .path .p span{font-size:13.5px;color:var(--muted);}
-  /* 平台区块 */
-  .platform{margin-top:46px;}
-  .p-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;border-bottom:2px solid var(--line);padding-bottom:10px;margin-bottom:18px;}
-  .p-head h2{font-size:22px;}
-  .p-head .cnt{font-size:13px;color:var(--faint);}
-  .p-head .desc{font-size:14px;color:var(--muted);width:100%;margin-top:2px;}
-  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px;}
-  .lesson{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px;position:relative;transition:border-color .15s,transform .15s;}
-  .lesson.live{cursor:pointer;}
-  .lesson.live:hover{border-color:var(--coral);transform:translateY(-2px);}
-  .lesson .code{font-size:12px;font-weight:800;color:var(--faint);font-family:ui-monospace,Consolas,monospace;}
-  .lesson .t{font-size:15.5px;font-weight:700;margin:5px 0 6px;line-height:1.5;}
-  .lesson .d{font-size:13px;color:var(--muted);line-height:1.6;}
-  .lesson .st{position:absolute;top:14px;right:14px;font-size:11px;font-weight:700;border-radius:999px;padding:2px 10px;}
-  .st.live{background:var(--teal-soft);color:#1E7268;border:1px solid var(--teal-line);}
-  .st.plan{background:#F4F2EC;color:var(--faint);border:1px solid var(--line);}
-  .lesson.plan{opacity:.72;}
-  .tag-elective{display:inline-block;font-size:12px;color:var(--amber);background:var(--amber-soft);border:1px solid var(--amber-line);border-radius:8px;padding:6px 12px;margin:14px 0 0;}
-  footer{border-top:1px solid var(--line);margin-top:60px;padding-top:22px;font-size:13px;color:var(--faint);text-align:center;}
-  footer a{color:var(--blue);}
-  .note{font-size:13px;color:var(--faint);text-align:center;margin-top:10px;}
-  @media (max-width:600px){ .hero h1{font-size:32px;} }
-</style>
-</head>
-<body>
-<div class="topbar"><div class="topbar-in">
-  <a class="logo" href="index.html">青竹<span>蓝牙学堂</span></a>
-  <nav class="topnav">
-    <a href="#base">通用基础</a>
-    <a href="#android">Android</a>
-    <a href="#ios">iOS</a>
-    <a href="#harmonyos">鸿蒙</a>
-    <a href="#flutter">Flutter</a>
-    <a href="#rn">RN</a>
-  </nav>
-</div></div>
-
+:root{--bg:#F2F3F5;--card:#fff;--ink:#16181D;--mut:#6B7280;--line:#E5E7EB;}
+*{box-sizing:border-box;margin:0;padding:0;} html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--ink);font:15px/1.7 "PingFang SC","Microsoft YaHei",system-ui,sans-serif;}
+a{color:inherit;text-decoration:none;}
+.top{position:sticky;top:0;z-index:50;background:rgba(242,243,245,.9);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);}
+.top-in{max-width:1180px;margin:0 auto;padding:0 20px;height:56px;display:flex;align-items:center;gap:16px;}
+.logo{font-weight:800;font-size:17px;} .logo span{color:#2A9D8F;}
+.nav{margin-left:auto;display:flex;gap:14px;font-size:13px;color:var(--mut);} .nav a:hover{color:var(--ink);}
+.wrap{max-width:1180px;margin:0 auto;padding:40px 20px 90px;}
+.hero{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap;margin-bottom:26px;}
+h1{font-size:40px;line-height:1.2;font-weight:800;} h1 em{font-style:normal;color:#2A9D8F;}
+.dek{color:var(--mut);max-width:520px;margin-top:10px;}
+.kpi{display:flex;gap:12px;}
+.kpi div{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px 20px;text-align:center;box-shadow:0 1px 2px rgba(0,0,0,.04);}
+.kpi b{display:block;font-size:26px;} .kpi span{font-size:12px;color:var(--mut);}
+.grid{display:grid;grid-template-columns:repeat(6,1fr);gap:16px;}
+.span6{grid-column:span 6;} .span3{grid-column:span 3;} .span2{grid-column:span 2;}
+.tile{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:20px 22px;box-shadow:0 1px 3px rgba(0,0,0,.05);border-top:4px solid var(--ac);}
+.t-head{display:flex;align-items:center;gap:10px;} .dot{width:10px;height:10px;border-radius:50%;background:var(--ac);}
+.t-head h2{font-size:19px;} .cnt{margin-left:auto;font-size:24px;font-weight:800;color:var(--ac);}
+.t-sub{font-size:12.5px;color:var(--mut);margin:4px 0 12px;}
+.chips{display:flex;flex-wrap:wrap;gap:8px;}
+.chips a{display:inline-flex;gap:6px;align-items:center;background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-size:13px;}
+.chips a b{font-family:ui-monospace,Consolas,monospace;font-size:11px;color:var(--ac);}
+.chips a:hover{border-color:var(--ac);background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.08);}
+footer{margin-top:36px;color:var(--mut);font-size:13px;text-align:center;}
+@media(max-width:900px){.span3,.span2{grid-column:span 6;}h1{font-size:30px;}}
+.sw{position:fixed;right:16px;bottom:16px;z-index:99;display:flex;gap:6px;align-items:center;background:rgba(20,20,20,.85);color:#fff;border-radius:999px;padding:6px 12px;font-size:12px;backdrop-filter:blur(6px);} .sw a{color:#bbb;text-decoration:none;padding:2px 8px;border-radius:999px;} .sw a.on{background:#fff;color:#111;font-weight:700;}
+</style></head><body>
+<div class="top"><div class="top-in"><a class="logo" href="index.html">青竹<span>蓝牙学堂</span></a><nav class="nav"><a href="#base">通用基础</a><a href="#android">Android 实战</a><a href="#ios">iOS 实战</a><a href="#harmonyos">HarmonyOS 实战</a><a href="#flutter">Flutter 实战</a><a href="#rn">React Native 实战</a></nav></div></div>
 <div class="wrap">
-  <div class="hero">
-    <span class="badge">全新改版 · HTML 互动课程</span>
-    <h1>青竹<em>蓝牙学堂</em></h1>
-    <p>不堆术语、不绕弯子。每课摆出真实设备，讲清它们一来一回发生了什么，配流程图、可点击的演练和自测——看得懂，也动得了手。</p>
-    <div class="cta">
-      <a class="btn" href="bluetooth/01-orientation.html">从第一课开始 →</a>
-      <a class="btn ghost" href="#base">浏览课程地图</a>
-    </div>
-  </div>
-
-  <div class="path">
-    <div class="p"><span class="n">第一步</span><b>通用基础</b><span>平台无关，先懂蓝牙怎么回事</span></div>
-    <div class="p"><span class="n">第二步</span><b>平台实战</b><span>在你用的端落地：Android / iOS / 鸿蒙 / Flutter / RN</span></div>
-    <div class="p"><span class="n">第三步</span><b>综合实战</b><span>做一个能读温湿度的完整 App</span></div>
-  </div>
-  <p class="note">每课统一模板：实物直讲 · 流程图 · 交互演练 · 自测过关 · 速查表。绿色「已上线」可点，灰色为规划中。</p>
-
-  <div id="courses"></div>
-
-  <footer>
-    青竹蓝牙学堂 · 62 门正课已全部上线 · 通用基础 + Android / iOS / 鸿蒙 / Flutter / RN<br>
-    每课统一模板：实物直讲 · 流程图 · 交互演练 · 自测过关 · 速查表
-  </footer>
+  <div class="hero"><div><h1>蓝牙，<em>一课一课</em>做明白</h1><p class="dek">实物直讲 + 流程图 + 可点击演练 + 自测。先修通用基础，再落到你用的端。</p></div>
+  <div class="kpi"><div><b>62</b><span>正课</span></div><div><b>6</b><span>技术栈</span></div><div><b>100%</b><span>已上线</span></div></div></div>
+  <div class="grid">
+  <section class="tile span6" id="base" style="--ac:#2A9D8F">
+    <div class="t-head"><span class="dot"></span><h2>通用基础</h2><span class="cnt">12</span></div>
+    <p class="t-sub">Bluetooth 通用 · 平台无关</p>
+    <div class="chips"><a href="bluetooth/01-orientation.html" title="全景：广播→连接→发现→订阅→通知"><b>A1</b>温度计和手机是怎么说上话的</a><a href="bluetooth/02-advertising-scanning.html" title="广播包 31 字节、间隔权衡、扫描限流"><b>A2</b>广播与扫描：怎么被发现</a><a href="bluetooth/03-connection-parameters.html" title="interval / latency / timeout、断线恢复"><b>A3</b>连接与参数：专属通道与省电</a><a href="bluetooth/04-gatt-attribute-table.html" title="服务 / 特征 / 描述符、UUID"><b>A4</b>GATT：设备的数据清单</a><a href="bluetooth/05-read-write-notify.html" title="Read / Write / Notify / Indicate"><b>A5</b>读、写、通知：三种操作</a><a href="bluetooth/06-subscribe-cccd.html" title="0x2902、两步订阅、字节解析"><b>A6</b>订阅与 CCCD：让设备主动上报</a><a href="bluetooth/07-mtu-fragmentation.html" title="三层长度、分包重组、流控"><b>A7</b>MTU 与分包：长数据怎么发</a><a href="bluetooth/08-pairing-bonding-encryption.html" title="配对方式、密钥、加密"><b>A8</b>配对、绑定与加密</a><a href="bluetooth/09-address-privacy.html" title="RPA / IRK、稳定身份"><b>A9</b>地址轮换与隐私</a><a href="bluetooth/10-stage-troubleshooting.html" title="扫描 / 连接 / 发现 / 写入分段取证"><b>A10</b>按阶段排障</a><a href="bluetooth/11-nrf-connect-lab.html" title="不写代码用手机做一遍"><b>A11</b>动手：nRF Connect 走通链路</a><a href="bluetooth/12-versions-and-selection.html" title="4.0→6.2 能力地图、选型"><b>A12</b>版本演进与经典 / BLE 选型</a></div>
+  </section>
+  <section class="tile span3" id="android" style="--ac:#3B6FD4">
+    <div class="t-head"><span class="dot"></span><h2>Android 实战</h2><span class="cnt">14</span></div>
+    <p class="t-sub">Kotlin · Android BLE API</p>
+    <div class="chips"><a href="android/01-android-overview.html" title="两条路、API 地图"><b>B1</b>Android 蓝牙全景：经典与 BLE</a><a href="android/02-permissions-manifest.html" title="运行时权限、版本差异"><b>B2</b>权限、开关与清单</a><a href="android/03-scan-filter.html" title="ScanFilter、后台扫描、限流"><b>B3</b>扫描与过滤</a><a href="android/04-connection-lifecycle.html" title="connectGatt、autoConnect、重连"><b>B4</b>连接生命周期</a><a href="android/05-discovery-readwrite.html" title="discoverServices、读写排队"><b>B5</b>服务发现与读写</a><a href="android/06-notify-cccd.html" title="CCCD 两步、onCharacteristicChanged"><b>B6</b>订阅与通知</a><a href="android/07-mtu-phy-params.html" title="requestMtu、PHY、参数请求"><b>B7</b>MTU、PHY 与连接参数</a><a href="android/08-fragmentation-flowcontrol.html" title="业务帧、窗口、幂等"><b>B8</b>分包、重组与流控</a><a href="android/09-statemachine-queue.html" title="串行会话、一次一操作、取消"><b>B9</b>线程、状态机与命令队列</a><a href="android/10-background-fgs-cdm.html" title="FGS、CDM、进程恢复"><b>B10</b>后台、前台服务与伴生设备</a><a href="android/11-pairing-le-security.html" title="createBond、加密事件"><b>B11</b>配对与 LE 安全</a><a href="android/12-hci-snoop-errors.html" title="HCI snoop、133 / 8 / 19、Wireshark"><b>B12</b>抓包与错误码排障</a><a href="android/13-vendor-matrix.html" title="平台行为、可复测矩阵"><b>B13</b>厂商兼容与机型矩阵</a><a href="android/14-bthome-project.html" title="扫描→连接→传输→双机验收"><b>B14</b>综合实战：BTHome 温湿度计</a></div>
+  </section>
+  <section class="tile span3" id="ios" style="--ac:#5B5BD6">
+    <div class="t-head"><span class="dot"></span><h2>iOS 实战</h2><span class="cnt">11</span></div>
+    <p class="t-sub">Swift · CoreBluetooth</p>
+    <div class="chips"><a href="ios/01-corebluetooth-overview.html" title="central / peripheral、API 地图"><b>C1</b>CoreBluetooth 全景</a><a href="ios/02-permission-state.html" title="蓝牙权限、状态回调"><b>C2</b>权限与状态</a><a href="ios/03-scan-identifier.html" title="scanForPeripherals、去重"><b>C3</b>扫描与过滤</a><a href="ios/04-connect-reconnect.html" title="connect、断线恢复"><b>C4</b>连接与重连</a><a href="ios/05-services-characteristics.html" title="discoverServices / Characteristics"><b>C5</b>服务与特征</a><a href="ios/06-read-write.html" title="readValue / writeValue"><b>C6</b>读写</a><a href="ios/07-notify-indicate.html" title="setNotifyValue、didUpdateValue"><b>C7</b>订阅与通知</a><a href="ios/08-chunk-flowcontrol.html" title="maximumWriteValueLength"><b>C8</b>分包与流控</a><a href="ios/09-background-restoration.html" title="background modes、state restoration"><b>C9</b>后台与状态恢复</a><a href="ios/10-pairing-security.html" title="系统配对、加密"><b>C10</b>配对与安全</a><a href="ios/11-project-temp.html" title="双机验收"><b>C11</b>综合实战：温湿度计</a></div>
+  </section>
+  <section class="tile span2" id="harmonyos" style="--ac:#C2452D">
+    <div class="t-head"><span class="dot"></span><h2>HarmonyOS 实战</h2><span class="cnt">9</span></div>
+    <p class="t-sub">ArkTS · ConnectivityKit</p>
+    <div class="chips"><a href="harmonyos/01-overview.html" title="BLE 中心 / 外设、API 地图"><b>D1</b>全景与角色</a><a href="harmonyos/02-permission-adapter.html" title="权限、适配器状态"><b>D2</b>权限与状态</a><a href="harmonyos/03-scan-filter.html" title="startBLEScan、过滤"><b>D3</b>扫描与过滤</a><a href="harmonyos/04-connect-discovery.html" title="connect、getServices"><b>D4</b>连接与服务发现</a><a href="harmonyos/05-read-write.html" title="read / write、字节解析"><b>D5</b>读写与解析</a><a href="harmonyos/06-notify.html" title="setNotify、特征变化"><b>D6</b>订阅与通知</a><a href="harmonyos/07-peripheral.html" title="广播与 GATT Server"><b>D7</b>外设角色</a><a href="harmonyos/08-troubleshooting.html" title="分段定位"><b>D8</b>排障</a><a href="harmonyos/09-project.html" title="双机验收"><b>D9</b>综合实战：温湿度计</a></div>
+  </section>
+  <section class="tile span2" id="flutter" style="--ac:#0EA5E9">
+    <div class="t-head"><span class="dot"></span><h2>Flutter 实战</h2><span class="cnt">8</span></div>
+    <p class="t-sub">Dart · 跨端蓝牙库</p>
+    <div class="chips"><a href="flutter/01-lib-overview.html" title="flutter_reactive_ble 等"><b>E1</b>跨端蓝牙全景与库选型</a><a href="flutter/02-permission.html" title="跨端权限处理"><b>E2</b>权限与状态</a><a href="flutter/03-scan.html" title="scanForDevices、流"><b>E3</b>扫描</a><a href="flutter/04-connect-discover.html" title="connect、discoverServices"><b>E4</b>连接与发现</a><a href="flutter/05-read-write-notify.html" title="read / write / subscribe"><b>E5</b>读写与订阅</a><a href="flutter/06-lifecycle.html" title="页面退出释放"><b>E6</b>生命周期与清理</a><a href="flutter/07-native-bridge.html" title="调用已有原生蓝牙任务"><b>E7</b>原生桥接</a><a href="flutter/08-project.html" title="双端对照"><b>E8</b>综合实战：温湿度计</a></div>
+  </section>
+  <section class="tile span2" id="rn" style="--ac:#8B5CF6">
+    <div class="t-head"><span class="dot"></span><h2>React Native 实战</h2><span class="cnt">8</span></div>
+    <p class="t-sub">TypeScript · 跨端蓝牙库</p>
+    <div class="chips"><a href="react-native/01-lib-overview.html" title="react-native-ble-plx 等"><b>F1</b>全景与库选型</a><a href="react-native/02-permission.html" title="权限、适配器状态"><b>F2</b>权限与状态</a><a href="react-native/03-scan-events.html" title="startDeviceScan"><b>F3</b>扫描与事件</a><a href="react-native/04-connect-discover.html" title="connect、discoverAllServices"><b>F4</b>连接与发现</a><a href="react-native/05-read-write-monitor.html" title="read / write / monitor"><b>F5</b>读写与订阅</a><a href="react-native/06-lifecycle.html" title="离开页面清理"><b>F6</b>生命周期</a><a href="react-native/07-native-bridge.html" title="调用原生蓝牙任务"><b>F7</b>原生模块桥接</a><a href="react-native/08-project.html" title="双端对照"><b>F8</b>综合实战：温湿度计</a></div>
+  </section></div>
+  <footer>青竹蓝牙学堂 · 62 门正课已全部上线 · 实物直讲 + 演练 + 自测</footer>
 </div>
 
-<script>
-const DATA=[
-  {id:'base',name:'通用基础',sub:'Bluetooth 通用 · 平台无关',desc:'用温度计 + 手机讲清蓝牙原理，不依赖任何平台。修完再选你的端。',lessons:[
-    ['A1','温度计和手机是怎么说上话的','全景：广播→连接→发现→订阅→通知','live','bluetooth/01-orientation.html'],
-    ['A2','广播与扫描：怎么被发现','广播包 31 字节、间隔权衡、扫描限流','live','bluetooth/02-advertising-scanning.html'],
-    ['A3','连接与参数：专属通道与省电','interval / latency / timeout、断线恢复','live','bluetooth/03-connection-parameters.html'],
-    ['A4','GATT：设备的数据清单','服务 / 特征 / 描述符、UUID','live','bluetooth/04-gatt-attribute-table.html'],
-    ['A5','读、写、通知：三种操作','Read / Write / Notify / Indicate','live','bluetooth/05-read-write-notify.html'],
-    ['A6','订阅与 CCCD：让设备主动上报','0x2902、两步订阅、字节解析','live','bluetooth/06-subscribe-cccd.html'],
-    ['A7','MTU 与分包：长数据怎么发','三层长度、分包重组、流控','live','bluetooth/07-mtu-fragmentation.html'],
-    ['A8','配对、绑定与加密','配对方式、密钥、加密','live','bluetooth/08-pairing-bonding-encryption.html'],
-    ['A9','地址轮换与隐私','RPA / IRK、稳定身份','live','bluetooth/09-address-privacy.html'],
-    ['A10','按阶段排障','扫描 / 连接 / 发现 / 写入分段取证','live','bluetooth/10-stage-troubleshooting.html'],
-    ['A11','动手：nRF Connect 走通链路','不写代码用手机做一遍','live','bluetooth/11-nrf-connect-lab.html'],
-    ['A12','版本演进与经典 / BLE 选型','4.0→6.2 能力地图、选型','live','bluetooth/12-versions-and-selection.html'],
-  ]},
-  {id:'android',name:'Android 实战',sub:'Kotlin · Android BLE API',desc:'内容最厚的一站。从权限到后台、抓包、厂商兼容，再到完整温湿度计 App。',lessons:[
-    ['B1','Android 蓝牙全景：经典与 BLE','两条路、API 地图','live','android/01-android-overview.html'],
-    ['B2','权限、开关与清单','运行时权限、版本差异','live','android/02-permissions-manifest.html'],
-    ['B3','扫描与过滤','ScanFilter、后台扫描、限流','live','android/03-scan-filter.html'],
-    ['B4','连接生命周期','connectGatt、autoConnect、重连','live','android/04-connection-lifecycle.html'],
-    ['B5','服务发现与读写','discoverServices、读写排队','live','android/05-discovery-readwrite.html'],
-    ['B6','订阅与通知','CCCD 两步、onCharacteristicChanged','live','android/06-notify-cccd.html'],
-    ['B7','MTU、PHY 与连接参数','requestMtu、PHY、参数请求','live','android/07-mtu-phy-params.html'],
-    ['B8','分包、重组与流控','业务帧、窗口、幂等','live','android/08-fragmentation-flowcontrol.html'],
-    ['B9','线程、状态机与命令队列','串行会话、一次一操作、取消','live','android/09-statemachine-queue.html'],
-    ['B10','后台、前台服务与伴生设备','FGS、CDM、进程恢复','live','android/10-background-fgs-cdm.html'],
-    ['B11','配对与 LE 安全','createBond、加密事件','live','android/11-pairing-le-security.html'],
-    ['B12','抓包与错误码排障','HCI snoop、133 / 8 / 19、Wireshark','live','android/12-hci-snoop-errors.html'],
-    ['B13','厂商兼容与机型矩阵','平台行为、可复测矩阵','live','android/13-vendor-matrix.html'],
-    ['B14','综合实战：BTHome 温湿度计','扫描→连接→传输→双机验收','live','android/14-bthome-project.html'],
-  ],elective:'选修：经典蓝牙 RFCOMM · GATT Server 外设 · LE Audio 与测距 · 性能功耗 · 从原生到 SDK'},
-  {id:'ios',name:'iOS 实战',sub:'Swift · CoreBluetooth',desc:'CoreBluetooth 中心设备全流程，含后台与状态恢复等 iOS 特有机制。',lessons:[
-    ['C1','CoreBluetooth 全景','central / peripheral、API 地图','live','ios/01-corebluetooth-overview.html'],
-    ['C2','权限与状态','蓝牙权限、状态回调','live','ios/02-permission-state.html'],
-    ['C3','扫描与过滤','scanForPeripherals、去重','live','ios/03-scan-identifier.html'],
-    ['C4','连接与重连','connect、断线恢复','live','ios/04-connect-reconnect.html'],
-    ['C5','服务与特征','discoverServices / Characteristics','live','ios/05-services-characteristics.html'],
-    ['C6','读写','readValue / writeValue','live','ios/06-read-write.html'],
-    ['C7','订阅与通知','setNotifyValue、didUpdateValue','live','ios/07-notify-indicate.html'],
-    ['C8','分包与流控','maximumWriteValueLength','live','ios/08-chunk-flowcontrol.html'],
-    ['C9','后台与状态恢复','background modes、state restoration','live','ios/09-background-restoration.html'],
-    ['C10','配对与安全','系统配对、加密','live','ios/10-pairing-security.html'],
-    ['C11','综合实战：温湿度计','双机验收','live','ios/11-project-temp.html'],
-  ],elective:'选修：外设角色 · 经典蓝牙 · L2CAP · 配件设置弹窗'},
-  {id:'harmonyos',name:'HarmonyOS 实战',sub:'ArkTS · ConnectivityKit',desc:'鸿蒙 BLE 中心与外设角色，API 与 Android 对照着学。',lessons:[
-    ['D1','全景与角色','BLE 中心 / 外设、API 地图','live','harmonyos/01-overview.html'],
-    ['D2','权限与状态','权限、适配器状态','live','harmonyos/02-permission-adapter.html'],
-    ['D3','扫描与过滤','startBLEScan、过滤','live','harmonyos/03-scan-filter.html'],
-    ['D4','连接与服务发现','connect、getServices','live','harmonyos/04-connect-discovery.html'],
-    ['D5','读写与解析','read / write、字节解析','live','harmonyos/05-read-write.html'],
-    ['D6','订阅与通知','setNotify、特征变化','live','harmonyos/06-notify.html'],
-    ['D7','外设角色','广播与 GATT Server','live','harmonyos/07-peripheral.html'],
-    ['D8','排障','分段定位','live','harmonyos/08-troubleshooting.html'],
-    ['D9','综合实战：温湿度计','双机验收','live','harmonyos/09-project.html'],
-  ]},
-  {id:'flutter',name:'Flutter 实战',sub:'Dart · 跨端蓝牙库',desc:'用跨端库快速落地，再学如何桥接已有原生蓝牙任务。',lessons:[
-    ['E1','跨端蓝牙全景与库选型','flutter_reactive_ble 等','live','flutter/01-lib-overview.html'],
-    ['E2','权限与状态','跨端权限处理','live','flutter/02-permission.html'],
-    ['E3','扫描','scanForDevices、流','live','flutter/03-scan.html'],
-    ['E4','连接与发现','connect、discoverServices','live','flutter/04-connect-discover.html'],
-    ['E5','读写与订阅','read / write / subscribe','live','flutter/05-read-write-notify.html'],
-    ['E6','生命周期与清理','页面退出释放','live','flutter/06-lifecycle.html'],
-    ['E7','原生桥接','调用已有原生蓝牙任务','live','flutter/07-native-bridge.html'],
-    ['E8','综合实战：温湿度计','双端对照','live','flutter/08-project.html'],
-  ]},
-  {id:'rn',name:'React Native 实战',sub:'TypeScript · 跨端蓝牙库',desc:'RN 蓝牙库全流程与原生模块桥接。',lessons:[
-    ['F1','全景与库选型','react-native-ble-plx 等','live','react-native/01-lib-overview.html'],
-    ['F2','权限与状态','权限、适配器状态','live','react-native/02-permission.html'],
-    ['F3','扫描与事件','startDeviceScan','live','react-native/03-scan-events.html'],
-    ['F4','连接与发现','connect、discoverAllServices','live','react-native/04-connect-discover.html'],
-    ['F5','读写与订阅','read / write / monitor','live','react-native/05-read-write-monitor.html'],
-    ['F6','生命周期','离开页面清理','live','react-native/06-lifecycle.html'],
-    ['F7','原生模块桥接','调用原生蓝牙任务','live','react-native/07-native-bridge.html'],
-    ['F8','综合实战：温湿度计','双端对照','live','react-native/08-project.html'],
-  ]},
-];
-const root=document.getElementById('courses');
-DATA.forEach(p=>{
-  const sec=document.createElement('section'); sec.className='platform'; sec.id=p.id;
-  const live=p.lessons.filter(l=>l[3]==='live').length;
-  sec.innerHTML=`<div class="p-head"><h2>${p.name}</h2><span class="cnt">${p.lessons.length} 课 · ${p.sub}</span><span class="desc">${p.desc}</span></div>`;
-  const grid=document.createElement('div'); grid.className='grid';
-  p.lessons.forEach(l=>{
-    const [code,title,desc,st,href]=l;
-    const isLive=st==='live';
-    const card=document.createElement(isLive?'a':'div');
-    card.className='lesson '+(isLive?'live':'plan');
-    if(isLive) card.href=href;
-    card.innerHTML=`<span class="st ${isLive?'live':'plan'}">${isLive?'已上线':'规划中'}</span>
-      <div class="code">${code}</div><div class="t">${title}</div><div class="d">${desc}</div>`;
-    grid.appendChild(card);
-  });
-  sec.appendChild(grid);
-  if(p.elective){ const e=document.createElement('div'); e.className='tag-elective'; e.textContent=p.elective; sec.appendChild(e); }
-  root.appendChild(sec);
-});
-</script>
-</body>
-</html>
+</body></html>

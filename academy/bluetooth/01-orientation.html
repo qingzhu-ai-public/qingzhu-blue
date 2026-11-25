@@ -50,6 +50,17 @@
   @media (max-width:1100px){.layout{grid-template-columns:minmax(0,1fr) 200px;}.boardnav{display:none;}}
   @media (max-width:900px){.layout{grid-template-columns:1fr;}.toc{display:none;}}
 </style>
+<style>
+:root{--bg:#F2F3F5;--card:#FFF;--ink:#16181D;--muted:#6B7280;--faint:#9CA3AF;--line:#E5E7EB;--radius:20px;--coral:#2A9D8F;--coral-soft:#E9F4F2;}
+body{background:var(--bg);}
+.topbar{background:rgba(242,243,245,.92);backdrop-filter:blur(8px);}
+.boardnav,.toc{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px 10px;box-shadow:0 1px 3px rgba(0,0,0,.05);}
+.boardnav a,.toc a{border-left:0;border-radius:10px;padding:7px 12px;}
+.boardnav a.cur{background:var(--coral-soft);border-left:0;}
+.b,.key{border-radius:16px;}
+.seg button{border-radius:10px;}
+.opt{border-radius:10px;}
+</style>
 </head>
 <body>
 <div class="topbar"><div class="topbar-in">
