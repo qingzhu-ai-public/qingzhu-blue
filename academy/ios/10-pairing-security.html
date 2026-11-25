@@ -172,6 +172,10 @@
   .ctl-row label{display:inline-flex;align-items:center;gap:10px;}
   .ctl-row input[type=range]{accent-color:var(--coral);width:160px;}
   .ctl-row .chk input{accent-color:var(--coral);}
+  .api-lv{display:inline-block;font-family:ui-monospace,Consolas,monospace;font-size:11.5px;font-weight:800;color:#2F58A8;background:var(--blue-soft);border:1px solid var(--blue-line);border-radius:999px;padding:0 8px;white-space:nowrap;}
+  .refs{font-size:14px;}
+  .refs li{margin:7px 0;}
+  .refs .src{font-size:12px;color:var(--faint);}
 </style>
 </head>
 <body style="--coral:#E8590C;--coral-soft:#FBEADF;--coral-line:#F2C4A4">
@@ -200,69 +204,176 @@
 <main>
   <div class="crumb">蓝牙小课堂 / iOS 第十课 · C10</div>
   <h1>配对与安全：<em>系统弹窗</em>，无 createBond</h1>
-  <p class="lead">iOS 没有 createBond API，配对由系统在访问受保护特征时自动弹窗。这一课讲系统配对、加密错误与解绑在系统设置。</p>
-  <div class="meta"><span>平台：iOS/Swift</span><span>约 11 分钟</span><span>含交互演练</span><span>前置：C4</span></div>
+  <p class="lead">iOS 没有 createBond API，配对由系统在访问受保护特征时自动弹窗。这一课把系统配对的触发链、四个安全类 ATT 错误码、解绑与恢复出厂的密钥失配处理逐一讲清，并教你区分「链路安全」与「业务授权」两层。</p>
+  <div class="meta"><span>平台：iOS/Swift</span><span>约 22 分钟</span><span>iOS 5 → 10</span><span>含两场交互演练</span><span>前置：C4</span></div>
   <div class="journey">
-    <div class="j-step"><span class="n">1</span><span class="t">系统配对</span><span class="s">自动弹窗</span></div>
-    <div class="j-step"><span class="n">2</span><span class="t">加密</span><span class="s">受保护特征</span></div>
-    <div class="j-step"><span class="n">3</span><span class="t">解绑</span><span class="s">系统设置</span></div>
-    <div class="j-step"><span class="n">4</span><span class="t">动手</span><span class="s">走状态</span></div>
+    <div class="j-step"><span class="n">1</span><span class="t">系统配对</span><span class="s">触发链</span></div>
+    <div class="j-step"><span class="n">2</span><span class="t">错误码</span><span class="s">安全四码</span></div>
+    <div class="j-step"><span class="n">3</span><span class="t">解绑</span><span class="s">密钥失配</span></div>
+    <div class="j-step"><span class="n">4</span><span class="t">动手</span><span class="s">两场演练</span></div>
+    <div class="j-step"><span class="n">5</span><span class="t">自测</span><span class="s">六个问题</span></div>
   </div>
 
   <section id="auto">
     <h2><span class="no">第 1 步</span>访问受保护特征触发系统弹窗</h2>
-    
       <p>iOS 无 createBond。读写需要认证/加密的特征时，<b>系统自动弹配对框</b>，完成后密钥由系统保存。App 不直接管密钥。</p>
-      <div class="recap"><b>本步收束：</b>配对系统代管，App 不 createBond。</div>
+    <table>
+      <tr><th>能力</th><th>Android</th><th>iOS</th></tr>
+      <tr><td>主动发起配对</td><td>createBond()</td><td><b>无 API</b>；访问受保护特征间接触发</td></tr>
+      <tr><td>解除绑定</td><td>removeBond()（反射/隐藏）</td><td><b>无 API</b>；设置→蓝牙→忽略此设备</td></tr>
+      <tr><td>查绑定状态</td><td>bondState + 广播</td><td><b>无 API</b>；只能靠操作结果推断</td></tr>
+      <tr><td>密钥保存</td><td>系统栈</td><td>系统栈（App 不可见）</td></tr>
+    </table>
+    <figure>
+      <svg viewBox="0 0 760 250" role="img" aria-label="系统配对触发时序">
+        <defs><marker id="ar10" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#A39B8E"/></marker></defs>
+        <text x="120" y="24" text-anchor="middle" font-size="13" font-weight="bold" fill="#2F58A8">App</text>
+        <text x="400" y="24" text-anchor="middle" font-size="13" font-weight="bold" fill="#8A5510">iOS 系统</text>
+        <text x="660" y="24" text-anchor="middle" font-size="13" font-weight="bold" fill="#1E7268">外设</text>
+        <line x1="120" y1="34" x2="120" y2="235" stroke="#C9D8F2" stroke-width="2"/>
+        <line x1="400" y1="34" x2="400" y2="235" stroke="#EDD9B4" stroke-width="2"/>
+        <line x1="660" y1="34" x2="660" y2="235" stroke="#BFE0DB" stroke-width="2"/>
+        <line x1="120" y1="55" x2="658" y2="55" stroke="#A39B8E" stroke-width="2" marker-end="url(#ar10)"/>
+        <text x="390" y="47" text-anchor="middle" font-size="11.5" fill="#5F7FB5">readValue（受保护特征）</text>
+        <line x1="660" y1="85" x2="402" y2="85" stroke="#D95B43" stroke-width="2" marker-end="url(#ar10)"/>
+        <text x="530" y="77" text-anchor="middle" font-size="11.5" fill="#B04A35">ATT: insufficientAuthentication</text>
+        <rect x="250" y="100" width="300" height="40" rx="10" fill="#FBF3E4" stroke="#EDD9B4"/>
+        <text x="400" y="125" text-anchor="middle" font-size="12" font-weight="bold" fill="#8A5510">系统弹配对框 → 用户确认 → 密钥交换保存</text>
+        <line x1="400" y1="160" x2="658" y2="160" stroke="#2A9D8F" stroke-width="2" marker-end="url(#ar10)"/>
+        <text x="530" y="152" text-anchor="middle" font-size="11.5" fill="#1E7268">加密链路建立，重试读写</text>
+        <line x1="660" y1="190" x2="122" y2="190" stroke="#2A9D8F" stroke-width="2" marker-end="url(#ar10)"/>
+        <text x="390" y="182" text-anchor="middle" font-size="11.5" fill="#1E7268">didUpdateValueFor（成功）</text>
+        <text x="380" y="228" text-anchor="middle" font-size="12" fill="#A39B8E">App 全程不碰密钥；配对失败则回调带 error，引导用户重试</text>
+      </svg>
+      <figcaption>配对由 ATT 安全错误触发、系统全程代办；App 只负责发起操作与处理结果。</figcaption>
+    </figure>
+    <ul>
+      <li><b>触发条件</b>：特征声明需要认证/加密（如 properties 带 .notifyEncryptionRequired，或设备端 ATT 权限表要求），普通特征不会弹。</li>
+      <li><b>想「提前配对」</b>：没有正规 API；工程上读一次受保护特征（如设备信息里要求加密的项）来触发。</li>
+      <li><b>配对方式</b>：Just Works / 数字比较 /  passkey 由双方 IO 能力决定（通用基础 A 板），iOS 弹窗样式随之变化。</li>
+    </ul>
+      <div class="recap"><b>本步收束：</b>配对系统代管，App 不 createBond；受保护操作触发弹窗。</div>
   </section>
 
   <section id="err">
-    <h2><span class="no">第 2 步</span>insufficientEncryption/Authentication</h2>
-    
+    <h2><span class="no">第 2 步</span>安全类 ATT 错误码：四个码逐一认</h2>
       <p>读写回调 error 为 .insufficientAuthentication / .insufficientEncryption 时，系统会引导配对/加密；重试该操作。区分安全层与业务授权（厂商协议）。</p>
-      <div class="recap"><b>本步收束：</b>安全错误系统引导；业务授权另走厂商。</div>
+    <table>
+      <tr><th>CBATTError.Code</th><th>ATT 值</th><th>含义</th><th>对策</th></tr>
+      <tr><td><code>.insufficientAuthentication</code></td><td>0x05</td><td>链路未认证（没配对）</td><td>系统弹配对；完成后重试</td></tr>
+      <tr><td><code>.insufficientEncryption</code></td><td>0x0F</td><td>链路未加密</td><td>同上，配对后链路加密</td></tr>
+      <tr><td><code>.insufficientEncryptionKeySize</code></td><td>0x0C</td><td>密钥长度不够（设备要求更高）</td><td>重新配对协商更强密钥</td></tr>
+      <tr><td><code>.insufficientAuthorization</code></td><td>0x08</td><td>设备端应用层未授权</td><td>走厂商业务授权流程，不是配对能解决的</td></tr>
+    </table>
+    <p>枚举 <code>CBATTError.Code</code> 自 <span class="api-lv">iOS 5</span>（ObjC 常量），Swift 的 <code>CBATTError</code> 结构体自 <span class="api-lv">iOS 10</span> 命名。错误从 didUpdateValueFor / didWriteValueFor / didUpdateNotificationStateFor 的 error 参数来，转成 <code>CBATTError</code> 判断：</p>
+    <pre>func peripheral(_ p: CBPeripheral, didUpdateValueFor ch: CBCharacteristic, error: Error?) {
+  if let e = error as? CBATTError {
+    switch e.code {
+    case .insufficientAuthentication, .insufficientEncryption:
+      <span class="cm">// 系统已引导配对；用户完成后重试 readValue</span>
+      break
+    case .insufficientAuthorization:
+      <span class="cm">// 业务授权：走厂商协议（token/握手），别死循环重试</span>
+      break
+    default: break
+    }
+  }
+}</pre>
+    <div class="key"><span class="tag">重点 · 两层分清</span><b>链路安全</b>（配对/加密）由系统管，错误码是 ATT 标准码；<b>业务授权</b>（厂商 token、账号绑定）是应用层协议，错误可能表现为 insufficientAuthorization 或厂商自定义回执。配对成功≠业务授权通过，两层各自验证。</div>
+      <div class="recap"><b>本步收束：</b>安全错误系统引导；业务授权另走厂商；重试要有上限别死循环。</div>
   </section>
 
   <section id="unbond">
     <h2><span class="no">第 3 步</span>解绑在系统设置，恢复出厂要清</h2>
-    
       <div class="key"><span class="tag">重点</span>解绑在「设置→蓝牙→忽略设备」，App 无 API。外设恢复出厂后手机旧密钥不匹配→反复弹配对/读写错；引导用户忽略设备重配。两侧一起清。</div>
-      <div class="recap"><b>本步收束：</b>解绑靠系统设置；恢复出厂两侧清。</div>
+    <ul>
+      <li><b>失配的症状</b>：连接成功但读写报安全错、配对框反复弹、或连接后立刻断（设备拒绝旧密钥）。</li>
+      <li><b>处理三步</b>：① 识别症状（安全错误连续出现）；② 提示用户「设置→蓝牙→忽略此设备」；③ 重新连接触发新配对。App 内给图文引导，别只甩错误码。</li>
+      <li><b>固件侧配合</b>：恢复出厂务必清绑定表；提供「清除配对」命令（业务层）让用户不用跑系统设置。</li>
+      <li><b>没有 bondState 可查</b>：iOS 不告诉你绑没绑，只能靠操作结果推断——把「安全错误计数」作为失配信号。</li>
+    </ul>
+      <div class="recap"><b>本步收束：</b>解绑靠系统设置；恢复出厂两侧清；失配靠症状识别。</div>
   </section>
 
   <section id="lab">
-    <h2><span class="no">动手</span>走受保护读写→系统配对→恢复出厂</h2>
-    <p>点「读受保护特征」触发系统配对；配对后读写成功。点「外设恢复出厂」再读看密钥不匹配；点「忽略设备」清理后重配。</p>
+    <h2><span class="no">动手</span>两场演练：配对全流程、安全错误分层</h2>
+    <p>演练一点「读受保护特征」触发系统配对；配对后读写成功。点「外设恢复出厂」再读看密钥不匹配；点「忽略设备」清理后重配。演练二给四种错误，判断属于哪一层、该怎么处理。</p>
     <div class="lab">
-      <div class="lab-head"><b>配对演练</b><span class="hint">系统弹窗，无 createBond</span></div>
+      <div class="lab-head"><b>演练一 · 配对演练</b><span class="hint">系统弹窗，无 createBond</span></div>
       <div class="controls"><div class="seg" id="p10"><button data-p="read">读受保护特征</button><button data-p="reset">外设恢复出厂</button><button data-p="forget">忽略设备</button></div></div>
       <div class="lab-body"><div><div class="chips" id="st10"></div></div><div class="logcat"><div class="logcat-head"><span>系统</span><span>live</span></div><div class="logcat-body" id="log10"><span class="c">// 读受保护特征</span></div></div></div>
       <div class="lab-foot"><span class="hint">恢复出厂后→忽略设备→重配</span></div>
     </div>
-    <div class="key"><span class="tag">看懂这场演练</span>iOS 配对系统代管（无 createBond），访问受保护特征自动弹窗；解绑在系统设置。恢复出厂密钥不匹配要忽略设备重配，两侧一起清。</div>
+    <div class="lab">
+      <div class="lab-head"><b>演练二 · 安全错误分层</b><span class="hint">链路安全 vs 业务授权</span></div>
+      <div class="controls"><div class="seg" id="eseg"><button data-e="auth" class="on">insufficientAuthentication</button><button data-e="enc">insufficientEncryption</button><button data-e="authz">insufficientAuthorization</button><button data-e="biz">厂商回执: TOKEN_EXPIRED</button></div></div>
+      <div class="lab-body">
+        <div>
+          <div class="chips" id="echips"></div>
+          <div class="key" id="ehint"></div>
+        </div>
+        <div class="logcat"><div class="logcat-head"><span>处理</span><span>live</span></div><div class="logcat-body" id="elog"></div></div>
+      </div>
+      <div class="lab-foot"><span class="hint">前两个系统管；后两个配对救不了，走业务流程</span></div>
+    </div>
+    <div class="key"><span class="tag">看懂这两场演练</span>iOS 配对系统代管（无 createBond），访问受保护特征自动弹窗；解绑在系统设置。恢复出厂密钥不匹配要忽略设备重配，两侧一起清。安全错误与业务授权分层处理。</div>
   </section>
 
   <section id="quiz">
-    <h2><span class="no">自测</span>三个问题</h2>
+    <h2><span class="no">自测</span>六个问题</h2>
     <div class="card" id="quiz-box"></div>
     <p id="quiz-done" style="display:none;font-weight:700;color:#1E7268;">全对。最后一课：综合实战温湿度计。</p>
   </section>
 
   <section id="map">
-    <h2><span class="no">回顾</span>速查</h2>
-    <table><tr><th>项</th><th>iOS</th></tr><tr><td>配对</td><td>系统弹窗</td></tr><tr><td>解绑</td><td>系统设置</td></tr><tr><td>安全错误</td><td>系统引导</td></tr></table>
-    <div class="note"><span class="tag">说明</span>本页为教学简化，工程细节以正文与官方规范为准；演练为模拟，非真实设备通信。</div>
-    <footer>青竹蓝牙学堂 · 蓝牙小课堂iOS 第十课 · C10 · <a href="../index.html">回到学堂</a></footer>
+    <h2><span class="no">回顾</span>速查表</h2>
+    <table>
+      <tr><th>项</th><th>iOS</th></tr>
+      <tr><td>发起配对</td><td>无 API；访问受保护特征触发系统弹窗</td></tr>
+      <tr><td>解绑</td><td>设置→蓝牙→忽略此设备</td></tr>
+      <tr><td>查绑定状态</td><td>无 API；靠操作结果推断</td></tr>
+      <tr><td>0x05 / 0x0F</td><td>未认证 / 未加密 → 系统引导配对后重试</td></tr>
+      <tr><td>0x08</td><td>设备端未授权 → 厂商业务流程</td></tr>
+      <tr><td>恢复出厂失配</td><td>忽略设备重配；两侧一起清</td></tr>
+      <tr><td>业务授权</td><td>厂商 token/握手，与配对分层</td></tr>
+    </table>
+    <div class="note"><span class="tag">说明</span>本页为教学整理，错误码对照 Apple CBATTError 文档与 ATT 规范；演练为模拟，非真实系统弹窗。</div>
+  </section>
+
+  <section id="refs">
+    <h2><span class="no">依据</span>参考链接</h2>
+    <div class="card refs">
+      <h3 style="margin-top:0;">Apple 官方文档</h3>
+      <ul>
+        <li><a href="https://developer.apple.com/documentation/corebluetooth/cbatterror-swift.struct/code?language=objc" target="_blank" rel="noopener">CBATTError.Code</a> <span class="src">— iOS 5+；全部 ATT 错误码（含四个安全码）</span></li>
+        <li><a href="https://developer.apple.com/documentation/corebluetooth/cbcharacteristicproperties/notifyencryptionrequired" target="_blank" rel="noopener">notifyEncryptionRequired</a> <span class="src">— iOS 6；加密订阅要求</span></li>
+      </ul>
+      <h3>CoreBluetooth API 参考</h3>
+      <ul>
+        <li><a href="https://developer.apple.com/documentation/corebluetooth/cbatterror-swift.struct" target="_blank" rel="noopener">CBATTError（Swift 结构体）</a> <span class="src">— iOS 10 命名；error 转换入口</span></li>
+        <li><a href="https://developer.apple.com/documentation/corebluetooth/cbperipheraldelegate/peripheral(_:didupdatevaluefor:error:)-1xyna" target="_blank" rel="noopener">peripheral(_:didUpdateValueFor:error:)</a> <span class="src">— 安全错误的到达点</span></li>
+      </ul>
+      <h3>实测与深入</h3>
+      <ul>
+        <li><a href="https://punchthrough.com/core-bluetooth-guide/" target="_blank" rel="noopener">Punch Through · Core Bluetooth Ultimate Guide</a> <span class="src">— 配对与加密的工程经验</span></li>
+      </ul>
+    </div>
+    <div class="next-links">
+      <a href="09-background-restoration.html">← C9 后台与恢复</a>
+      <a href="11-project-temp.html">C11 实战温度 App →</a>
+    </div>
+    <footer>青竹蓝牙学堂 · 蓝牙小课堂 iOS 第十课 · C10 · <a href="../index.html">回到学堂</a></footer>
   </section>
 </main>
 <aside class="toc" id="toc">
   <div class="toc-title">本课目录</div>
   <a href="#auto">系统配对</a>
-  <a href="#err">加密错误</a>
-  <a href="#unbond">解绑</a>
-  <a href="#lab">动手演练</a>
+  <a href="#err">安全错误码</a>
+  <a href="#unbond">解绑与失配</a>
+  <a href="#lab">两场演练</a>
   <a href="#quiz">本课自测</a>
-  <a href="#map">回顾与速查</a>
+  <a href="#map">速查表</a>
+  <a href="#refs">参考链接</a>
 </aside>
 </div>
 <script>
@@ -280,11 +391,38 @@
   paint();
 })();
 
+// 演练二：安全错误分层
+(function(){
+  var E={
+    auth:{layer:'链路安全',cls:'on',hint:'链路未认证（0x05）——没配对。系统已弹配对框，用户完成后重试该操作。',
+      log:['<span class="warn">didUpdateValueFor error: insufficientAuthentication</span>','<span class="api">系统引导配对 → 密钥保存</span>','<span class="ok">重试 readValue → 成功</span>']},
+    enc:{layer:'链路安全',cls:'on',hint:'链路未加密（0x0F）——同样由系统配对/加密解决，App 不碰密钥。',
+      log:['<span class="warn">error: insufficientEncryption</span>','<span class="api">系统建立加密链路</span>','<span class="ok">重试 → 成功</span>']},
+    authz:{layer:'设备端授权',cls:'bad',hint:'0x08 设备应用层未授权——配对救不了。走厂商授权流程（token/绑定/握手），别死循环重试。',
+      log:['<span class="warn">error: insufficientAuthorization</span>','<span class="err">重新配对无效（不是链路问题）</span>','<span class="api">走厂商业务授权 → 再试</span>']},
+    biz:{layer:'业务授权',cls:'bad',hint:'ATT 层成功、数据里是厂商错误回执——纯应用层问题，按厂商协议刷新 token。',
+      log:['<span class="ok">ATT 读写成功（链路没问题）</span>','<span class="err">payload: TOKEN_EXPIRED</span>','<span class="api">刷新业务 token → 重发命令</span>']}
+  };
+  function show(k){
+    var e=E[k];
+    document.getElementById('echips').innerHTML=
+      '<span class="chip '+e.cls+'">层级: '+e.layer+'</span>'+
+      '<span class="chip '+(e.cls==='on'?'on':'')+'">'+(e.cls==='on'?'系统配对可解':'配对不可解')+'</span>';
+    document.getElementById('ehint').innerHTML='<span class="tag">处理</span>'+e.hint;
+    document.getElementById('elog').innerHTML=e.log.map(function(l){return '<div>'+l+'</div>';}).join('');
+  }
+  document.querySelectorAll('#eseg button').forEach(function(b){b.addEventListener('click',function(){
+    document.querySelectorAll('#eseg button').forEach(function(x){x.classList.remove('on');});
+    b.classList.add('on'); show(b.getAttribute('data-e'));
+  });});
+  show('auth');
+})();
+
 const tocLinks=[...document.querySelectorAll('.toc a')];
 const secs=tocLinks.map(a=>document.getElementById(a.getAttribute('href').slice(1)));
 const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){tocLinks.forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+e.target.id));}});},{rootMargin:'-20% 0px -70% 0px'});
 secs.forEach(s=>s&&io.observe(s));
-const QUIZ=[{"q":"1. iOS 有 createBond 吗？","opts":[["没有，系统自动弹窗配对",true,"对。"],["有",false,"Android 才有。"],["用 removeBond",false,"iOS 无此 API。"]]},{"q":"2. 解绑在哪？","opts":[["系统设置→蓝牙→忽略设备",true,"对。"],["App API",false,"无 API。"],["重启手机",false,"不必。"]]},{"q":"3. 恢复出厂后反复弹配对根因？","opts":[["手机旧密钥与外设不匹配",true,"对。忽略设备重配。"],["蓝牙坏",false,"是密钥。"],["权限",false,"无关。"]]}];
+const QUIZ=[{"q":"1. iOS 有 createBond 吗？","opts":[["没有，系统自动弹窗配对",true,"对。"],["有",false,"Android 才有。"],["用 removeBond",false,"iOS 无此 API。"]]},{"q":"2. 解绑在哪？","opts":[["系统设置→蓝牙→忽略设备",true,"对。"],["App API",false,"无 API。"],["重启手机",false,"不必。"]]},{"q":"3. 恢复出厂后反复弹配对根因？","opts":[["手机旧密钥与外设不匹配",true,"对。忽略设备重配，两侧一起清。"],["蓝牙坏",false,"是密钥。"],["权限",false,"无关。"]]},{"q":"4. insufficientAuthentication（0x05）属于哪层？","opts":[["链路安全：系统引导配对后重试",true,"对。"],["业务授权",false,"那是 0x08 或厂商回执。"],["蓝牙权限",false,"与 NSBluetooth 权限无关。"]]},{"q":"5. App 能查配对状态或读密钥吗？","opts":[["都不能，只能靠操作结果推断",true,"对。无 bondState API，密钥系统私有。"],["能查 bondState",false,"Android 才有。"],["能读密钥",false,"系统栈私有。"]]},{"q":"6. 配对成功后写命令仍失败，回执 TOKEN_EXPIRED，怎么办？","opts":[["走业务授权：刷新厂商 token 再重发",true,"对。链路安全与业务授权是两层。"],["再配对一次",false,"配对救不了业务层。"],["忽略设备",false,"不是密钥失配。"]]}];
 let solved=0; const box=document.getElementById('quiz-box');
 QUIZ.forEach((item,qi)=>{
   const h=document.createElement('div'); h.className='quiz-q'; h.textContent=item.q; box.appendChild(h);

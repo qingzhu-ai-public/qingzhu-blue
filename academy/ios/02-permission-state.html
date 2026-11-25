@@ -172,6 +172,10 @@
   .ctl-row label{display:inline-flex;align-items:center;gap:10px;}
   .ctl-row input[type=range]{accent-color:var(--coral);width:160px;}
   .ctl-row .chk input{accent-color:var(--coral);}
+  .api-lv{display:inline-block;font-family:ui-monospace,Consolas,monospace;font-size:11.5px;font-weight:800;color:#2F58A8;background:var(--blue-soft);border:1px solid var(--blue-line);border-radius:999px;padding:0 8px;white-space:nowrap;}
+  .refs{font-size:14px;}
+  .refs li{margin:7px 0;}
+  .refs .src{font-size:12px;color:var(--faint);}
 </style>
 </head>
 <body style="--coral:#E8590C;--coral-soft:#FBEADF;--coral-line:#F2C4A4">
@@ -200,26 +204,37 @@
 <main>
   <div class="crumb">蓝牙小课堂 / iOS 第二课 · C2</div>
   <h1>权限与状态：<em>poweredOn</em> 才能扫描</h1>
-  <p class="lead">iOS 要 Info.plist 声明蓝牙用途，运行时弹授权；CBCentralManager 初始化后等 centralManagerDidUpdateState 到 .poweredOn 才能扫描。这一课讲权限与状态机。</p>
-  <div class="meta"><span>平台：iOS/Swift</span><span>约 11 分钟</span><span>含交互演练</span><span>前置：C1</span></div>
+  <p class="lead">iOS 要 Info.plist 声明蓝牙用途，运行时弹授权；CBCentralManager 初始化后等 centralManagerDidUpdateState 到 .poweredOn 才能扫描。这一课把两个 plist 键、六个状态、四个授权值逐一讲清，并演练「授权 × 开关」的全部组合。学完你能回答：弹窗什么时候出现、unauthorized 和 poweredOff 怎么区分处理、用户中途关蓝牙会发生什么。</p>
+  <div class="meta"><span>平台：iOS/Swift</span><span>约 22 分钟</span><span>iOS 6 → 13</span><span>含两场交互演练</span><span>前置：C1</span></div>
   <div class="journey">
-    <div class="j-step"><span class="n">1</span><span class="t">plist</span><span class="s">用途声明</span></div>
-    <div class="j-step"><span class="n">2</span><span class="t">授权</span><span class="s">运行时</span></div>
-    <div class="j-step"><span class="n">3</span><span class="t">状态</span><span class="s">poweredOn</span></div>
-    <div class="j-step"><span class="n">4</span><span class="t">动手</span><span class="s">走状态</span></div>
+    <div class="j-step"><span class="n">1</span><span class="t">plist</span><span class="s">两个键</span></div>
+    <div class="j-step"><span class="n">2</span><span class="t">状态</span><span class="s">六态状态机</span></div>
+    <div class="j-step"><span class="n">3</span><span class="t">授权</span><span class="s">四个授权值</span></div>
+    <div class="j-step"><span class="n">4</span><span class="t">动手</span><span class="s">两场演练</span></div>
+    <div class="j-step"><span class="n">5</span><span class="t">自测</span><span class="s">六个问题</span></div>
   </div>
 
   <section id="plist">
-    <h2><span class="no">第 1 步</span>Info.plist 声明蓝牙用途</h2>
-    
+    <h2><span class="no">第 1 步</span>Info.plist 声明蓝牙用途：两个键分工</h2>
       <pre>NSBluetoothAlwaysUsageDescription = "用于连接温度计读取温度"
 // 旧系统另需 NSBluetoothPeripheralUsageDescription</pre>
-      <div class="recap"><b>本步收束：</b>不声明用途，初始化即崩溃/被拒。</div>
+    <table>
+      <tr><th>键</th><th>作用</th><th>适用版本</th></tr>
+      <tr><td><code>NSBluetoothAlwaysUsageDescription</code></td><td>「App 为什么要用蓝牙」的用途文案，显示在授权弹窗里</td><td><span class="api-lv">iOS 13+</span></td></tr>
+      <tr><td><code>NSBluetoothPeripheralUsageDescription</code></td><td>旧键：连接蓝牙外设的用途文案；iOS 13 起废弃</td><td><span class="api-lv">iOS 6–12</span></td></tr>
+    </table>
+    <p>官方规则（Apple 文档 Important 标注）：<b>部署目标 ≥ iOS 13 只写 Always 键；部署目标 &lt; iOS 13 两个键都要写</b>——旧系统读旧键，新系统读新键。文案要具体（「连接你的温度计读取体温」），写「需要蓝牙」这种空话会被 App Store 审核打回。</p>
+    <pre><span class="cm">&lt;!-- Info.plist 片段 --&gt;</span>
+&lt;key&gt;NSBluetoothAlwaysUsageDescription&lt;/key&gt;
+&lt;string&gt;用于连接你的温度计并读取温度&lt;/string&gt;
+&lt;key&gt;NSBluetoothPeripheralUsageDescription&lt;/key&gt;  <span class="cm">&lt;!-- 仅当部署目标 &lt; iOS 13 --&gt;</span>
+&lt;string&gt;用于连接你的温度计并读取温度&lt;/string&gt;</pre>
+    <div class="key"><span class="tag">重点 · 崩溃不是异常是设计</span>iOS 13+ 缺 Always 键时，App 一碰蓝牙 API 就被系统直接终止（TCC 隐私机制，日志里是 <code>This app has crashed because it attempted to access privacy-sensitive data without a usage description</code>）。这不是可以 try/catch 的错误，只能靠 plist 声明预防。</div>
+      <div class="recap"><b>本步收束：</b>不声明用途，初始化即崩溃/被拒；13+ 写 Always 键，要兼容旧系统就两个都写。</div>
   </section>
 
   <section id="state">
-    <h2><span class="no">第 2 步</span>等 .poweredOn 再扫描</h2>
-    
+    <h2><span class="no">第 2 步</span>六个状态逐一讲：等 .poweredOn 再扫描</h2>
       <pre>func centralManagerDidUpdateState(_ c: CBCentralManager) {
   switch c.state {
   case .poweredOn: startScan()
@@ -227,50 +242,176 @@
   case .poweredOff: 提示打开蓝牙
   default: break }
 }</pre>
-      <div class="key"><span class="tag">重点</span>初始化 CBCentralManager 会触发授权弹窗；<b>state 到 .poweredOn 之前不要扫描</b>。用户可中途关蓝牙/撤授权，状态会再回调。</div>
-      <div class="recap"><b>本步收束：</b>poweredOn 才扫描；unauthorized/poweredOff 分别提示。</div>
+    <p><code>state</code> 的类型是 <code>CBManagerState</code> <span class="api-lv">iOS 10 命名</span>（旧名 CBCentralManagerState <span class="api-lv">iOS 5–9</span> 已废弃），六个值一个都不能漏：</p>
+    <table>
+      <tr><th>状态</th><th>值</th><th>含义</th><th>你该做什么</th></tr>
+      <tr><td><code>.unknown</code></td><td>0</td><td>刚初始化，状态还没确定</td><td>等下一次回调，别干活</td></tr>
+      <tr><td><code>.resetting</code></td><td>1</td><td>蓝牙栈短暂重启，连接会丢</td><td>等恢复回调，稍后重连</td></tr>
+      <tr><td><code>.unsupported</code></td><td>2</td><td>设备不支持 BLE（老模拟器等）</td><td>提示设备不支持，别再重试</td></tr>
+      <tr><td><code>.unauthorized</code></td><td>3</td><td>用户拒绝了蓝牙授权</td><td>引导去 设置→隐私→蓝牙 打开</td></tr>
+      <tr><td><code>.poweredOff</code></td><td>4</td><td>蓝牙开关关着（或飞行模式）</td><td>提示打开蓝牙</td></tr>
+      <tr><td><code>.poweredOn</code></td><td>5</td><td>一切就绪</td><td>可以扫描/连接</td></tr>
+    </table>
+    <figure>
+      <svg viewBox="0 0 760 250" role="img" aria-label="CBCentralManager 状态机">
+        <defs><marker id="ar2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#A39B8E"/></marker></defs>
+        <rect x="290" y="15" width="180" height="52" rx="12" fill="#F4F2EC" stroke="#E8E4DC"/>
+        <text x="380" y="38" text-anchor="middle" font-size="13" font-weight="bold" fill="#7A7267">init → .unknown</text>
+        <text x="380" y="56" text-anchor="middle" font-size="11" fill="#A39B8E">等 didUpdateState</text>
+        <rect x="10" y="130" width="130" height="60" rx="12" fill="#FBEDE9" stroke="#F0CFC6"/>
+        <text x="75" y="155" text-anchor="middle" font-size="12" font-weight="bold" fill="#B04A35">.unauthorized</text>
+        <text x="75" y="175" text-anchor="middle" font-size="10.5" fill="#C08475">引导去设置授权</text>
+        <rect x="160" y="130" width="130" height="60" rx="12" fill="#FBEDE9" stroke="#F0CFC6"/>
+        <text x="225" y="155" text-anchor="middle" font-size="12" font-weight="bold" fill="#B04A35">.poweredOff</text>
+        <text x="225" y="175" text-anchor="middle" font-size="10.5" fill="#C08475">提示开蓝牙</text>
+        <rect x="310" y="130" width="130" height="60" rx="12" fill="#E9F4F2" stroke="#BFE0DB"/>
+        <text x="375" y="155" text-anchor="middle" font-size="12" font-weight="bold" fill="#1E7268">.poweredOn</text>
+        <text x="375" y="175" text-anchor="middle" font-size="10.5" fill="#4E8A80">唯一能干活的态</text>
+        <rect x="460" y="130" width="130" height="60" rx="12" fill="#FBF3E4" stroke="#EDD9B4"/>
+        <text x="525" y="155" text-anchor="middle" font-size="12" font-weight="bold" fill="#8A5510">.resetting</text>
+        <text x="525" y="175" text-anchor="middle" font-size="10.5" fill="#A8762A">短暂态，等恢复</text>
+        <rect x="610" y="130" width="140" height="60" rx="12" fill="#F4F2EC" stroke="#E8E4DC"/>
+        <text x="680" y="155" text-anchor="middle" font-size="12" font-weight="bold" fill="#7A7267">.unsupported</text>
+        <text x="680" y="175" text-anchor="middle" font-size="10.5" fill="#A39B8E">终态，别再试</text>
+        <line x1="330" y1="67" x2="90" y2="128" stroke="#A39B8E" stroke-width="1.6" marker-end="url(#ar2)"/>
+        <line x1="355" y1="67" x2="235" y2="128" stroke="#A39B8E" stroke-width="1.6" marker-end="url(#ar2)"/>
+        <line x1="380" y1="67" x2="375" y2="128" stroke="#2A9D8F" stroke-width="2" marker-end="url(#ar2)"/>
+        <line x1="405" y1="67" x2="515" y2="128" stroke="#A39B8E" stroke-width="1.6" marker-end="url(#ar2)"/>
+        <line x1="430" y1="67" x2="665" y2="128" stroke="#A39B8E" stroke-width="1.6" marker-end="url(#ar2)"/>
+        <path d="M290,160 L240,160" fill="none" stroke="#A39B8E" stroke-width="1.6" marker-end="url(#ar2)"/>
+        <path d="M290,175 L308,175" fill="none" stroke="#2A9D8F" stroke-width="1.6" marker-end="url(#ar2)"/>
+        <path d="M460,160 L442,160" fill="none" stroke="#2A9D8F" stroke-width="1.6" marker-end="url(#ar2)"/>
+        <text x="380" y="228" text-anchor="middle" font-size="12" fill="#A39B8E">开关/授权随时变化，状态就会再回调一次；poweredOff ↔ poweredOn 可反复横跳</text>
+      </svg>
+      <figcaption>初始化落在 unknown，随后进入五态之一；除 unsupported 外都可能随用户操作再变化。</figcaption>
+    </figure>
+      <div class="key"><span class="tag">重点</span>初始化 CBCentralManager 会触发授权弹窗；<b>state 到 .poweredOn 之前不要扫描</b>。用户可中途关蓝牙/撤授权，状态会再回调。连接中关蓝牙：所有连接断开（didDisconnectPeripheral 带 error），状态变 poweredOff——重连逻辑要等 poweredOn 回来再启动。</div>
+    <ul>
+      <li><b>resetting 是短暂态</b>：系统蓝牙服务重启（偶发），期间连接全部失效；正确姿势是等下一次 didUpdateState，不要立刻重试。</li>
+      <li><b>unsupported 常见于模拟器</b>：iOS 模拟器不支持 BLE，真机调试是必修课。</li>
+      <li><b>不要在 init 后立刻读 state 就下结论</b>：第一拍几乎总是 .unknown，结论只能写在回调里。</li>
+    </ul>
+      <div class="recap"><b>本步收束：</b>poweredOn 才扫描；unauthorized/poweredOff 分别提示；resetting 等恢复、unsupported 放弃。</div>
   </section>
 
   <section id="auth">
-    <h2><span class="no">第 3 步</span>授权与状态分开看</h2>
-    
+    <h2><span class="no">第 3 步</span>授权与状态分开看：CBManagerAuthorization</h2>
       <p>授权（用户允许 App 用蓝牙）与蓝牙开关（硬件 poweredOn）是两件事。CBManager.authorization 与 state 分别判断，界面分别提示。</p>
-      <div class="recap"><b>本步收束：</b>授权≠开关，分别判断提示。</div>
+    <table>
+      <tr><th>授权值 <span class="api-lv">iOS 13+</span></th><th>含义</th><th>界面动作</th></tr>
+      <tr><td><code>.notDetermined</code></td><td>还没弹过窗（首次 init 会弹）</td><td>等用户选择，别催</td></tr>
+      <tr><td><code>.restricted</code></td><td>家长控制/MDM 限制，用户改不了</td><td>提示受限制，别引导去设置</td></tr>
+      <tr><td><code>.denied</code></td><td>用户点了「不允许」</td><td>给「去设置」按钮（UIApplication.openSettingsURLString）</td></tr>
+      <tr><td><code>.allowedAlways</code></td><td>已授权</td><td>再看 state 决定能否扫描</td></tr>
+    </table>
+    <pre><span class="cm">// iOS 13+：用实例属性（类属性 CBManager.authorization 已在 13.1 废弃）</span>
+if #available(iOS 13.0, *) {
+  switch central.authorization {
+  case .denied:       showGoToSettings()
+  case .restricted:   showRestrictedHint()
+  case .notDetermined: break            <span class="cm">// 弹窗在路上</span>
+  case .allowedAlways: break            <span class="cm">// 看 state</span>
+  @unknown default:   break
+  }
+}</pre>
+    <ul>
+      <li><b>弹窗时机</b>：不是 init 那一行同步弹，而是系统准备好后弹；用户没选之前 state 停在 unknown/unauthorized 之间过渡，别在弹窗期间反复 init。</li>
+      <li><b>拒绝不可逆（App 内）</b>：denied 之后再 init 一万次也不会再弹窗，只能去系统设置改。</li>
+      <li><b>设置里撤销授权</b>：iOS 会直接终止 App（下次冷启动），不是只发个回调——别指望「撤销后热更新 UI」。</li>
+      <li><b>授权 API 是 iOS 13+</b>：更早系统没有蓝牙授权弹窗，state 直接反映开关；用 <code>#available</code> 分支。</li>
+    </ul>
+      <div class="recap"><b>本步收束：</b>授权≠开关，分别判断提示；denied 引导去设置，restricted 别引导，撤销授权 App 会被终止。</div>
   </section>
 
   <section id="lab">
-    <h2><span class="no">动手</span>切换状态，看允许做什么</h2>
-    <p>点状态，右侧给出此时允许的动作与提示。体会 unauthorized 与 poweredOff 的不同处理。</p>
+    <h2><span class="no">动手</span>两场演练：状态动作表、权限全流程走查</h2>
+    <p>演练一点状态，右侧给出此时允许的动作与提示；演练二从首次初始化开始，亲手走一遍「弹窗 → 允许/拒绝 → 开关蓝牙 → 撤销授权」的完整流程。</p>
     <div class="lab">
-      <div class="lab-head"><b>状态机演练</b><span class="hint">poweredOn 才扫描</span></div>
+      <div class="lab-head"><b>演练一 · 状态机演练</b><span class="hint">poweredOn 才扫描</span></div>
       <div class="controls"><div class="seg" id="s2"><button data-s="on" class="on">poweredOn</button><button data-s="off">poweredOff</button><button data-s="unauth">unauthorized</button><button data-s="reset">resetting</button></div></div>
       <div class="lab-body"><div class="key" id="act2"></div><div class="logcat"><div class="logcat-head"><span>state</span><span>live</span></div><div class="logcat-body" id="log2"></div></div></div>
       <div class="lab-foot"><span class="hint">poweredOn 扫描；off 提示开蓝牙；unauth 提示去设置</span></div>
     </div>
-    <div class="key"><span class="tag">看懂这场演练</span>Info.plist 声明用途；初始化触发授权；等 .poweredOn 再扫描。授权与开关分开判断，状态变化会再回调。</div>
+    <div class="lab">
+      <div class="lab-head"><b>演练二 · 权限状态走查</b><span class="hint">授权 × 开关，两个维度四种组合</span></div>
+      <div class="controls">
+        <button class="btn" id="pmInit" type="button">初始化 Manager</button>
+        <button class="btn teal" id="pmAllow" type="button">弹窗点「允许」</button>
+        <button class="btn ghost" id="pmDeny" type="button">弹窗点「不允许」</button>
+        <button class="btn ghost" id="pmBt" type="button">切换蓝牙开关</button>
+        <button class="btn ghost" id="pmRevoke" type="button">设置里撤销授权</button>
+        <button class="btn" id="pmScan" type="button">尝试扫描</button>
+      </div>
+      <div class="lab-body">
+        <div>
+          <div class="chips" id="pmChips"></div>
+          <div class="key" id="pmHint"><span class="tag">当前该做什么</span>先点「初始化 Manager」</div>
+        </div>
+        <div class="logcat"><div class="logcat-head"><span>系统日志</span><span>live</span></div><div class="logcat-body" id="pmLog"></div></div>
+      </div>
+      <div class="lab-foot"><span class="hint">试试：拒绝后再初始化（不会再弹窗）；授权后关蓝牙（poweredOff 而非 unauthorized）；撤销授权（App 被终止）</span></div>
+    </div>
+    <div class="key"><span class="tag">看懂这两场演练</span>Info.plist 声明用途；初始化触发授权；等 .poweredOn 再扫描。授权与开关是两个独立维度：unauthorized 找设置，poweredOff 找开关，提示文案不能混。</div>
   </section>
 
   <section id="quiz">
-    <h2><span class="no">自测</span>三个问题</h2>
+    <h2><span class="no">自测</span>六个问题</h2>
     <div class="card" id="quiz-box"></div>
     <p id="quiz-done" style="display:none;font-weight:700;color:#1E7268;">全对。下一课讲扫描与过滤。</p>
   </section>
 
   <section id="map">
-    <h2><span class="no">回顾</span>速查</h2>
-    <table><tr><th>state</th><th>动作</th></tr><tr><td>poweredOn</td><td>扫描</td></tr><tr><td>poweredOff</td><td>提示开蓝牙</td></tr><tr><td>unauthorized</td><td>提示授权</td></tr></table>
-    <div class="note"><span class="tag">说明</span>本页为教学简化，工程细节以正文与官方规范为准；演练为模拟，非真实设备通信。</div>
-    <footer>青竹蓝牙学堂 · 蓝牙小课堂iOS 第二课 · C2 · <a href="../index.html">回到学堂</a></footer>
+    <h2><span class="no">回顾</span>速查表</h2>
+    <table>
+      <tr><th>场景</th><th>判断 / 动作</th></tr>
+      <tr><td>部署目标 ≥ iOS 13</td><td>plist 写 NSBluetoothAlwaysUsageDescription</td></tr>
+      <tr><td>要兼容 iOS 12 及以下</td><td>再加 NSBluetoothPeripheralUsageDescription（6–12）</td></tr>
+      <tr><td>能不能扫描</td><td>state == .poweredOn（六态里唯一能干活的）</td></tr>
+      <tr><td>用户拒绝授权</td><td>authorization == .denied → 引导去设置；再 init 不弹窗</td></tr>
+      <tr><td>蓝牙关着</td><td>state == .poweredOff → 提示开蓝牙（与授权无关）</td></tr>
+      <tr><td>连接中关蓝牙</td><td>didDisconnect 带 error + 状态回调；等 poweredOn 再重连</td></tr>
+      <tr><td>resetting / unsupported</td><td>等恢复 / 放弃重试</td></tr>
+      <tr><td>查授权（iOS 13+）</td><td>实例属性 central.authorization，四值分支</td></tr>
+    </table>
+    <div class="note"><span class="tag">说明</span>本页为教学整理，键与枚举已对照 Apple 官方文档核实；演练为模拟，非真实系统弹窗。</div>
+  </section>
+
+  <section id="refs">
+    <h2><span class="no">依据</span>参考链接</h2>
+    <div class="card refs">
+      <h3 style="margin-top:0;">Apple 官方文档</h3>
+      <ul>
+        <li><a href="https://developer.apple.com/documentation/bundleresources/information-property-list/nsbluetoothalwaysusagedescription" target="_blank" rel="noopener">NSBluetoothAlwaysUsageDescription</a> <span class="src">— iOS 13+；用途文案与崩溃规则</span></li>
+        <li><a href="https://developer.apple.com/documentation/bundleresources/information-property-list/nsbluetoothperipheralusagedescription" target="_blank" rel="noopener">NSBluetoothPeripheralUsageDescription</a> <span class="src">— iOS 6–12；部署目标 &lt;13 时两键都写（Important 标注）</span></li>
+      </ul>
+      <h3>CoreBluetooth API 参考</h3>
+      <ul>
+        <li><a href="https://developer.apple.com/documentation/corebluetooth/cbmanagerstate" target="_blank" rel="noopener">CBManagerState</a> <span class="src">— iOS 10 命名；六个状态值</span></li>
+        <li><a href="https://developer.apple.com/documentation/corebluetooth/cbmanagerauthorization" target="_blank" rel="noopener">CBManagerAuthorization</a> <span class="src">— iOS 13；四个授权值</span></li>
+        <li><a href="https://developer.apple.com/documentation/corebluetooth/cbmanager/authorization-swift.property" target="_blank" rel="noopener">CBManager.authorization（实例属性）</a> <span class="src">— iOS 13；类属性版本 13.1 废弃</span></li>
+        <li><a href="https://developer.apple.com/documentation/corebluetooth/cbcentralmanagerdelegate/centralmanagerdidupdatestate(_:)" target="_blank" rel="noopener">centralManagerDidUpdateState(_:)</a> <span class="src">— 唯一必须实现的 delegate 方法</span></li>
+      </ul>
+      <h3>实测与深入</h3>
+      <ul>
+        <li><a href="https://punchthrough.com/core-bluetooth-guide/" target="_blank" rel="noopener">Punch Through · Core Bluetooth Ultimate Guide</a> <span class="src">— 授权与状态处理的工程经验</span></li>
+      </ul>
+    </div>
+    <div class="next-links">
+      <a href="01-corebluetooth-overview.html">← C1 CoreBluetooth 全景</a>
+      <a href="03-scan-identifier.html">C3 扫描 identifier →</a>
+    </div>
+    <footer>青竹蓝牙学堂 · 蓝牙小课堂 iOS 第二课 · C2 · <a href="../index.html">回到学堂</a></footer>
   </section>
 </main>
 <aside class="toc" id="toc">
   <div class="toc-title">本课目录</div>
   <a href="#plist">用途声明</a>
-  <a href="#state">状态机</a>
-  <a href="#auth">授权</a>
-  <a href="#lab">动手演练</a>
+  <a href="#state">六态状态机</a>
+  <a href="#auth">授权四值</a>
+  <a href="#lab">两场演练</a>
   <a href="#quiz">本课自测</a>
-  <a href="#map">回顾与速查</a>
+  <a href="#map">速查表</a>
+  <a href="#refs">参考链接</a>
 </aside>
 </div>
 <script>
@@ -282,11 +423,87 @@
   show('on');
 })();
 
+// 演练二：权限状态走查（授权 × 开关）
+(function(){
+  var auth='notDetermined', bt=true, inited=false, popup=false, dead=false;
+  var log=document.getElementById('pmLog');
+  function line(html){ var d=document.createElement('div'); d.innerHTML=html; log.appendChild(d); log.scrollTop=log.scrollHeight; }
+  function state(){
+    if(!inited) return '—';
+    if(auth==='denied'||auth==='restricted') return 'unauthorized';
+    if(popup) return 'unknown';
+    return bt?'poweredOn':'poweredOff';
+  }
+  function render(){
+    var st=state();
+    document.getElementById('pmChips').innerHTML=
+      '<span class="chip '+(auth==='allowedAlways'?'on':(auth==='denied'||auth==='restricted'?'bad':''))+'">authorization: '+auth+'</span>'+
+      '<span class="chip '+(st==='poweredOn'?'on':(st==='—'?'':'bad'))+'">state: '+st+'</span>'+
+      '<span class="chip '+(bt?'on':'bad')+'">蓝牙开关: '+(bt?'开':'关')+'</span>';
+    var hint='先点「初始化 Manager」';
+    if(dead) hint='App 已被终止。再点「初始化」模拟用户重新打开 App（冷启动，授权仍是 denied）';
+    else if(popup) hint='弹窗在屏上：等用户选择，别重复 init';
+    else if(st==='unauthorized') hint='引导用户去 设置→隐私→蓝牙 打开授权（App 内不会再弹窗）';
+    else if(st==='poweredOff') hint='提示用户打开蓝牙开关（授权没问题，是硬件关着）';
+    else if(st==='poweredOn') hint='可以扫描/连接了';
+    else if(inited) hint='等 didUpdateState 回调';
+    document.getElementById('pmHint').innerHTML='<span class="tag">当前该做什么</span>'+hint;
+  }
+  document.getElementById('pmInit').addEventListener('click',function(){
+    if(dead){ dead=false; inited=true; line('<span class="c">// 用户重新打开 App（冷启动）</span>'); line('<span class="api">CBCentralManager(delegate:queue:nil)</span>'); line('<span class="warn">didUpdateState → .unauthorized（授权仍被拒，不弹窗）</span>'); render(); return; }
+    if(popup){ line('<span class="c">// 弹窗已在屏上，重复 init 不会弹第二次</span>'); return; }
+    if(inited){ line('<span class="c">// 已初始化；state='+state()+'</span>'); return; }
+    inited=true;
+    line('<span class="api">CBCentralManager(delegate:queue:nil)</span>');
+    if(auth==='notDetermined'){ popup=true; line('<span class="ok">系统弹出蓝牙授权弹窗（首次，文案来自 Info.plist）</span>'); line('<span class="c">// didUpdateState → .unknown，等用户选择</span>'); }
+    else if(auth==='denied'){ line('<span class="warn">didUpdateState → .unauthorized（拒绝过，不再弹窗）</span>'); }
+    else { line('<span class="ok">didUpdateState → .'+(bt?'poweredOn':'poweredOff')+'</span>'); }
+    render();
+  });
+  document.getElementById('pmAllow').addEventListener('click',function(){
+    if(!popup){ line('<span class="c">// 现在没有弹窗</span>'); return; }
+    popup=false; auth='allowedAlways';
+    line('<span class="ok">用户点「允许」→ authorization = .allowedAlways</span>');
+    line('<span class="ok">didUpdateState → .'+(bt?'poweredOn':'poweredOff')+'</span>');
+    render();
+  });
+  document.getElementById('pmDeny').addEventListener('click',function(){
+    if(!popup){ line('<span class="c">// 现在没有弹窗</span>'); return; }
+    popup=false; auth='denied';
+    line('<span class="err">用户点「不允许」→ authorization = .denied</span>');
+    line('<span class="warn">didUpdateState → .unauthorized（之后只能去设置改）</span>');
+    render();
+  });
+  document.getElementById('pmBt').addEventListener('click',function(){
+    bt=!bt;
+    line('<span class="c">// 用户'+(bt?'打开':'关闭')+'蓝牙开关</span>');
+    if(!inited){ line('<span class="c">// App 还没初始化，无回调</span>'); }
+    else if(auth==='allowedAlways'){ line('<span class="ok">didUpdateState → .'+(bt?'poweredOn':'poweredOff')+'</span>'); if(!bt)line('<span class="warn">若有连接：didDisconnectPeripheral 带 error，连接全断</span>'); }
+    else { line('<span class="c">// state 仍是 unauthorized：授权问题优先于开关</span>'); }
+    render();
+  });
+  document.getElementById('pmRevoke').addEventListener('click',function(){
+    if(auth!=='allowedAlways'){ line('<span class="c">// 当前没有已授予的权限可撤销</span>'); return; }
+    auth='denied'; inited=false; dead=true;
+    line('<span class="err">用户在设置里关闭本 App 的蓝牙权限</span>');
+    line('<span class="err">系统直接终止 App（不是回调，是 SIGKILL）</span>');
+    render();
+  });
+  document.getElementById('pmScan').addEventListener('click',function(){
+    var st=state();
+    line('<span class="api">scanForPeripherals(withServices:…)</span>');
+    if(st==='poweredOn'){ line('<span class="ok">→ didDiscover 陆续到来</span>'); }
+    else { line('<span class="err">无结果。非 poweredOn 调 API：控制台 API MISUSE 警告</span>'); }
+    render();
+  });
+  render();
+})();
+
 const tocLinks=[...document.querySelectorAll('.toc a')];
 const secs=tocLinks.map(a=>document.getElementById(a.getAttribute('href').slice(1)));
 const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){tocLinks.forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+e.target.id));}});},{rootMargin:'-20% 0px -70% 0px'});
 secs.forEach(s=>s&&io.observe(s));
-const QUIZ=[{"q":"1. 何时才能扫描？","opts":[["state=.poweredOn",true,"对。"],["初始化后立即",false,"要等状态。"],["授权后不管状态",false,"还要 poweredOn。"]]},{"q":"2. 不声明 NSBluetoothAlwaysUsageDescription 会？","opts":[["崩溃/被拒",true,"对。"],["正常",false,"必须声明。"],["只影响后台",false,"前台也要。"]]},{"q":"3. unauthorized 与 poweredOff 处理？","opts":[["分别提示去设置授权 / 打开蓝牙",true,"对。"],["一样",false,"两件事。"],["都重启 App",false,"不必。"]]}];
+const QUIZ=[{"q":"1. 何时才能扫描？","opts":[["state=.poweredOn",true,"对。"],["初始化后立即",false,"要等状态。"],["授权后不管状态",false,"还要 poweredOn。"]]},{"q":"2. 不声明 NSBluetoothAlwaysUsageDescription 会？","opts":[["崩溃/被拒",true,"对。"],["正常",false,"必须声明。"],["只影响后台",false,"前台也要。"]]},{"q":"3. unauthorized 与 poweredOff 处理？","opts":[["分别提示去设置授权 / 打开蓝牙",true,"对。"],["一样",false,"两件事。"],["都重启 App",false,"不必。"]]},{"q":"4. 部署目标 iOS 12，plist 怎么写？","opts":[["Always 和 Peripheral 两个键都写",true,"对。旧系统读 Peripheral 键，新系统读 Always 键。"],["只写 Always",false,"iOS 12 不认识 Always 键。"],["只写 Peripheral",false,"iOS 13+ 运行时会缺 Always 键。"]]},{"q":"5. state=.resetting 该怎么办？","opts":[["等下一次状态回调再重连",true,"对。蓝牙栈短暂重启，期间连接已丢。"],["立刻重试扫描",false,"栈还没恢复，重试无效。"],["提示用户重启手机",false,"短暂态会自己恢复。"]]},{"q":"6. 用户拒绝授权后，App 内再 init 会？","opts":[["不会再弹窗，state=.unauthorized",true,"对。只能引导去系统设置修改。"],["再弹一次窗",false,"拒绝后 App 内无法再弹。"],["自动变已授权",false,"不可能。"]]}];
 let solved=0; const box=document.getElementById('quiz-box');
 QUIZ.forEach((item,qi)=>{
   const h=document.createElement('div'); h.className='quiz-q'; h.textContent=item.q; box.appendChild(h);

@@ -172,6 +172,10 @@
   .ctl-row label{display:inline-flex;align-items:center;gap:10px;}
   .ctl-row input[type=range]{accent-color:var(--coral);width:160px;}
   .ctl-row .chk input{accent-color:var(--coral);}
+  .api-lv{display:inline-block;font-family:ui-monospace,Consolas,monospace;font-size:11.5px;font-weight:800;color:#2F58A8;background:var(--blue-soft);border:1px solid var(--blue-line);border-radius:999px;padding:0 8px;white-space:nowrap;}
+  .refs{font-size:14px;}
+  .refs li{margin:7px 0;}
+  .refs .src{font-size:12px;color:var(--faint);}
 </style>
 </head>
 <body style="--coral:#E8590C;--coral-soft:#FBEADF;--coral-line:#F2C4A4">
@@ -200,74 +204,212 @@
 <main>
   <div class="crumb">蓝牙小课堂 / iOS 第十一课 · C11</div>
   <h1>综合实战：<em>温湿度计</em> App 与双机验收</h1>
-  <p class="lead">把 C1–C10 串成完整 App：扫描→连接→发现→订阅→解析温度湿度→后台恢复。这一课给流程清单与双机验收方法。</p>
-  <div class="meta"><span>平台：iOS/Swift</span><span>约 15 分钟</span><span>含交互演练</span><span>前置：C1–C10</span></div>
+  <p class="lead">把 C1–C10 串成完整 App：扫描→连接→发现→订阅→解析温度湿度→后台恢复。这一课给逐 API 流程清单、两种温度字节格式（sint16 与 IEEE-11073 FLOAT）的解码、工程收束清单与双机验收方法。</p>
+  <div class="meta"><span>平台：iOS/Swift</span><span>约 25 分钟</span><span>iOS 5 → 13</span><span>含两场交互演练</span><span>前置：C1–C10</span></div>
   <div class="journey">
-    <div class="j-step"><span class="n">1</span><span class="t">流程</span><span class="s">六步</span></div>
-    <div class="j-step"><span class="n">2</span><span class="t">解析</span><span class="s">小端符号</span></div>
-    <div class="j-step"><span class="n">3</span><span class="t">后台</span><span class="s">恢复</span></div>
+    <div class="j-step"><span class="n">1</span><span class="t">流程</span><span class="s">六步逐 API</span></div>
+    <div class="j-step"><span class="n">2</span><span class="t">解析</span><span class="s">sint16 / FLOAT</span></div>
+    <div class="j-step"><span class="n">3</span><span class="t">收束</span><span class="s">十课清单</span></div>
     <div class="j-step"><span class="n">4</span><span class="t">验收</span><span class="s">双机</span></div>
-    <div class="j-step"><span class="n">5</span><span class="t">动手</span><span class="s">走流程</span></div>
+    <div class="j-step"><span class="n">5</span><span class="t">动手</span><span class="s">两场演练</span></div>
   </div>
 
   <section id="flow">
     <h2><span class="no">第 1 步</span>扫描→连接→发现→订阅→解析→显示</h2>
-    
       <pre>scanForPeripherals([1809]) → didDiscover
 connect → didConnect → discoverServices → discoverCharacteristics
 setNotifyValue(true) → didUpdateValueFor → 解析 → UI</pre>
-      <div class="recap"><b>本步收束：</b>六步异步链，每步等回调。</div>
+    <table>
+      <tr><th>步</th><th>发起 API</th><th>等哪个回调</th><th>引入</th></tr>
+      <tr><td>① 扫描</td><td><code>scanForPeripherals(withServices:[CBUUID(string:"1809")], options:nil)</code></td><td>didDiscover（拿 peripheral + 广播）</td><td><span class="api-lv">iOS 5</span></td></tr>
+      <tr><td>② 连接</td><td><code>stopScan()</code> → <code>connect(p, options:nil)</code></td><td>didConnect（失败 didFailToConnect）</td><td><span class="api-lv">iOS 5</span></td></tr>
+      <tr><td>③ 发现</td><td><code>discoverServices(["1809"])</code> → <code>discoverCharacteristics(["2A6E"], for:)</code></td><td>didDiscoverServices → didDiscoverCharacteristics</td><td><span class="api-lv">iOS 5</span></td></tr>
+      <tr><td>④ 订阅</td><td><code>setNotifyValue(true, for: ch)</code></td><td>didUpdateNotificationStateFor（确认 isNotifying）</td><td><span class="api-lv">iOS 5</span></td></tr>
+      <tr><td>⑤ 解析</td><td>—（数据驱动）</td><td>didUpdateValueFor（ch.value 字节）</td><td><span class="api-lv">iOS 5</span></td></tr>
+      <tr><td>⑥ 显示</td><td>主线程更新 UI</td><td>—（+ C9 后台恢复兜底）</td><td>—</td></tr>
+    </table>
+    <figure>
+      <svg viewBox="0 0 760 200" role="img" aria-label="温湿度计 App 六步异步链">
+        <defs><marker id="ar11" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#2A9D8F"/></marker></defs>
+        <g font-size="12.5" font-weight="bold" text-anchor="middle">
+          <rect x="8" y="40" width="112" height="58" rx="11" fill="#E9F4F2" stroke="#BFE0DB"/><text x="64" y="64" fill="#1E7268">① 扫描</text><text x="64" y="82" font-size="10.5" font-weight="normal" fill="#4E8A80">didDiscover</text>
+          <rect x="132" y="40" width="112" height="58" rx="11" fill="#E9F4F2" stroke="#BFE0DB"/><text x="188" y="64" fill="#1E7268">② 连接</text><text x="188" y="82" font-size="10.5" font-weight="normal" fill="#4E8A80">didConnect</text>
+          <rect x="256" y="40" width="112" height="58" rx="11" fill="#E9F4F2" stroke="#BFE0DB"/><text x="312" y="64" fill="#1E7268">③ 发现</text><text x="312" y="82" font-size="10.5" font-weight="normal" fill="#4E8A80">两级 discover</text>
+          <rect x="380" y="40" width="112" height="58" rx="11" fill="#E9F4F2" stroke="#BFE0DB"/><text x="436" y="64" fill="#1E7268">④ 订阅</text><text x="436" y="82" font-size="10.5" font-weight="normal" fill="#4E8A80">isNotifying</text>
+          <rect x="504" y="40" width="112" height="58" rx="11" fill="#FBF3E4" stroke="#EDD9B4"/><text x="560" y="64" fill="#8A5510">⑤ 解析</text><text x="560" y="82" font-size="10.5" font-weight="normal" fill="#A8762A">小端+符号/FLOAT</text>
+          <rect x="628" y="40" width="112" height="58" rx="11" fill="#ECF1FB" stroke="#C9D8F2"/><text x="684" y="64" fill="#2F58A8">⑥ 显示</text><text x="684" y="82" font-size="10.5" font-weight="normal" fill="#5F7FB5">主线程 UI</text>
+        </g>
+        <g stroke="#2A9D8F" stroke-width="2" marker-end="url(#ar11)">
+          <line x1="120" y1="69" x2="130" y2="69"/><line x1="244" y1="69" x2="254" y2="69"/><line x1="368" y1="69" x2="378" y2="69"/><line x1="492" y1="69" x2="502" y2="69"/><line x1="616" y1="69" x2="626" y2="69"/>
+        </g>
+        <path d="M560,98 L560,140 L436,140 L436,100" fill="none" stroke="#A39B8E" stroke-width="1.6" marker-end="url(#ar11)"/>
+        <text x="498" y="132" text-anchor="middle" font-size="11" fill="#A39B8E">通知持续到达，⑤⑥ 循环</text>
+        <text x="380" y="180" text-anchor="middle" font-size="12" fill="#A39B8E">每步等回调再走下一步；断连走 C4 重连，后台走 C9 恢复</text>
+      </svg>
+      <figcaption>六步异步链：发起 API → 等回调 → 下一步；⑤⑥ 随通知循环。</figcaption>
+    </figure>
+    <ul>
+      <li><b>强引用 peripheral</b>（C1）：connect 前存进属性，否则对象释放连接即断。</li>
+      <li><b>状态机驱动</b>（C4）：idle→scanning→connecting→discovering→subscribing→streaming，断连回 idle 重连。</li>
+      <li><b>先查 properties</b>（C5）：2A6E 应带 .notify 或 .indicate，没有就降级 readValue 轮询。</li>
+    </ul>
+      <div class="recap"><b>本步收束：</b>六步异步链，每步等回调；状态机+强引用兜底。</div>
   </section>
 
   <section id="parse">
-    <h2><span class="no">第 2 步</span>温度 sint16 小端、湿度 uint16</h2>
-    
+    <h2><span class="no">第 2 步</span>温度 sint16 小端、湿度 uint16，标准 2A1C 是 FLOAT</h2>
       <pre>6A 09 → 0x096A=2410 ×0.01 = 24.10°C
 A8 11 → 0x11A8=4520 ×0.01 = 45.20%
 DA FD → sint16 -550 → -5.50°C</pre>
-      <div class="recap"><b>本步收束：</b>小端+温度带符号，两大坑。</div>
+    <table>
+      <tr><th>特征</th><th>所属标准服务</th><th>格式</th><th>分辨率</th></tr>
+      <tr><td><code>2A6E</code> Temperature</td><td>181A 环境感知</td><td>sint16 小端（带符号）</td><td>0.01 °C</td></tr>
+      <tr><td><code>2A6F</code> Humidity</td><td>181A 环境感知</td><td>uint16 小端</td><td>0.01 %</td></tr>
+      <tr><td><code>2A1C</code> Temperature Measurement</td><td>1809 健康温度计</td><td>IEEE-11073 FLOAT（3 字节尾数 + 1 字节指数）</td><td>10^指数</td></tr>
+    </table>
+    <pre><span class="cm">// sint16（2A6E）：小端拼整数，再补符号</span>
+let raw = Int(bitPattern: UInt(data[0]) | UInt(data[1]) &lt;&lt; 8)
+let signed = raw &gt; 32767 ? raw - 65536 : raw
+let celsius = Double(signed) / 100.0
+
+<span class="cm">// IEEE-11073 FLOAT（2A1C）：前 3 字节有符号尾数，第 4 字节有符号指数</span>
+var mant = Int(data[0]) | Int(data[1]) &lt;&lt; 8 | Int(data[2]) &lt;&lt; 16
+if mant &amp; 0x800000 != 0 { mant -= 0x1000000 }
+var exp = Int(data[3]); if exp &amp; 0x80 != 0 { exp -= 0x100 }
+let value = Double(mant) * pow(10.0, Double(exp))
+<span class="cm">// 6A 09 00 FE → 尾数 2410，指数 -2 → 24.10°C</span></pre>
+    <div class="note"><span class="tag">对表</span>标准配对是 1809→2A1C（FLOAT）、181A→2A6E/2A6F（整数×0.01）。本课演练用「1809 服务 + 2A6E 特征」是自制外设的简化组合，真实标准设备先按 UUID 对表选解码器；两种格式都要会。</div>
+      <div class="recap"><b>本步收束：</b>小端+温度带符号两大坑；2A1C 另走 FLOAT 解码。</div>
+  </section>
+
+  <section id="eng">
+    <h2><span class="no">第 3 步</span>工程收束：十课清单逐项落进 App</h2>
+    <table>
+      <tr><th>课</th><th>App 里的落点</th><th>不做的后果</th></tr>
+      <tr><td>C2 权限</td><td>Info.plist 两键 + 状态机门控</td><td>崩溃 / 静默失败</td></tr>
+      <tr><td>C3 标识</td><td>identifier 持久化 + retrieve 快连</td><td>每次全量扫描，慢</td></tr>
+      <tr><td>C4 重连</td><td>didDisconnect → pending connect / iOS 17 auto</td><td>断连后失联</td></tr>
+      <tr><td>C5 能力</td><td>按 properties 选订阅/读/写</td><td>对只读特征发写，报错</td></tr>
+      <tr><td>C6 读写</td><td>写走 maximumWriteValueLength 分片</td><td>长包静默截断</td></tr>
+      <tr><td>C7 订阅</td><td>重连后重放订阅清单</td><td>重连成功但没数据</td></tr>
+      <tr><td>C8 流控</td><td>canSendWriteWithoutResponse 阀门</td><td>高速写丢包</td></tr>
+      <tr><td>C9 后台</td><td>bluetooth-central + RestoreIdentifier + 业务持久化</td><td>后台/被杀后失联</td></tr>
+      <tr><td>C10 安全</td><td>安全错误引导配对；失配引导忽略设备</td><td>反复弹窗死循环</td></tr>
+    </table>
+      <div class="recap"><b>本步收束：</b>功能跑通只是起点，十课清单逐项落地才算工程完成。</div>
   </section>
 
   <section id="accept">
-    <h2><span class="no">第 3 步</span>第二部 iPhone 当外设验收</h2>
-    
+    <h2><span class="no">第 4 步</span>第二部 iPhone 当外设验收</h2>
       <p>第二部 iPhone 用 CBPeripheralManager 提供 1809 服务+2A6E 特征发通知；主力机连接订阅显示。改值看刷新；锁屏/切后台/终止各测恢复。记录双机日志对时间线。</p>
-      <div class="recap"><b>本步收束：</b>双机+多场景验收。</div>
+    <pre><span class="cm">// 外设机：CBPeripheralManager（iOS 6+）</span>
+let ch = CBMutableCharacteristic(type: CBUUID(string: "2A6E"),
+  properties: [.notify, .read], value: nil, permissions: [.readable])
+let svc = CBMutableService(type: CBUUID(string: "1809"), primary: true)
+svc.characteristics = [ch]
+pm.add(svc)
+pm.startAdvertising([CBAdvertisementDataServiceUUIDsKey: [svc.uuid]])
+<span class="cm">// 改值推送（2410 → 24.10°C，小端 6A 09）</span>
+pm.updateValue(Data([0x6A, 0x09]), for: ch, onSubscribedCentrals: nil)</pre>
+    <table>
+      <tr><th>验收场景</th><th>预期</th><th>依据课</th></tr>
+      <tr><td>前台改值</td><td>1 秒内 UI 刷新，数值与外设端一致</td><td>C7</td></tr>
+      <tr><td>负温度（DA FD）</td><td>显示 -5.50°C 而非 649.86°C</td><td>本课</td></tr>
+      <tr><td>锁屏 / 切后台</td><td>事件仍交付（本地通知/日志验证）</td><td>C9</td></tr>
+      <tr><td>系统终止后外设发通知</td><td>App 后台重启，willRestoreState 续订</td><td>C9</td></tr>
+      <tr><td>用户强退</td><td>不重启（预期行为，记录在案）</td><td>C9</td></tr>
+      <tr><td>外设关电再开</td><td>didDisconnect → 自动重连 → 重订阅 → 数据恢复</td><td>C4/C7</td></tr>
+      <tr><td>双机日志对时间线</td><td>外设 updateValue 时刻 ≈ 中心 didUpdateValueFor 时刻</td><td>—</td></tr>
+    </table>
+      <div class="recap"><b>本步收束：</b>双机+多场景验收；每行有预期有依据，测完打勾。</div>
   </section>
 
   <section id="lab">
-    <h2><span class="no">动手</span>勾选六步流程，累积链路日志</h2>
-    <p>按顺序勾选六步，右侧累积整条链路日志。勾完即走通一个温湿度计 App。</p>
+    <h2><span class="no">动手</span>两场演练：六步流程、解码工坊</h2>
+    <p>演练一按顺序勾选六步，右侧累积整条链路日志。勾完即走通一个温湿度计 App。演练二输入十六进制字节、选格式，亲手解码验证。</p>
     <div class="lab">
-      <div class="lab-head"><b>实战流程演练</b><span class="hint">六步异步链</span></div>
+      <div class="lab-head"><b>演练一 · 实战流程演练</b><span class="hint">六步异步链</span></div>
       
       <div class="lab-body single"><div><div id="steps11"></div><div class="stats"><div class="stat-box good"><b id="prog11">0 / 6</b><small>完成</small></div></div></div><div class="logcat"><div class="logcat-head"><span>链路日志</span><span>live</span></div><div class="logcat-body" id="log11"><span class="c">// 勾选步骤</span></div></div></div>
       <div class="lab-foot"><span class="hint">顺序：扫描→连接→发现→订阅→解析→显示</span></div>
     </div>
-    <div class="key"><span class="tag">看懂这场演练</span>六步异步链每步等回调；解析小端+温度带符号；后台恢复靠 bluetooth-central+restoration；双机+多场景验收对时间线。</div>
+    <div class="lab">
+      <div class="lab-head"><b>演练二 · 解码工坊</b><span class="hint">小端 + 符号 + FLOAT</span></div>
+      <div class="controls">
+        <div class="seg" id="fmt11"><button data-f="s16" class="on">2A6E sint16</button><button data-f="u16">2A6F uint16</button><button data-f="float">2A1C FLOAT</button></div>
+        <input id="hexIn" type="text" value="6A 09" spellcheck="false" style="font-family:ui-monospace,Consolas,monospace;font-size:13px;padding:6px 10px;border:1px solid #D8D2C6;border-radius:8px;width:150px;">
+        <button class="btn" id="decBtn" type="button">解码</button>
+      </div>
+      <div class="lab-body">
+        <div>
+          <div class="chips" id="decChips"></div>
+          <div class="key" id="decHint"><span class="tag">试试</span>6A 09 / DA FD / A8 11；FLOAT 试 6A 09 00 FE</div>
+        </div>
+        <div class="logcat"><div class="logcat-head"><span>解码过程</span><span>live</span></div><div class="logcat-body" id="decLog"><span class="c">// 输入字节，点解码</span></div></div>
+      </div>
+      <div class="lab-foot"><span class="hint">sint16 两字节、FLOAT 四字节；字节数不对会报错</span></div>
+    </div>
+    <div class="key"><span class="tag">看懂这两场演练</span>六步异步链每步等回调；解析小端+温度带符号（2A1C 走 FLOAT）；后台恢复靠 bluetooth-central+restoration；双机+多场景验收对时间线。</div>
   </section>
 
   <section id="quiz">
-    <h2><span class="no">自测</span>三个问题</h2>
+    <h2><span class="no">自测</span>六个问题</h2>
     <div class="card" id="quiz-box"></div>
     <p id="quiz-done" style="display:none;font-weight:700;color:#1E7268;">全对。iOS 板十一课完成。接下来鸿蒙 / Flutter / RN 板。</p>
   </section>
 
   <section id="map">
     <h2><span class="no">回顾</span>实战清单</h2>
-    <table><tr><th>步</th><th>API</th></tr><tr><td>扫描</td><td>scanForPeripherals</td></tr><tr><td>连接</td><td>connect</td></tr><tr><td>发现</td><td>discoverServices/Characteristics</td></tr><tr><td>订阅</td><td>setNotifyValue</td></tr><tr><td>解析</td><td>小端+符号</td></tr><tr><td>后台</td><td>bluetooth-central+restoration</td></tr></table>
-    <div class="note"><span class="tag">说明</span>本页为教学简化，工程细节以正文与官方规范为准；演练为模拟，非真实设备通信。</div>
-    <footer>青竹蓝牙学堂 · 蓝牙小课堂iOS 第十一课 · C11 · <a href="../index.html">回到学堂</a></footer>
+    <table>
+      <tr><th>步</th><th>API / 要点</th></tr>
+      <tr><td>扫描</td><td>scanForPeripherals 带 UUID（iOS 5）</td></tr>
+      <tr><td>连接</td><td>connect + 强引用 + 状态机（iOS 5）</td></tr>
+      <tr><td>发现</td><td>discoverServices → discoverCharacteristics 两级</td></tr>
+      <tr><td>订阅</td><td>setNotifyValue；重连后重放（iOS 5）</td></tr>
+      <tr><td>解析</td><td>2A6E sint16×0.01；2A1C IEEE-11073 FLOAT</td></tr>
+      <tr><td>后台</td><td>bluetooth-central + RestoreIdentifier（iOS 7）</td></tr>
+      <tr><td>验收</td><td>双机七场景，预期+依据逐行打勾</td></tr>
+    </table>
+    <div class="note"><span class="tag">说明</span>本页为教学整理，特征格式对照 Bluetooth SIG GATT Supplement；演练为模拟，非真实设备通信。</div>
+  </section>
+
+  <section id="refs">
+    <h2><span class="no">依据</span>参考链接</h2>
+    <div class="card refs">
+      <h3 style="margin-top:0;">Apple 官方文档</h3>
+      <ul>
+        <li><a href="https://developer.apple.com/documentation/corebluetooth" target="_blank" rel="noopener">Core Bluetooth 框架总览</a> <span class="src">— 中心/外设两条角色线</span></li>
+        <li><a href="https://developer.apple.com/documentation/corebluetooth/cbperipheralmanager" target="_blank" rel="noopener">CBPeripheralManager</a> <span class="src">— iOS 6；第二部 iPhone 当外设</span></li>
+        <li><a href="https://developer.apple.com/documentation/corebluetooth/cbperipheral/setnotifyvalue(_:for:)" target="_blank" rel="noopener">setNotifyValue(_:for:)</a> <span class="src">— iOS 5；订阅入口</span></li>
+      </ul>
+      <h3>规范与 UUID</h3>
+      <ul>
+        <li><a href="https://www.bluetooth.com/specifications/specs/gatt-specification-supplement/" target="_blank" rel="noopener">Bluetooth SIG · GATT Specification Supplement</a> <span class="src">— 2A6E/2A6F/2A1C 字段格式与分辨率</span></li>
+        <li><a href="https://developer.apple.com/documentation/corebluetooth/cbuuid" target="_blank" rel="noopener">CBUUID</a> <span class="src">— iOS 5；16 位短 UUID 写法</span></li>
+      </ul>
+      <h3>实测与深入</h3>
+      <ul>
+        <li><a href="https://punchthrough.com/core-bluetooth-guide/" target="_blank" rel="noopener">Punch Through · Core Bluetooth Ultimate Guide</a> <span class="src">— 完整 App 工程经验</span></li>
+        <li><a href="https://developer.apple.com/documentation/technotes/tn3115-bluetooth-state-restoration-app-relaunch-rules" target="_blank" rel="noopener">TN3115 · 状态恢复重启规则</a> <span class="src">— 验收「终止/强退」两行的判定依据</span></li>
+      </ul>
+    </div>
+    <div class="next-links">
+      <a href="10-pairing-security.html">← C10 配对与安全</a>
+      <a href="../index.html">回到学堂总览 →</a>
+    </div>
+    <footer>青竹蓝牙学堂 · 蓝牙小课堂 iOS 第十一课 · C11 · <a href="../index.html">回到学堂</a></footer>
   </section>
 </main>
 <aside class="toc" id="toc">
   <div class="toc-title">本课目录</div>
   <a href="#flow">六步流程</a>
-  <a href="#parse">解析</a>
+  <a href="#parse">字节解析</a>
+  <a href="#eng">工程收束</a>
   <a href="#accept">双机验收</a>
-  <a href="#lab">动手演练</a>
+  <a href="#lab">两场演练</a>
   <a href="#quiz">本课自测</a>
-  <a href="#map">回顾与速查</a>
+  <a href="#map">实战清单</a>
+  <a href="#refs">参考链接</a>
 </aside>
 </div>
 <script>
@@ -283,11 +425,65 @@ DA FD → sint16 -550 → -5.50°C</pre>
     w.appendChild(b);});
 })();
 
+// 演练二：解码工坊
+(function(){
+  var fmt='s16';
+  var input=document.getElementById('hexIn');
+  var log=document.getElementById('decLog');
+  var META={s16:{name:'2A6E sint16',unit:'°C',need:2},u16:{name:'2A6F uint16',unit:'%',need:2},float:{name:'2A1C FLOAT',unit:'°C',need:4}};
+  function line(html){ var d=document.createElement('div'); d.innerHTML=html; log.appendChild(d); }
+  function chips(ok,text){
+    document.getElementById('decChips').innerHTML=
+      '<span class="chip on">'+META[fmt].name+'</span>'+
+      '<span class="chip '+(ok?'on':'bad')+'">'+text+'</span>';
+  }
+  function decode(){
+    log.innerHTML='';
+    var m=META[fmt];
+    var parts=input.value.trim().split(/[\s,]+/).filter(Boolean);
+    var a=[];
+    for(var i=0;i<parts.length;i++){
+      var v=parseInt(parts[i],16);
+      if(!/^[0-9a-fA-F]{1,2}$/.test(parts[i])||isNaN(v)){ line('<span class="err">非法字节: '+parts[i]+'</span>'); chips(false,'输入有误'); return; }
+      a.push(v);
+    }
+    if(a.length!==m.need){ line('<span class="err">'+m.name+' 需要 '+m.need+' 字节，收到 '+a.length+'</span>'); chips(false,'字节数不对'); return; }
+    line('<span class="api">输入: '+parts.join(' ').toUpperCase()+'（小端）</span>');
+    var val;
+    if(fmt==='float'){
+      var mant=a[0]|(a[1]<<8)|(a[2]<<16);
+      var negM=(mant&0x800000)!==0;
+      if(negM)mant-=0x1000000;
+      var exp=a[3]; if(exp&0x80)exp-=0x100;
+      line('<span class="c">// 尾数(24bit'+(negM?' 有符号补码':'')+'): '+mant+'，指数(int8): '+exp+'</span>');
+      val=mant*Math.pow(10,exp);
+    }else{
+      var raw=a[0]|(a[1]<<8);
+      line('<span class="c">// 小端拼整数: 0x'+raw.toString(16).toUpperCase()+' = '+raw+'</span>');
+      if(fmt==='s16'&&raw>32767){ raw-=65536; line('<span class="warn">最高位为 1 → 补码转负: '+raw+'</span>'); }
+      val=raw/100;
+      line('<span class="c">// ×0.01 分辨率</span>');
+    }
+    line('<span class="ok">结果: '+(Math.round(val*100)/100)+' '+m.unit+'</span>');
+    chips(true,(Math.round(val*100)/100)+' '+m.unit);
+    document.getElementById('decHint').innerHTML='<span class="tag">'+(fmt==='float'?'FLOAT':'整数')+'</span>'+(fmt==='float'?'尾数×10^指数；FE 是 -2 的补码':'小端低位在前；sint16 最高位是符号');
+  }
+  document.querySelectorAll('#fmt11 button').forEach(function(b){b.addEventListener('click',function(){
+    document.querySelectorAll('#fmt11 button').forEach(function(x){x.classList.remove('on');});
+    b.classList.add('on'); fmt=b.getAttribute('data-f');
+    input.value=fmt==='float'?'6A 09 00 FE':(fmt==='u16'?'A8 11':'6A 09');
+    decode();
+  });});
+  document.getElementById('decBtn').addEventListener('click',decode);
+  input.addEventListener('keydown',function(e){ if(e.key==='Enter')decode(); });
+  decode();
+})();
+
 const tocLinks=[...document.querySelectorAll('.toc a')];
 const secs=tocLinks.map(a=>document.getElementById(a.getAttribute('href').slice(1)));
 const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){tocLinks.forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+e.target.id));}});},{rootMargin:'-20% 0px -70% 0px'});
 secs.forEach(s=>s&&io.observe(s));
-const QUIZ=[{"q":"1. 温度 DA FD 解析？","opts":[["sint16 -550 → -5.50°C",true,"对。"],["649.86°C",false,"符号错。"],["5.50°C",false,"是负。"]]},{"q":"2. 订阅用？","opts":[["setNotifyValue(true)",true,"对。"],["writeDescriptor",false,"Android。"],["readValue",false,"那是读。"]]},{"q":"3. 后台收事件靠？","opts":[["bluetooth-central 后台模式",true,"对。"],["常驻定时器",false,"非常驻。"],["前台-only",false,"后台可收。"]]}];
+const QUIZ=[{"q":"1. 温度 DA FD 解析？","opts":[["sint16 -550 → -5.50°C",true,"对。"],["649.86°C",false,"符号错。"],["5.50°C",false,"是负。"]]},{"q":"2. 订阅用？","opts":[["setNotifyValue(true)",true,"对。"],["writeDescriptor",false,"Android。"],["readValue",false,"那是读。"]]},{"q":"3. 后台收事件靠？","opts":[["bluetooth-central 后台模式",true,"对。"],["常驻定时器",false,"非常驻。"],["前台-only",false,"后台可收。"]]},{"q":"4. 标准 1809 服务的 2A1C 用什么格式？","opts":[["IEEE-11073 FLOAT（尾数+指数）",true,"对。3 字节尾数 + 1 字节指数。"],["sint16 ×0.01",false,"那是 181A 的 2A6E。"],["uint16",false,"湿度 2A6F 才是。"]]},{"q":"5. 2A6E/2A6F 属于哪个标准服务？","opts":[["181A 环境感知",true,"对。1809 健康温度计配的是 2A1C。"],["1809",false,"1809 配 2A1C。"],["180D 心率",false,"那是 2A37。"]]},{"q":"6. FLOAT 字节 6A 09 00 FE 解码？","opts":[["24.10°C",true,"对。尾数 2410 × 10^-2。"],["2410°C",false,"指数 FE=-2 没算。"],["-24.10°C",false,"尾数最高位是 0，为正。"]]}];
 let solved=0; const box=document.getElementById('quiz-box');
 QUIZ.forEach((item,qi)=>{
   const h=document.createElement('div'); h.className='quiz-q'; h.textContent=item.q; box.appendChild(h);

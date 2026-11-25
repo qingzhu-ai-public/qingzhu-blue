@@ -172,6 +172,10 @@
   .ctl-row label{display:inline-flex;align-items:center;gap:10px;}
   .ctl-row input[type=range]{accent-color:var(--coral);width:160px;}
   .ctl-row .chk input{accent-color:var(--coral);}
+  .api-lv{display:inline-block;font-family:ui-monospace,Consolas,monospace;font-size:11.5px;font-weight:800;color:#2F58A8;background:var(--blue-soft);border:1px solid var(--blue-line);border-radius:999px;padding:0 8px;white-space:nowrap;}
+  .refs{font-size:14px;}
+  .refs li{margin:7px 0;}
+  .refs .src{font-size:12px;color:var(--faint);}
 </style>
 </head>
 <body style="--coral:#E8590C;--coral-soft:#FBEADF;--coral-line:#F2C4A4">
@@ -200,71 +204,194 @@
 <main>
   <div class="crumb">蓝牙小课堂 / iOS 第八课 · C8</div>
   <h1>分包与流控：<em>maximumWriteValueLength</em></h1>
-  <p class="lead">iOS 用 maximumWriteValueLength(for:) 查单次能写多少，长数据自己切片。withoutResponse 连发靠 canSendWriteWithoutResponse + ready 回调流控。</p>
-  <div class="meta"><span>平台：iOS/Swift</span><span>约 12 分钟</span><span>含交互演练</span><span>前置：C6</span></div>
+  <p class="lead">iOS 用 maximumWriteValueLength(for:) 查单次能写多少，长数据自己切片。withoutResponse 连发靠 canSendWriteWithoutResponse + ready 回调流控。这一课把单包上限、业务分包协议、流控队列完整实现，以及 L2CAP 高吞吐替代路线讲清。</p>
+  <div class="meta"><span>平台：iOS/Swift</span><span>约 24 分钟</span><span>iOS 9 → 11</span><span>含两场交互演练</span><span>前置：C6</span></div>
   <div class="journey">
-    <div class="j-step"><span class="n">1</span><span class="t">长度</span><span class="s">maximumWrite</span></div>
+    <div class="j-step"><span class="n">1</span><span class="t">长度</span><span class="s">单包上限</span></div>
     <div class="j-step"><span class="n">2</span><span class="t">切片</span><span class="s">业务分包</span></div>
-    <div class="j-step"><span class="n">3</span><span class="t">流控</span><span class="s">ready 回调</span></div>
-    <div class="j-step"><span class="n">4</span><span class="t">动手</span><span class="s">算片</span></div>
+    <div class="j-step"><span class="n">3</span><span class="t">流控</span><span class="s">队列+ready</span></div>
+    <div class="j-step"><span class="n">4</span><span class="t">动手</span><span class="s">两场演练</span></div>
+    <div class="j-step"><span class="n">5</span><span class="t">自测</span><span class="s">六个问题</span></div>
   </div>
 
   <section id="len">
-    <h2><span class="no">第 1 步</span>maximumWriteValueLength(for:)</h2>
-    
-      <pre>let n = peripheral.maximumWriteValueLength(for: .withResponse)   // ≈ MTU-3
-let m = peripheral.maximumWriteValueLength(for: .withoutResponse) // ≈ MTU-3</pre>
-      <div class="recap"><b>本步收束：</b>按类型查单次上限，长数据切片。</div>
+    <h2><span class="no">第 1 步</span>maximumWriteValueLength(for:)：两种类型两个答案</h2>
+      <pre>let n = peripheral.maximumWriteValueLength(for: .withoutResponse) <span class="cm">// = MTU-3</span>
+let m = peripheral.maximumWriteValueLength(for: .withResponse)    <span class="cm">// 通常 512（系统长写）</span></pre>
+    <table>
+      <tr><th>API</th><th>返回</th><th>引入</th></tr>
+      <tr><td><code>maximumWriteValueLength(for: .withoutResponse)</code></td><td>ATT_MTU − 3；MTU 23 → 20B，MTU 247 → 244B</td><td><span class="api-lv">iOS 9</span></td></tr>
+      <tr><td><code>maximumWriteValueLength(for: .withResponse)</code></td><td>通常 512B；超出 MTU 部分系统自动 Prepare/Execute 长写</td><td><span class="api-lv">iOS 9</span></td></tr>
+      <tr><td><code>openL2CAPChannel(_:)</code> / <code>CBL2CAPChannel</code></td><td>流式通道：拿 InputStream/OutputStream，不再逐包切片</td><td><span class="api-lv">iOS 11</span></td></tr>
+    </table>
+    <ul>
+      <li><b>连接后再查</b>：MTU 在连接时由系统自动协商（iOS 无 requestMtu），同一设备不同连接结果可能不同；别缓存上次的值。</li>
+      <li><b>长写不是免费午餐</b>：withResponse 长写由多个 ATT 往返组成，吞吐低；大文件走无响应写+流控，或干脆 L2CAP。</li>
+      <li><b>L2CAP 通道</b>：设备固件要支持并公布 PSM；适合音频/固件升级等持续流，GATT 仍负责控制面。</li>
+    </ul>
+      <div class="recap"><b>本步收束：</b>按类型查单次上限（iOS 9）；无响应=MTU−3，带响应=512 长写；大流考虑 L2CAP（iOS 11）。</div>
   </section>
 
   <section id="chunk">
     <h2><span class="no">第 2 步</span>业务分包带编号序号</h2>
-    
       <p>跨多次写的记录要带消息编号+分片序号+长度，接收端重组要超时+去重（同 A7/B8）。iOS 不替你重组，业务协议自定。</p>
-      <div class="recap"><b>本步收束：</b>分包编号序号，重组超时去重。</div>
+    <pre><span class="cm">// 发送端：按无响应上限切片，每片带协议头</span>
+let chunkSize = p.maximumWriteValueLength(for: .withoutResponse) - 4  <span class="cm">// 留 4B 头</span>
+var seq = 0
+for start in stride(from: 0, to: payload.count, by: chunkSize) {
+  let piece = payload[start ..&lt; min(start+chunkSize, payload.count)]
+  var frame = Data([msgId, UInt8(seq), UInt8(total), UInt8(piece.count)])
+  frame.append(piece)
+  queue.append(frame)          <span class="cm">// 进流控队列，见第 3 步</span>
+  seq += 1
+}</pre>
+    <figure>
+      <svg viewBox="0 0 760 240" role="img" aria-label="分包与流控数据流">
+        <defs><marker id="ar8" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#A39B8E"/></marker></defs>
+        <rect x="10" y="30" width="150" height="70" rx="12" fill="#ECF1FB" stroke="#C9D8F2"/>
+        <text x="85" y="58" text-anchor="middle" font-size="13" font-weight="bold" fill="#2F58A8">1000B 业务记录</text>
+        <text x="85" y="78" text-anchor="middle" font-size="11" fill="#5F7FB5">msgId=7</text>
+        <rect x="200" y="30" width="150" height="70" rx="12" fill="#FBF3E4" stroke="#EDD9B4"/>
+        <text x="275" y="58" text-anchor="middle" font-size="13" font-weight="bold" fill="#8A5510">切片 + 协议头</text>
+        <text x="275" y="78" text-anchor="middle" font-size="11" fill="#A8762A">[msgId|seq|total|len]</text>
+        <rect x="390" y="30" width="150" height="70" rx="12" fill="#FBEDE9" stroke="#F0CFC6"/>
+        <text x="465" y="58" text-anchor="middle" font-size="13" font-weight="bold" fill="#B04A35">流控队列</text>
+        <text x="465" y="78" text-anchor="middle" font-size="11" fill="#C08475">canSend 为真才出队</text>
+        <rect x="580" y="30" width="170" height="70" rx="12" fill="#E9F4F2" stroke="#BFE0DB"/>
+        <text x="665" y="58" text-anchor="middle" font-size="13" font-weight="bold" fill="#1E7268">设备端重组</text>
+        <text x="665" y="78" text-anchor="middle" font-size="11" fill="#4E8A80">按 seq 拼 · 超时丢弃 · 去重</text>
+        <line x1="160" y1="65" x2="198" y2="65" stroke="#A39B8E" stroke-width="2" marker-end="url(#ar8)"/>
+        <line x1="350" y1="65" x2="388" y2="65" stroke="#A39B8E" stroke-width="2" marker-end="url(#ar8)"/>
+        <line x1="540" y1="65" x2="578" y2="65" stroke="#2A9D8F" stroke-width="2" marker-end="url(#ar8)"/>
+        <path d="M665,100 L665,160 L465,160 L465,102" fill="none" stroke="#C07A1E" stroke-width="2" marker-end="url(#ar8)"/>
+        <text x="565" y="152" text-anchor="middle" font-size="11.5" fill="#8A5510">缓冲腾空 → peripheralIsReady → 继续出队</text>
+        <text x="380" y="210" text-anchor="middle" font-size="12" fill="#A39B8E">无响应写不保证送达：关键记录要么设备回业务 ACK，要么改用 withResponse</text>
+      </svg>
+      <figcaption>切片进队列，canSend 放行才发；设备端按序号重组，超时去重兜底。</figcaption>
+    </figure>
+    <ul>
+      <li><b>协议头四件套</b>：消息编号（区分并发记录）、分片序号、总片数、本片长度——接收端缺一样都重组不稳。</li>
+      <li><b>重组三兜底</b>：超时（如 2 秒没集齐就丢）、去重（同 msgId 重复片）、乱序（按 seq 排，别假设按序到达）。</li>
+      <li><b>送达确认分层</b>：无响应写只保证「发出去了」；关键数据要设备回业务 ACK，或整条记录用 withResponse 写。</li>
+    </ul>
+      <div class="recap"><b>本步收束：</b>分包编号序号，重组超时去重；关键记录要业务 ACK。</div>
   </section>
 
   <section id="flow">
-    <h2><span class="no">第 3 步</span>withoutResponse 的 ready 流控</h2>
-    
+    <h2><span class="no">第 3 步</span>withoutResponse 的 ready 流控：完整实现</h2>
       <pre>while canSendWriteWithoutResponse { write(nextChunk, .withoutResponse) }
 // peripheralIsReadyToSendWriteWithoutResponse → 继续发</pre>
-      <div class="recap"><b>本步收束：</b>canSend 判断+ready 回调续发，防丢。</div>
+    <table>
+      <tr><th>API</th><th>作用</th><th>引入</th></tr>
+      <tr><td><code>canSendWriteWithoutResponse</code></td><td>发送缓冲有无空位（Bool）</td><td><span class="api-lv">iOS 11</span></td></tr>
+      <tr><td><code>peripheralIsReady(toSendWriteWithoutResponse:)</code></td><td>缓冲恢复空位时回调</td><td><span class="api-lv">配 iOS 11</span></td></tr>
+    </table>
+    <pre><span class="cm">// 工程完整版：队列 + pump + ready 续发 + 断线清理</span>
+var queue: [Data] = []
+func pump() {
+  while p.canSendWriteWithoutResponse, !queue.isEmpty {
+    p.writeValue(queue.removeFirst(), for: ch, type: .withoutResponse)
+  }
+}
+func peripheralIsReady(toSendWriteWithoutResponse p: CBPeripheral) { pump() }
+<span class="cm">// didDisconnect 时：queue.removeAll()——旧会话的片别再发到新会话</span></pre>
+    <ul>
+      <li><b>canSend=false 硬发的后果</b>：数据可能被静默丢弃，没有任何错误回调——「偶尔丢包」的头号来源。</li>
+      <li><b>ready 回调可能不来</b>：断线时缓冲作废，靠 didDisconnect 清队列；别死等。</li>
+      <li><b>iOS 11 以下</b>：没有流控 API，只能限速延时或改 withResponse；新项目最低版本建议 ≥ 11。</li>
+      <li><b>背压</b>：队列设上限（如 256 片），满了让业务层等待/丢弃，别无限堆内存。</li>
+    </ul>
+      <div class="recap"><b>本步收束：</b>canSend 判断+ready 回调续发，防丢；断线清队列；队列设上限。</div>
   </section>
 
   <section id="lab">
-    <h2><span class="no">动手</span>调 MTU 看单次上限与片数</h2>
-    <p>拖 MTU（模拟协商结果），看 withResponse 单次上限与 100B 记录要几片。</p>
+    <h2><span class="no">动手</span>两场演练：调 MTU 算片数、流控阀</h2>
+    <p>演练一拖 MTU（模拟协商结果），看无响应写单次上限与 100B 记录要几片。演练二亲手操作流控：入队、pump、缓冲满、ready 续发，体会硬发丢包。</p>
     <div class="lab">
-      <div class="lab-head"><b>分包演练</b><span class="hint">maximumWriteValueLength ≈ MTU-3</span></div>
+      <div class="lab-head"><b>演练一 · 分包演练</b><span class="hint">无响应上限 = MTU-3</span></div>
       <div class="controls"><div class="ctl"><label>MTU</label><input type="range" id="m8" min="23" max="517" value="23"><span class="val" id="m8v">23</span></div></div>
       <div class="lab-body"><div><div class="stats"><div class="stat-box"><b id="len8">–</b><small>单次上限</small></div><div class="stat-box good"><b id="n8">–</b><small>100B 片数</small></div></div></div><div class="logcat"><div class="logcat-head"><span>计算</span><span>live</span></div><div class="logcat-body" id="log8"></div></div></div>
       <div class="lab-foot"><span class="hint">MTU23→20B/片→5 片；MTU247→244B/片→1 片</span></div>
     </div>
-    <div class="key"><span class="tag">看懂这场演练</span>maximumWriteValueLength(for:) 查单次上限（≈MTU-3），长数据业务切片带编号序号；withoutResponse 用 canSend+ready 回调流控防丢。</div>
+    <div class="lab">
+      <div class="lab-head"><b>演练二 · 流控阀</b><span class="hint">缓冲容量 3；canSend=false 硬发会丢</span></div>
+      <div class="controls">
+        <button class="btn" id="fqEnq" type="button">入队 10 片</button>
+        <button class="btn teal" id="fqPump" type="button">pump() 发送</button>
+        <button class="btn ghost" id="fqForce" type="button">硬发（忽略 canSend）</button>
+        <button class="btn ghost" id="fqReady" type="button">peripheralIsReady</button>
+      </div>
+      <div class="lab-body">
+        <div>
+          <div class="chips" id="fqChips"></div>
+          <div class="stats">
+            <div class="stat-box good"><b id="fqSent">0</b><small>已发送</small></div>
+            <div class="stat-box"><b id="fqQueue">0</b><small>队列剩余</small></div>
+            <div class="stat-box bad"><b id="fqDrop">0</b><small>静默丢弃</small></div>
+          </div>
+        </div>
+        <div class="logcat"><div class="logcat-head"><span>流控日志</span><span>live</span></div><div class="logcat-body" id="fqLog"></div></div>
+      </div>
+      <div class="lab-foot"><span class="hint">pump 发满 3 片后 canSend=false；点 ready 腾空再 pump；试试硬发——丢了也没回调</span></div>
+    </div>
+    <div class="key"><span class="tag">看懂这两场演练</span>maximumWriteValueLength(for:) 查单次上限（无响应=MTU-3），长数据业务切片带编号序号；withoutResponse 用 canSend+ready 回调流控防丢，硬发就是静默丢包。</div>
   </section>
 
   <section id="quiz">
-    <h2><span class="no">自测</span>三个问题</h2>
+    <h2><span class="no">自测</span>六个问题</h2>
     <div class="card" id="quiz-box"></div>
     <p id="quiz-done" style="display:none;font-weight:700;color:#1E7268;">全对。下一课讲后台与状态恢复。</p>
   </section>
 
   <section id="map">
-    <h2><span class="no">回顾</span>速查</h2>
-    <table><tr><th>项</th><th>API</th></tr><tr><td>单次上限</td><td>maximumWriteValueLength</td></tr><tr><td>流控</td><td>canSend+ready</td></tr><tr><td>重组</td><td>业务自定</td></tr></table>
-    <div class="note"><span class="tag">说明</span>本页为教学简化，工程细节以正文与官方规范为准；演练为模拟，非真实设备通信。</div>
-    <footer>青竹蓝牙学堂 · 蓝牙小课堂iOS 第八课 · C8 · <a href="../index.html">回到学堂</a></footer>
+    <h2><span class="no">回顾</span>速查表</h2>
+    <table>
+      <tr><th>项</th><th>API / 策略</th></tr>
+      <tr><td>单次上限</td><td>maximumWriteValueLength(for:)（iOS 9）：MTU−3 / 512</td></tr>
+      <tr><td>流控</td><td>canSendWriteWithoutResponse + peripheralIsReady（iOS 11）</td></tr>
+      <tr><td>分包协议</td><td>msgId + seq + total + len；重组超时去重</td></tr>
+      <tr><td>关键记录送达</td><td>业务 ACK 或 withResponse</td></tr>
+      <tr><td>断线</td><td>清队列，旧片不发新会话</td></tr>
+      <tr><td>高吞吐流</td><td>CBL2CAPChannel（iOS 11），GATT 只做控制面</td></tr>
+    </table>
+    <div class="note"><span class="tag">说明</span>本页为教学整理，API 版本已对照 Apple 官方文档核实；演练为模拟，非真实设备通信。</div>
+  </section>
+
+  <section id="refs">
+    <h2><span class="no">依据</span>参考链接</h2>
+    <div class="card refs">
+      <h3 style="margin-top:0;">Apple 官方文档</h3>
+      <ul>
+        <li><a href="https://developer.apple.com/documentation/corebluetooth/cbperipheral/maximumwritevaluelength(for:)" target="_blank" rel="noopener">maximumWriteValueLength(for:)</a> <span class="src">— iOS 9；两种写类型的上限</span></li>
+        <li><a href="https://developer.apple.com/documentation/corebluetooth/cbperipheral/cansendwritewithoutresponse" target="_blank" rel="noopener">canSendWriteWithoutResponse</a> <span class="src">— iOS 11；流控开关</span></li>
+        <li><a href="https://developer.apple.com/documentation/corebluetooth/cbperipheraldelegate/peripheralisready(tosendwritewithoutresponse:)" target="_blank" rel="noopener">peripheralIsReady(toSendWriteWithoutResponse:)</a> <span class="src">— 缓冲恢复回调</span></li>
+      </ul>
+      <h3>CoreBluetooth API 参考</h3>
+      <ul>
+        <li><a href="https://developer.apple.com/documentation/corebluetooth/cbperipheral/openl2capchannel(_:)" target="_blank" rel="noopener">openL2CAPChannel(_:)</a> <span class="src">— iOS 11；流式通道入口</span></li>
+        <li><a href="https://developer.apple.com/documentation/corebluetooth/cbl2capchannel" target="_blank" rel="noopener">CBL2CAPChannel</a> <span class="src">— iOS 11；输入/输出流</span></li>
+      </ul>
+      <h3>实测与深入</h3>
+      <ul>
+        <li><a href="https://punchthrough.com/core-bluetooth-guide/" target="_blank" rel="noopener">Punch Through · Core Bluetooth Ultimate Guide</a> <span class="src">— 吞吐实测与无响应写丢包分析</span></li>
+      </ul>
+    </div>
+    <div class="next-links">
+      <a href="07-notify-indicate.html">← C7 通知与指示</a>
+      <a href="09-background-restoration.html">C9 后台与恢复 →</a>
+    </div>
+    <footer>青竹蓝牙学堂 · 蓝牙小课堂 iOS 第八课 · C8 · <a href="../index.html">回到学堂</a></footer>
   </section>
 </main>
 <aside class="toc" id="toc">
   <div class="toc-title">本课目录</div>
   <a href="#len">单次长度</a>
-  <a href="#chunk">切片</a>
-  <a href="#flow">流控</a>
-  <a href="#lab">动手演练</a>
+  <a href="#chunk">业务分包</a>
+  <a href="#flow">流控实现</a>
+  <a href="#lab">两场演练</a>
   <a href="#quiz">本课自测</a>
-  <a href="#map">回顾与速查</a>
+  <a href="#map">速查表</a>
+  <a href="#refs">参考链接</a>
 </aside>
 </div>
 <script>
@@ -277,11 +404,53 @@ let m = peripheral.maximumWriteValueLength(for: .withoutResponse) // ≈ MTU-3</
   document.getElementById('m8').addEventListener('input',calc);calc();
 })();
 
+// 演练二：流控阀（缓冲容量 3）
+(function(){
+  var buf=0, queue=0, sent=0, dropped=0;
+  var log=document.getElementById('fqLog');
+  function line(html){ var d=document.createElement('div'); d.innerHTML=html; log.appendChild(d); log.scrollTop=log.scrollHeight; }
+  function canSend(){ return buf<3; }
+  function render(){
+    document.getElementById('fqSent').textContent=sent;
+    document.getElementById('fqQueue').textContent=queue;
+    document.getElementById('fqDrop').textContent=dropped;
+    document.getElementById('fqChips').innerHTML=
+      '<span class="chip '+(canSend()?'on':'bad')+'">canSendWriteWithoutResponse: '+canSend()+'</span>'+
+      '<span class="chip '+(buf>=3?'bad':'on')+'">缓冲 '+buf+'/3</span>';
+  }
+  document.getElementById('fqEnq').addEventListener('click',function(){
+    queue+=10;
+    line('<span class="api">queue.append(10 片)</span> <span class="c">// 业务分包入队</span>');
+    render();
+  });
+  document.getElementById('fqPump').addEventListener('click',function(){
+    var n=0;
+    while(canSend()&&queue>0){ queue--; buf++; sent++; n++; }
+    if(n>0) line('<span class="api">pump()</span> <span class="ok">发出 '+n+' 片</span>');
+    else line('<span class="c">// pump：'+(queue===0?'队列空':'canSend=false，一片也发不出')+'</span>');
+    if(!canSend()) line('<span class="warn">缓冲满 → canSend=false，等 peripheralIsReady</span>');
+    render();
+  });
+  document.getElementById('fqForce').addEventListener('click',function(){
+    if(queue===0){ line('<span class="c">// 队列空，没片可发</span>'); return; }
+    queue--;
+    if(canSend()){ buf++; sent++; line('<span class="api">writeValue(.withoutResponse)</span> <span class="ok">碰巧有空位，发出去了</span>'); }
+    else { dropped++; line('<span class="api">writeValue(.withoutResponse)</span> <span class="err">缓冲满：静默丢弃，无任何回调！</span>'); }
+    render();
+  });
+  document.getElementById('fqReady').addEventListener('click',function(){
+    buf=0;
+    line('<span class="ok">peripheralIsReady(toSendWriteWithoutResponse:)</span> <span class="c">// 缓冲腾空，继续 pump</span>');
+    render();
+  });
+  render();
+})();
+
 const tocLinks=[...document.querySelectorAll('.toc a')];
 const secs=tocLinks.map(a=>document.getElementById(a.getAttribute('href').slice(1)));
 const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){tocLinks.forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+e.target.id));}});},{rootMargin:'-20% 0px -70% 0px'});
 secs.forEach(s=>s&&io.observe(s));
-const QUIZ=[{"q":"1. 查单次写上限用？","opts":[["maximumWriteValueLength(for:)",true,"对。"],["requestMtu",false,"Android。"],["MTU 固定 20",false,"可协商。"]]},{"q":"2. withoutResponse 连发靠什么流控？","opts":[["canSendWriteWithoutResponse + ready 回调",true,"对。"],["无脑连发",false,"会丢。"],["Thread.sleep",false,"堵线程。"]]},{"q":"3. iOS 替你重组分包吗？","opts":[["不，业务协议自定",true,"对。"],["替",false,"要自己重组。"],["系统自动",false,"不自动。"]]}];
+const QUIZ=[{"q":"1. 查单次写上限用？","opts":[["maximumWriteValueLength(for:)",true,"对。"],["requestMtu",false,"Android。"],["MTU 固定 20",false,"可协商。"]]},{"q":"2. withoutResponse 连发靠什么流控？","opts":[["canSendWriteWithoutResponse + ready 回调",true,"对。"],["无脑连发",false,"会丢。"],["Thread.sleep",false,"堵线程。"]]},{"q":"3. iOS 替你重组分包吗？","opts":[["不，业务协议自定",true,"对。"],["替",false,"要自己重组。"],["系统自动",false,"不自动。"]]},{"q":"4. MTU 247，1000 字节无响应写要几片？","opts":[["5 片（每片 244B）",true,"对。247−3=244，ceil(1000/244)=5。"],["4 片",false,"要减 3 字节头。"],["1 片",false,"那是 withResponse 长写。"]]},{"q":"5. canSend=false 时硬发会？","opts":[["可能静默丢弃，无错误回调",true,"对。这是无响应写丢包头号原因。"],["排队等空位",false,"系统不替你排队。"],["触发 didWriteValueFor 报错",false,"无响应写没有该回调。"]]},{"q":"6. 固件升级要持续高吞吐，更好的路线？","opts":[["L2CAP 通道（iOS 11）",true,"对。流式读写，GATT 只做控制面。"],["withResponse 长写",false,"多往返，吞吐低。"],["加大 MTU 到 1000",false,"ATT MTU 上限 517。"]]}];
 let solved=0; const box=document.getElementById('quiz-box');
 QUIZ.forEach((item,qi)=>{
   const h=document.createElement('div'); h.className='quiz-q'; h.textContent=item.q; box.appendChild(h);

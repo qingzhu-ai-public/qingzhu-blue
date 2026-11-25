@@ -172,6 +172,10 @@
   .ctl-row label{display:inline-flex;align-items:center;gap:10px;}
   .ctl-row input[type=range]{accent-color:var(--coral);width:160px;}
   .ctl-row .chk input{accent-color:var(--coral);}
+  .api-lv{display:inline-block;font-family:ui-monospace,Consolas,monospace;font-size:11.5px;font-weight:800;color:#2F58A8;background:var(--blue-soft);border:1px solid var(--blue-line);border-radius:999px;padding:0 8px;white-space:nowrap;}
+  .refs{font-size:14px;}
+  .refs li{margin:7px 0;}
+  .refs .src{font-size:12px;color:var(--faint);}
 </style>
 </head>
 <body style="--coral:#E8590C;--coral-soft:#FBEADF;--coral-line:#F2C4A4">
@@ -200,71 +204,208 @@
 <main>
   <div class="crumb">蓝牙小课堂 / iOS 第三课 · C3</div>
   <h1>扫描与过滤：<em>服务 UUID</em> 与 identifier 去重</h1>
-  <p class="lead">scanForPeripherals(withServices:) 用广播里的服务 UUID 缩小范围；peripheral.identifier 是系统给的 UUID，用它合并同一行。这一课讲过滤、去重与 AllowDuplicates。</p>
-  <div class="meta"><span>平台：iOS/Swift</span><span>约 12 分钟</span><span>含交互演练</span><span>前置：C2</span></div>
+  <p class="lead">scanForPeripherals(withServices:) 用广播里的服务 UUID 缩小范围；peripheral.identifier 是系统给的 UUID，用它合并同一行。这一课把扫描 API 族、广播字典的每个键、identifier 与 MAC 的本质区别、取回旧设备的两条路逐一讲清。学完你能回答：为什么加了过滤设备消失、为什么换台 iPhone  identifier 就变了、不扫描怎么拿回上次连过的设备。</p>
+  <div class="meta"><span>平台：iOS/Swift</span><span>约 25 分钟</span><span>iOS 5 → 13</span><span>含两场交互演练</span><span>前置：C2</span></div>
   <div class="journey">
     <div class="j-step"><span class="n">1</span><span class="t">过滤</span><span class="s">withServices</span></div>
-    <div class="j-step"><span class="n">2</span><span class="t">标识</span><span class="s">identifier</span></div>
-    <div class="j-step"><span class="n">3</span><span class="t">去重</span><span class="s">合并行</span></div>
-    <div class="j-step"><span class="n">4</span><span class="t">重复</span><span class="s">AllowDuplicates</span></div>
-    <div class="j-step"><span class="n">5</span><span class="t">动手</span><span class="s">看列表</span></div>
+    <div class="j-step"><span class="n">2</span><span class="t">标识</span><span class="s">identifier≠MAC</span></div>
+    <div class="j-step"><span class="n">3</span><span class="t">去重</span><span class="s">AllowDuplicates</span></div>
+    <div class="j-step"><span class="n">4</span><span class="t">取回</span><span class="s">retrieve 两条路</span></div>
+    <div class="j-step"><span class="n">5</span><span class="t">动手</span><span class="s">两场演练</span></div>
+    <div class="j-step"><span class="n">6</span><span class="t">自测</span><span class="s">六个问题</span></div>
   </div>
 
   <section id="filter">
-    <h2><span class="no">第 1 步</span>withServices 筛广播里声明的服务</h2>
-    
+    <h2><span class="no">第 1 步</span>扫描 API 族与 withServices 过滤</h2>
       <pre>central.scanForPeripherals(withServices: [CBUUID(string:"1809")], options: nil)</pre>
-      <div class="key"><span class="tag">重点</span>筛的是<b>广播中声明</b>的服务。设备支持某服务不代表每次广播都公布它；列表空先确认外设有广播该 UUID。后台扫描必须带服务 UUID。</div>
-      <div class="recap"><b>本步收束：</b>withServices 筛广播声明；后台必须带 UUID。</div>
+    <table>
+      <tr><th>API</th><th>作用</th><th>引入</th></tr>
+      <tr><td><code>scanForPeripherals(withServices:options:)</code></td><td>开扫；services 传 nil 全收（前台才行），传数组按广播声明过滤</td><td><span class="api-lv">iOS 5</span></td></tr>
+      <tr><td><code>stopScan()</code></td><td>停扫；找到目标就停，永远限时</td><td><span class="api-lv">iOS 5</span></td></tr>
+      <tr><td><code>isScanning</code></td><td>当前是否在扫（别重复 start）</td><td><span class="api-lv">iOS 9</span></td></tr>
+      <tr><td><code>centralManager(_:didDiscover:advertisementData:rssi:)</code></td><td>结果回调：设备对象 + 广播字典 + 信号</td><td><span class="api-lv">iOS 5</span></td></tr>
+    </table>
+    <figure>
+      <svg viewBox="0 0 760 240" role="img" aria-label="iOS 扫描数据流">
+        <defs><marker id="ar3" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#A39B8E"/></marker></defs>
+        <rect x="10" y="20" width="180" height="90" rx="12" fill="#ECF1FB" stroke="#C9D8F2"/>
+        <text x="100" y="48" text-anchor="middle" font-size="14" font-weight="bold" fill="#2F58A8">你的 App</text>
+        <text x="100" y="70" text-anchor="middle" font-size="11" fill="#5F7FB5">scanForPeripherals</text>
+        <text x="100" y="88" text-anchor="middle" font-size="11" fill="#5F7FB5">didDiscover 收结果</text>
+        <rect x="240" y="20" width="240" height="90" rx="12" fill="#FBF3E4" stroke="#EDD9B4"/>
+        <text x="360" y="48" text-anchor="middle" font-size="14" font-weight="bold" fill="#8A5510">系统蓝牙服务（bluetoothd）</text>
+        <text x="360" y="70" text-anchor="middle" font-size="11" fill="#A8762A">服务 UUID 过滤 · 默认去重</text>
+        <text x="360" y="88" text-anchor="middle" font-size="11" fill="#A8762A">分配 identifier · 后台规则</text>
+        <rect x="530" y="20" width="220" height="90" rx="12" fill="#E9F4F2" stroke="#BFE0DB"/>
+        <text x="640" y="48" text-anchor="middle" font-size="14" font-weight="bold" fill="#1E7268">控制器 / 无线电</text>
+        <text x="640" y="70" text-anchor="middle" font-size="11" fill="#4E8A80">收广播包（可能含扫描响应）</text>
+        <text x="640" y="88" text-anchor="middle" font-size="11" fill="#4E8A80">MAC 在这一层，App 看不到</text>
+        <line x1="190" y1="65" x2="238" y2="65" stroke="#A39B8E" stroke-width="2" marker-end="url(#ar3)"/>
+        <line x1="480" y1="65" x2="528" y2="65" stroke="#A39B8E" stroke-width="2" marker-end="url(#ar3)"/>
+        <path d="M640,110 L640,170 L100,170 L100,112" fill="none" stroke="#2A9D8F" stroke-width="2" marker-end="url(#ar3)"/>
+        <text x="370" y="162" text-anchor="middle" font-size="12" fill="#1E7268" font-weight="bold">didDiscover(peripheral, advertisementData, rssi)：过滤与去重后的结果</text>
+        <text x="370" y="215" text-anchor="middle" font-size="12" fill="#A39B8E">与 Android 不同：过滤/去重规则由系统统一执行，App 拿不到原始 MAC 与全部广播包</text>
+      </svg>
+      <figcaption>扫描请求交给系统蓝牙服务，过滤、去重、identifier 分配都在系统层完成。</figcaption>
+    </figure>
+    <h3>1.1 advertisementData 字典里有什么</h3>
+    <table>
+      <tr><th>键</th><th>值</th><th>引入</th></tr>
+      <tr><td><code>CBAdvertisementDataLocalNameKey</code></td><td>广播里的设备名（可能没有；连接后 peripheral.name 更可靠）</td><td><span class="api-lv">iOS 5</span></td></tr>
+      <tr><td><code>CBAdvertisementDataServiceUUIDsKey</code></td><td>广播声明的服务 UUID 数组（withServices 筛的就是它）</td><td><span class="api-lv">iOS 5</span></td></tr>
+      <tr><td><code>CBAdvertisementDataManufacturerDataKey</code></td><td>厂商数据 Data（前 2 字节厂商 ID，如 Apple 0x004C）</td><td><span class="api-lv">iOS 5</span></td></tr>
+      <tr><td><code>CBAdvertisementDataServiceDataKey</code></td><td>[CBUUID: Data] 服务数据（如 BTHome 0xFCD2）</td><td><span class="api-lv">iOS 5</span></td></tr>
+      <tr><td><code>CBAdvertisementDataTxPowerLevelKey</code></td><td>发射功率 NSNumber（测距辅助）</td><td><span class="api-lv">iOS 5</span></td></tr>
+      <tr><td><code>CBAdvertisementDataIsConnectable</code></td><td>是否可连接 NSNumber</td><td><span class="api-lv">iOS 7</span></td></tr>
+    </table>
+      <div class="key"><span class="tag">重点</span>筛的是<b>广播中声明</b>的服务。设备支持某服务不代表每次广播都公布它；列表空先确认外设有广播该 UUID。后台扫描必须带服务 UUID。与 Android 的 ScanFilter 相比，iOS 只开放「服务 UUID」这一种系统级过滤，按名字/厂商数据筛要自己在 didDiscover 里做。</div>
+      <div class="recap"><b>本步收束：</b>withServices 筛广播声明；后台必须带 UUID；其余过滤自己在回调里做。</div>
   </section>
 
   <section id="id">
     <h2><span class="no">第 2 步</span>identifier 合并同一行，不是 MAC</h2>
-    
       <p><code>peripheral.identifier</code> 是 CoreBluetooth 给的 UUID，用于本机记录/查找，<b>不是 MAC</b>。名字可重复、地址会轮换；跨手机识别用设备序列号等稳定业务标识。</p>
-      <div class="recap"><b>本步收束：</b>identifier 本机去重；跨手机用 stableId。</div>
+    <table>
+      <tr><th>标识</th><th>谁生成</th><th>跨 App</th><th>跨手机</th><th>能不能拿到</th></tr>
+      <tr><td>MAC 地址</td><td>外设厂商/随机轮换</td><td>—</td><td>—</td><td><b>iOS 拿不到</b>（隐私设计，Android 能拿）</td></tr>
+      <tr><td><code>peripheral.identifier</code></td><td>本机系统按设备生成</td><td>同一台手机上稳定</td><td><b>不同！</b>每台手机各给一个</td><td>UUID 属性直接读</td></tr>
+      <tr><td>产品 stableId（序列号等）</td><td>产品固件写进广播/特征</td><td>稳定</td><td>稳定</td><td>自己解析广播或读特征</td></tr>
+    </table>
+    <ul>
+      <li><b>本机长期关联</b>：存 identifier，下次用 <code>retrievePeripherals(withIdentifiers:)</code> 直接取回（见第 4 步），不用重扫。</li>
+      <li><b>跨手机/云端绑定</b>：identifier 换台手机就变，必须用产品自己的 stableId（序列号、出厂 ID）做主键。</li>
+      <li><b>identifier 也可能变</b>：手机还原网络设置、外设配对信息被清除等场景可能重新分配——取回后连不上要回退到扫描。</li>
+      <li><b>去重列表</b>：UI 列表按 identifier 合并行；名字会重名，RSSI 会波动，都不可靠。</li>
+    </ul>
+      <div class="recap"><b>本步收束：</b>identifier 本机去重；跨手机用 stableId；iOS 永远拿不到 MAC。</div>
   </section>
 
   <section id="dup">
     <h2><span class="no">第 3 步</span>默认合并，AllowDuplicates 才多次回调</h2>
-    
       <p>默认系统合并重复发现。要观察广播值/RSSI 多次更新，前台用 <code>CBCentralManagerScanOptionAllowDuplicatesKey:true</code>，仍按 identifier 合并列表，结束及时停扫。RSSI 只配观察不配身份。</p>
-      <div class="recap"><b>本步收束：</b>默认去重；AllowDuplicates 前台多次回调。</div>
+    <pre>central.scanForPeripherals(withServices: [CBUUID(string: <span class="str">"1809"</span>)],
+  options: [CBCentralManagerScanOptionAllowDuplicatesKey: <span class="num">true</span>])  <span class="cm">// iOS 5+</span></pre>
+    <table>
+      <tr><th>场景</th><th>AllowDuplicates=false（默认）</th><th>AllowDuplicates=true</th></tr>
+      <tr><td>前台扫描</td><td>每台设备只回调一次（系统合并）</td><td>每收到一包就回调，RSSI/广播值持续刷新</td></tr>
+      <tr><td>后台扫描</td><td>合并</td><td><b>被忽略</b>，仍合并（官方文档明确）</td></tr>
+      <tr><td>典型用途</td><td>找设备列表、连接</td><td>测距、观察 BTHome 广播传感器、找最强信号</td></tr>
+    </table>
+    <div class="key"><span class="tag">重点 · 省电</span>AllowDuplicates 会显著增加回调频率与耗电，只在需要连续观察时开，且<b>用完就 stopScan</b>。持续扫描广播传感器（如温度计广播模式）是它的正当用途；找设备连接则不需要。</div>
+      <div class="recap"><b>本步收束：</b>默认去重；AllowDuplicates 前台多次回调、后台被忽略；用完就停。</div>
+  </section>
+
+  <section id="retrieve">
+    <h2><span class="no">第 4 步</span>不扫描取回设备：retrieve 两条路</h2>
+    <p>扫描不是拿 CBPeripheral 的唯一途径。系统记得「见过/连过」的设备，两条 retrieve API 可以直接取回对象，比重新扫描快得多：</p>
+    <table>
+      <tr><th>API</th><th>取回什么</th><th>引入</th></tr>
+      <tr><td><code>retrievePeripherals(withIdentifiers: [UUID])</code></td><td>本机系统认识的设备（扫到过/连过/配对过），按你存的 identifier 取</td><td><span class="api-lv">iOS 7</span></td></tr>
+      <tr><td><code>retrieveConnectedPeripherals(withServices: [CBUUID])</code></td><td><b>当前已连到系统</b>的设备（包括被其他 App 或系统服务连着的），按服务筛</td><td><span class="api-lv">iOS 7</span></td></tr>
+    </table>
+    <pre><span class="cm">// 路线一：上次连过，存了 identifier</span>
+let known = central.retrievePeripherals(withIdentifiers: [savedUUID])
+if let p = known.first {
+  p.delegate = self
+  central.connect(p, options: nil)   <span class="cm">// 取回 ≠ 已连接，仍要 connect</span>
+}
+
+<span class="cm">// 路线二：设备可能已被别的 App 连到系统（如手环被健康 App 连着）</span>
+let connected = central.retrieveConnectedPeripherals(withServices: [CBUUID(string: <span class="str">"1809"</span>)])
+<span class="cm">// 返回的 peripheral 可能 state 已是 .connected，直接 discoverServices 即可</span></pre>
+    <ul>
+      <li><b>取回的对象要检查 state</b>：retrieveConnectedPeripherals 拿到的可能已经 .connected，跳过 connect 直接发现服务；retrievePeripherals 拿到的通常 .disconnected，要走 connect。</li>
+      <li><b>连不上要回退</b>：identifier 失效（换机/重置）时 retrieve 返回空数组或 connect 无响应，回退到扫描流程。</li>
+      <li><b>connect 无超时</b>：对不在场的设备 connect 会一直挂着（这是特性，见 C4），配合超时定时器自己管理。</li>
+    </ul>
+    <div class="recap"><b>本步收束：</b>存 identifier 用 retrievePeripherals 秒回；查系统级连接用 retrieveConnectedPeripherals；取回后按 state 决定 connect 与否。</div>
   </section>
 
   <section id="lab">
-    <h2><span class="no">动手</span>开关服务过滤与重复结果，看列表行为</h2>
-    <p>模拟两台设备广播（温度计带 1809、信标不带）。开关「按 1809 过滤」看信标消失；开关「AllowDuplicates」看温度计行 RSSI 是否多次刷新。</p>
+    <h2><span class="no">动手</span>两场演练：扫描列表行为、identifier vs MAC</h2>
+    <p>演练一模拟两台设备广播（温度计带 1809、信标不带）：开关「按 1809 过滤」看信标消失；开关「AllowDuplicates」看温度计行 RSSI 是否多次刷新。演练二切换场景，看 identifier 什么时候变、stableId 为什么稳。</p>
     <div class="lab">
-      <div class="lab-head"><b>扫描列表演练</b><span class="hint">identifier 合并行</span></div>
+      <div class="lab-head"><b>演练一 · 扫描列表演练</b><span class="hint">identifier 合并行</span></div>
       <div class="controls"><div class="seg"><button id="f3">按1809过滤</button><button id="d3">AllowDuplicates</button></div><button class="btn teal" id="scan3">扫描 3 秒</button></div>
       <div class="lab-body"><div><div class="chips" id="list3"></div></div><div class="logcat"><div class="logcat-head"><span>didDiscover</span><span>live</span></div><div class="logcat-body" id="log3"><span class="c">// 点扫描</span></div></div></div>
       <div class="lab-foot"><span class="hint">过滤后信标消失；AllowDuplicates 才多次刷新 RSSI</span></div>
     </div>
-    <div class="key"><span class="tag">看懂这场演练</span>withServices 筛广播声明的服务；identifier 合并同一行（非 MAC）；默认去重，AllowDuplicates 前台才多次回调。跨手机用 stableId。</div>
+    <div class="lab">
+      <div class="lab-head"><b>演练二 · identifier vs MAC vs stableId</b><span class="hint">同一台温度计，四种场景</span></div>
+      <div class="controls"><div class="seg" id="idseg"><button data-k="same" class="on">本机重扫</button><button data-k="other">换一台 iPhone</button><button data-k="reset">还原网络设置</button><button data-k="addr">外设地址轮换</button></div></div>
+      <div class="lab-body">
+        <div>
+          <table class="attr" id="idtable"></table>
+          <div class="chips" id="idchips"></div>
+        </div>
+        <div class="logcat"><div class="logcat-head"><span>结论</span><span>live</span></div><div class="logcat-body" id="idlog"></div></div>
+      </div>
+      <div class="lab-foot"><span class="hint">MAC 永远拿不到；identifier 换手机必变；只有产品 stableId 走到哪都认得</span></div>
+    </div>
+    <div class="key"><span class="tag">看懂这两场演练</span>withServices 筛广播声明的服务；identifier 合并同一行（非 MAC）；默认去重，AllowDuplicates 前台才多次回调。跨手机用 stableId——这是 iOS 与 Android 设备身份模型的最大差异。</div>
   </section>
 
   <section id="quiz">
-    <h2><span class="no">自测</span>三个问题</h2>
+    <h2><span class="no">自测</span>六个问题</h2>
     <div class="card" id="quiz-box"></div>
     <p id="quiz-done" style="display:none;font-weight:700;color:#1E7268;">全对。下一课讲连接与重连。</p>
   </section>
 
   <section id="map">
-    <h2><span class="no">回顾</span>速查</h2>
-    <table><tr><th>项</th><th>记住</th></tr><tr><td>withServices</td><td>筛广播声明</td></tr><tr><td>identifier</td><td>本机去重非MAC</td></tr><tr><td>AllowDuplicates</td><td>前台多次回调</td></tr></table>
-    <div class="note"><span class="tag">说明</span>本页为教学简化，工程细节以正文与官方规范为准；演练为模拟，非真实设备通信。</div>
-    <footer>青竹蓝牙学堂 · 蓝牙小课堂iOS 第三课 · C3 · <a href="../index.html">回到学堂</a></footer>
+    <h2><span class="no">回顾</span>速查表</h2>
+    <table>
+      <tr><th>场景</th><th>用什么</th></tr>
+      <tr><td>找某类设备</td><td>scanForPeripherals(withServices:)，UUID 必须真在广播里</td></tr>
+      <tr><td>按名字/厂商筛</td><td>自己在 didDiscover 里解析 advertisementData</td></tr>
+      <tr><td>列表去重</td><td>按 peripheral.identifier 合并行</td></tr>
+      <tr><td>持续观察 RSSI/广播值</td><td>AllowDuplicates:true（仅前台有效），用完停扫</td></tr>
+      <tr><td>取回连过的设备</td><td>retrievePeripherals(withIdentifiers:)（iOS 7）</td></tr>
+      <tr><td>查系统级已连设备</td><td>retrieveConnectedPeripherals(withServices:)（iOS 7）</td></tr>
+      <tr><td>跨手机绑定设备</td><td>产品 stableId，别用 identifier</td></tr>
+      <tr><td>后台扫描</td><td>必须带服务 UUID；AllowDuplicates 被忽略（详见 C9）</td></tr>
+    </table>
+    <div class="note"><span class="tag">说明</span>本页为教学整理，API 版本已对照 Apple 官方文档核实；演练为模拟，非真实设备通信。</div>
+  </section>
+
+  <section id="refs">
+    <h2><span class="no">依据</span>参考链接</h2>
+    <div class="card refs">
+      <h3 style="margin-top:0;">Apple 官方文档</h3>
+      <ul>
+        <li><a href="https://developer.apple.com/documentation/corebluetooth/cbcentralmanager/scanforperipherals(withservices:options:)" target="_blank" rel="noopener">scanForPeripherals(withServices:options:)</a> <span class="src">— iOS 5；过滤语义与后台规则</span></li>
+        <li><a href="https://developer.apple.com/documentation/corebluetooth/cbcentralmanagerscanoptionallowduplicateskey" target="_blank" rel="noopener">CBCentralManagerScanOptionAllowDuplicatesKey</a> <span class="src">— iOS 5；后台被忽略的官方说明</span></li>
+      </ul>
+      <h3>CoreBluetooth API 参考</h3>
+      <ul>
+        <li><a href="https://developer.apple.com/documentation/corebluetooth/cbcentralmanager/retrieveperipherals(withidentifiers:)" target="_blank" rel="noopener">retrievePeripherals(withIdentifiers:)</a> <span class="src">— iOS 7；按 identifier 取回</span></li>
+        <li><a href="https://developer.apple.com/documentation/corebluetooth/cbcentralmanager/retrieveconnectedperipherals(withservices:)" target="_blank" rel="noopener">retrieveConnectedPeripherals(withServices:)</a> <span class="src">— iOS 7；系统级已连设备</span></li>
+        <li><a href="https://developer.apple.com/documentation/corebluetooth/cbcentralmanager/isscanning" target="_blank" rel="noopener">isScanning</a> <span class="src">— iOS 9</span></li>
+        <li><a href="https://developer.apple.com/documentation/corebluetooth/cbperipheral" target="_blank" rel="noopener">CBPeripheral</a> <span class="src">— identifier 属性：系统生成的 per-device UUID</span></li>
+        <li><a href="https://developer.apple.com/documentation/corebluetooth/cbadvertisementdatalocalnamekey" target="_blank" rel="noopener">CBAdvertisementDataLocalNameKey</a> <span class="src">— 广播字典键族入口</span></li>
+      </ul>
+      <h3>实测与深入</h3>
+      <ul>
+        <li><a href="https://punchthrough.com/core-bluetooth-guide/" target="_blank" rel="noopener">Punch Through · Core Bluetooth Ultimate Guide</a> <span class="src">— identifier 与 MAC 区别、长期稳定性实测</span></li>
+        <li><a href="https://punchthrough.com/ios-ble-scanning-guide/" target="_blank" rel="noopener">Punch Through · iOS BLE Scanning Guide</a> <span class="src">— 服务过滤的坑：外设常只广播部分服务（2025-11）</span></li>
+      </ul>
+    </div>
+    <div class="next-links">
+      <a href="02-permission-state.html">← C2 权限与状态</a>
+      <a href="04-connect-reconnect.html">C4 连接与重连 →</a>
+    </div>
+    <footer>青竹蓝牙学堂 · 蓝牙小课堂 iOS 第三课 · C3 · <a href="../index.html">回到学堂</a></footer>
   </section>
 </main>
 <aside class="toc" id="toc">
   <div class="toc-title">本课目录</div>
-  <a href="#filter">服务过滤</a>
-  <a href="#id">identifier</a>
-  <a href="#dup">重复结果</a>
-  <a href="#lab">动手演练</a>
+  <a href="#filter">扫描 API 与过滤</a>
+  <a href="#id">identifier≠MAC</a>
+  <a href="#dup">AllowDuplicates</a>
+  <a href="#retrieve">retrieve 两条路</a>
+  <a href="#lab">两场演练</a>
   <a href="#quiz">本课自测</a>
-  <a href="#map">回顾与速查</a>
+  <a href="#map">速查表</a>
+  <a href="#refs">参考链接</a>
 </aside>
 </div>
 <script>
@@ -283,11 +424,34 @@
   });
 })();
 
+// 演练二：identifier vs MAC vs stableId
+(function(){
+  var D={
+    same:{id:'A1B2C3D4-…-0001',same:true,note:'本机重扫：identifier 不变，retrievePeripherals 直接取回',log:['<span class="ok">identifier 与上次一致</span>','<span class="c">// 本机长期关联：存 identifier 即可</span>']},
+    other:{id:'F9E8D7C6-…-7777',same:false,note:'换一台 iPhone：同一台温度计，系统分配了全新 identifier',log:['<span class="err">identifier 变了！跨手机不能靠它</span>','<span class="ok">stableId=SN-8821 没变 → 云端绑定用它</span>']},
+    reset:{id:'5C3D2E1F-…-9292',same:false,note:'还原网络设置：本机蓝牙缓存清空，identifier 可能重新分配',log:['<span class="warn">identifier 可能变化，取回失败要回退扫描</span>','<span class="ok">stableId 依旧稳定</span>']},
+    addr:{id:'A1B2C3D4-…-0001',same:true,note:'外设随机地址轮换：MAC 变了你也看不见，identifier 通常不变但不保证',log:['<span class="c">// MAC 在系统层轮换，App 无感知</span>','<span class="warn">identifier 通常稳定，但别当永久主键</span>']}
+  };
+  function show(k){
+    var d=D[k];
+    document.getElementById('idtable').innerHTML=
+      '<tr><td>外设 MAC</td><td>App 不可见（系统层）</td></tr>'+
+      '<tr class="'+(d.same?'hit':'miss')+'"><td>peripheral.identifier</td><td>'+d.id+'</td></tr>'+
+      '<tr class="hit"><td>产品 stableId</td><td>SN-8821（固件写死）</td></tr>';
+    document.getElementById('idchips').innerHTML=
+      '<span class="chip '+(d.same?'on':'bad')+'">identifier '+(d.same?'与上次一致':'与上次不同')+'</span>'+
+      '<span class="chip on">stableId 永远一致</span>';
+    document.getElementById('idlog').innerHTML='<div><span class="c">// '+d.note+'</span></div>'+d.log.map(function(s){return '<div>'+s+'</div>';}).join('');
+  }
+  document.querySelectorAll('#idseg button').forEach(function(b){b.addEventListener('click',function(){document.querySelectorAll('#idseg button').forEach(function(x){x.classList.remove('on');});b.classList.add('on');show(b.getAttribute('data-k'));});});
+  show('same');
+})();
+
 const tocLinks=[...document.querySelectorAll('.toc a')];
 const secs=tocLinks.map(a=>document.getElementById(a.getAttribute('href').slice(1)));
 const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){tocLinks.forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+e.target.id));}});},{rootMargin:'-20% 0px -70% 0px'});
 secs.forEach(s=>s&&io.observe(s));
-const QUIZ=[{"q":"1. identifier 是 MAC 吗？","opts":[["不是，是 CoreBluetooth 给的 UUID",true,"对。"],["是",false,"无需转硬件地址。"],["是序列号",false,"是系统标识。"]]},{"q":"2. 后台扫描必须？","opts":[["带服务 UUID",true,"对。"],["不带过滤",false,"后台受限。"],["AllowDuplicates",false,"后台不允许。"]]},{"q":"3. 默认重复发现会？","opts":[["合并",true,"对。AllowDuplicates 才多次。"],["多次回调",false,"默认合并。"],["丢弃",false,"合并成一行。"]]}];
+const QUIZ=[{"q":"1. identifier 是 MAC 吗？","opts":[["不是，是 CoreBluetooth 给的 UUID",true,"对。"],["是",false,"无需转硬件地址。"],["是序列号",false,"是系统标识。"]]},{"q":"2. 后台扫描必须？","opts":[["带服务 UUID",true,"对。"],["不带过滤",false,"后台受限。"],["AllowDuplicates",false,"后台不允许。"]]},{"q":"3. 默认重复发现会？","opts":[["合并",true,"对。AllowDuplicates 才多次。"],["多次回调",false,"默认合并。"],["丢弃",false,"合并成一行。"]]},{"q":"4. 不扫描，取回上次连过的设备用？","opts":[["retrievePeripherals(withIdentifiers:)",true,"对。iOS 7 引入，按存下的 identifier 直接取回对象。"],["只能重新扫描",false,"retrieve 两条路更快。"],["retrieveConnectedPeripherals",false,"那是查当前已连到系统的设备。"]]},{"q":"5. 手环被健康 App 连着，你的 App 想用它？","opts":[["retrieveConnectedPeripherals(withServices:)",true,"对。系统级连接可共享，取回后可能已是 .connected。"],["先让健康 App 断开",false,"不必，系统允许共享连接。"],["扫不到就没办法",false,"已连接设备不广播，但 retrieve 拿得到。"]]},{"q":"6. 后台扫描开 AllowDuplicates:true 会？","opts":[["被系统忽略，仍然合并",true,"对。官方文档明确后台忽略此选项。"],["照样每包回调",false,"只有前台有效。"],["扫描启动失败",false,"不报错，只是忽略。"]]}];
 let solved=0; const box=document.getElementById('quiz-box');
 QUIZ.forEach((item,qi)=>{
   const h=document.createElement('div'); h.className='quiz-q'; h.textContent=item.q; box.appendChild(h);

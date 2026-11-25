@@ -172,6 +172,10 @@
   .ctl-row label{display:inline-flex;align-items:center;gap:10px;}
   .ctl-row input[type=range]{accent-color:var(--coral);width:160px;}
   .ctl-row .chk input{accent-color:var(--coral);}
+  .api-lv{display:inline-block;font-family:ui-monospace,Consolas,monospace;font-size:11.5px;font-weight:800;color:#2F58A8;background:var(--blue-soft);border:1px solid var(--blue-line);border-radius:999px;padding:0 8px;white-space:nowrap;}
+  .refs{font-size:14px;}
+  .refs li{margin:7px 0;}
+  .refs .src{font-size:12px;color:var(--faint);}
 </style>
 </head>
 <body style="--coral:#E8590C;--coral-soft:#FBEADF;--coral-line:#F2C4A4">
@@ -200,73 +204,169 @@
 <main>
   <div class="crumb">蓝牙小课堂 / iOS 第七课 · C7</div>
   <h1>订阅与通知：<em>setNotifyValue</em> 一行顶两步</h1>
-  <p class="lead">iOS 的 setNotifyValue(true) 由系统帮你完成本地登记+写 CCCD 两步，比 Android 省心。这一课讲订阅、didUpdateNotificationState 与值回调。</p>
-  <div class="meta"><span>平台：iOS/Swift</span><span>约 11 分钟</span><span>含交互演练</span><span>前置：C6</span></div>
+  <p class="lead">iOS 的 setNotifyValue(true) 由系统帮你完成本地登记+写 CCCD 两步，比 Android 省心。这一课把订阅 API、notify 与 indicate 的 ATT 差异、订阅确认与验证、重连重订逐一讲清，并演练 iOS 一步与 Android 两步的完整对照。</p>
+  <div class="meta"><span>平台：iOS/Swift</span><span>约 22 分钟</span><span>iOS 5 → 6</span><span>含两场交互演练</span><span>前置：C6</span></div>
   <div class="journey">
-    <div class="j-step"><span class="n">1</span><span class="t">setNotify</span><span class="s">一行</span></div>
-    <div class="j-step"><span class="n">2</span><span class="t">状态</span><span class="s">didUpdateNotificationState</span></div>
-    <div class="j-step"><span class="n">3</span><span class="t">值</span><span class="s">didUpdateValueFor</span></div>
-    <div class="j-step"><span class="n">4</span><span class="t">对照</span><span class="s">Android 两步</span></div>
-    <div class="j-step"><span class="n">5</span><span class="t">动手</span><span class="s">开关</span></div>
+    <div class="j-step"><span class="n">1</span><span class="t">setNotify</span><span class="s">一行顶两步</span></div>
+    <div class="j-step"><span class="n">2</span><span class="t">值</span><span class="s">notify/indicate</span></div>
+    <div class="j-step"><span class="n">3</span><span class="t">验证</span><span class="s">确认与重订</span></div>
+    <div class="j-step"><span class="n">4</span><span class="t">动手</span><span class="s">两场演练</span></div>
+    <div class="j-step"><span class="n">5</span><span class="t">自测</span><span class="s">六个问题</span></div>
   </div>
 
   <section id="set">
     <h2><span class="no">第 1 步</span>setNotifyValue 系统代劳两步</h2>
-    
       <pre>peripheral.setNotifyValue(true, for: ch)
 // didUpdateNotificationStateFor → isNotifying
 // 值更新 → didUpdateValueFor</pre>
-      <div class="key"><span class="tag">重点 · 与 Android 对照</span>Android 要手动 setCharacteristicNotification + writeDescriptor(CCCD) 两步；<b>iOS setNotifyValue 一行</b>，系统代写 CCCD。但仍要等 didUpdateNotificationState 确认 isNotifying。</div>
-      <div class="recap"><b>本步收束：</b>iOS 一行订阅，等状态回调确认。</div>
+    <table>
+      <tr><th>API / 回调 / 字段</th><th>作用</th><th>引入</th></tr>
+      <tr><td><code>setNotifyValue(_:for:)</code></td><td>true 订阅 / false 退订；系统同时做本地登记 + 写远端 CCCD</td><td><span class="api-lv">iOS 5</span></td></tr>
+      <tr><td><code>peripheral(_:didUpdateNotificationStateFor:error:)</code></td><td>订阅/退订的结果确认</td><td><span class="api-lv">iOS 5</span></td></tr>
+      <tr><td><code>ch.isNotifying</code></td><td>当前订阅状态（确认回调后更新）</td><td><span class="api-lv">iOS 5</span></td></tr>
+      <tr><td><code>ch.properties</code> 的 .notify / .indicate</td><td>特征支持哪种推送；两者都没有则订阅必失败</td><td><span class="api-lv">iOS 5</span></td></tr>
+      <tr><td><code>.notifyEncryptionRequired</code> / <code>.indicateEncryptionRequired</code></td><td>订阅要求加密链路（触发配对，C10）</td><td><span class="api-lv">iOS 6</span></td></tr>
+    </table>
+    <figure>
+      <svg viewBox="0 0 760 240" role="img" aria-label="iOS 一步订阅 vs Android 两步">
+        <defs><marker id="ar7" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#A39B8E"/></marker></defs>
+        <rect x="10" y="20" width="180" height="70" rx="12" fill="#ECF1FB" stroke="#C9D8F2"/>
+        <text x="100" y="48" text-anchor="middle" font-size="13" font-weight="bold" fill="#2F58A8">setNotifyValue(true)</text>
+        <text x="100" y="68" text-anchor="middle" font-size="11" fill="#5F7FB5">App 只调这一行</text>
+        <rect x="250" y="20" width="230" height="70" rx="12" fill="#FBF3E4" stroke="#EDD9B4"/>
+        <text x="365" y="45" text-anchor="middle" font-size="13" font-weight="bold" fill="#8A5510">系统代劳两步</text>
+        <text x="365" y="64" text-anchor="middle" font-size="11" fill="#A8762A">① 本地登记回调路由</text>
+        <text x="365" y="81" text-anchor="middle" font-size="11" fill="#A8762A">② 写远端 CCCD(0x2902)=0x0001/0x0002</text>
+        <rect x="540" y="20" width="210" height="70" rx="12" fill="#E9F4F2" stroke="#BFE0DB"/>
+        <text x="645" y="48" text-anchor="middle" font-size="12" font-weight="bold" fill="#1E7268">didUpdateNotificationStateFor</text>
+        <text x="645" y="68" text-anchor="middle" font-size="11" fill="#4E8A80">isNotifying = true 才算成</text>
+        <line x1="190" y1="55" x2="248" y2="55" stroke="#A39B8E" stroke-width="2" marker-end="url(#ar7)"/>
+        <line x1="480" y1="55" x2="538" y2="55" stroke="#2A9D8F" stroke-width="2" marker-end="url(#ar7)"/>
+        <rect x="10" y="130" width="740" height="80" rx="12" fill="#F4F2EC" stroke="#E8E4DC"/>
+        <text x="380" y="158" text-anchor="middle" font-size="13" font-weight="bold" fill="#7A7267">对照 Android：两步都要 App 自己做</text>
+        <text x="380" y="180" text-anchor="middle" font-size="11.5" fill="#A39B8E">① setCharacteristicNotification(ch, true)（只管本地）→ ② writeDescriptor(CCCD, ENABLE_NOTIFICATION_VALUE)（等 onDescriptorWrite）</text>
+        <text x="380" y="199" text-anchor="middle" font-size="11.5" fill="#A39B8E">漏了第二步：本地以为订上了，设备根本不发——iOS 把这对坑封装掉了</text>
+      </svg>
+      <figcaption>iOS 一行 = Android 两步；但「等确认回调」这一步两个平台都不能省。</figcaption>
+    </figure>
+      <div class="key"><span class="tag">重点 · 与 Android 对照</span>Android 要手动 setCharacteristicNotification + writeDescriptor(CCCD) 两步；<b>iOS setNotifyValue 一行</b>，系统代写 CCCD。但仍要等 didUpdateNotificationState 确认 isNotifying。CCCD 值：notify=0x0001，indicate=0x0002，系统按特征能力自动选。</div>
+      <div class="recap"><b>本步收束：</b>iOS 一行订阅，等状态回调确认；CCCD 系统代写。</div>
   </section>
 
   <section id="value">
-    <h2><span class="no">第 2 步</span>didUpdateValueFor 收数据</h2>
-    
+    <h2><span class="no">第 2 步</span>didUpdateValueFor 收数据：notify 与 indicate</h2>
       <p>订阅后设备发通知/指示都走 didUpdateValueFor。Indicate 的确认由系统协议栈自动回。解码放工作线程，别堵 delegate。</p>
-      <div class="recap"><b>本步收束：</b>值走 didUpdateValueFor；Indicate 系统签收。</div>
+    <table>
+      <tr><th>推送方式</th><th>ATT 操作</th><th>确认</th><th>吞吐</th><th>典型用途</th></tr>
+      <tr><td>Notify</td><td>Handle Value Notification (0x1B)</td><td>无（可丢）</td><td>高，可连发</td><td>传感器流、UART 透传</td></tr>
+      <tr><td>Indicate</td><td>Handle Value Indication (0x1D)</td><td>逐条确认（系统自动回）</td><td>低，一问一答</td><td>关键测量值（如 2A6E 温度测量）</td></tr>
+    </table>
+    <ul>
+      <li><b>App 层无感</b>：两种方式都走同一个 didUpdateValueFor，ch.value 更新；indicate 的 ATT 确认由协议栈自动完成，不占你的代码。</li>
+      <li><b>indicate 慢是协议本质</b>：每条都要等对端确认才能发下一条，别指望它跑吞吐；要快选 notify 特征。</li>
+      <li><b>回调线程</b>：delegate 回调在初始化时指定的 queue（nil=主队列）；重解码/写文件丢到工作线程，别堵回调。</li>
+      <li><b>与读共用回调</b>：分不清是读回还是通知？看上下文（你刚发过 readValue 吗），或按 ch.uuid 分流。</li>
+    </ul>
+      <div class="recap"><b>本步收束：</b>值走 didUpdateValueFor；Indicate 系统签收；notify 快、indicate 稳。</div>
   </section>
 
   <section id="verify">
     <h2><span class="no">第 3 步</span>订阅后触发新读数验证</h2>
-    
       <p>别把 setNotifyValue 调用当成功，等 isNotifying 并触发新读数看是否收到、字节序对。重连重新 setNotifyValue。</p>
-      <div class="recap"><b>本步收束：</b>等 isNotifying+新读数验证；重连重订。</div>
+    <ul>
+      <li><b>三段验证</b>：① didUpdateNotificationStateFor 无 error 且 isNotifying=true；② 触发一次新测量（按设备按钮/发测量命令）；③ didUpdateValueFor 真收到、字节解码正确。</li>
+      <li><b>订阅失败常见 error</b>：insufficientAuthentication / insufficientEncryption → 特征要求加密链路，走配对（C10）；特征不支持 notify/indicate → 先查 properties。</li>
+      <li><b>重连必重订</b>：本地订阅登记随连接会话作废；即使设备端 CCCD 因配对保留，iOS 侧也要重新 setNotifyValue 才能收到回调。把「订阅清单」存在 App 里，didConnect 后逐条重放。</li>
+      <li><b>退订</b>：setNotifyValue(false, for:)，同样等状态回调；不再需要的订阅及时退，省设备端资源。</li>
+    </ul>
+      <div class="recap"><b>本步收束：</b>等 isNotifying+新读数验证；重连重订；失败先查 properties 与加密要求。</div>
   </section>
 
   <section id="lab">
-    <h2><span class="no">动手</span>开关订阅，看状态与值流</h2>
-    <p>点 setNotifyValue(true)，等 didUpdateNotificationState isNotifying 后点「设备发通知」看值流入。对比 Android 需两步。</p>
+    <h2><span class="no">动手</span>两场演练：订阅开关、iOS 一步 vs Android 两步</h2>
+    <p>演练一点 setNotifyValue(true)，等 isNotifying 后点「设备发通知」看值流入。演练二切换平台模式，亲手走一遍 Android 的两步订阅，体会漏第二步的后果。</p>
     <div class="lab">
-      <div class="lab-head"><b>订阅演练</b><span class="hint">setNotifyValue 一行</span></div>
+      <div class="lab-head"><b>演练一 · 订阅演练</b><span class="hint">setNotifyValue 一行</span></div>
       <div class="controls"><div class="seg"><button id="n7">setNotifyValue(true)</button></div><button class="btn teal" id="f7">设备发通知</button></div>
       <div class="lab-body"><div><div class="chips"><span class="chip" id="ns7">isNotifying</span><span class="chip" id="vf7">值流入</span></div></div><div class="logcat"><div class="logcat-head"><span>delegate</span><span>live</span></div><div class="logcat-body" id="log7"><span class="c">// setNotifyValue</span></div></div></div>
       <div class="lab-foot"><span class="hint">iOS 一行顶 Android 两步</span></div>
     </div>
-    <div class="key"><span class="tag">看懂这场演练</span>iOS setNotifyValue 系统代劳本地+CCCD 两步，等 didUpdateNotificationState 确认 isNotifying；值走 didUpdateValueFor。重连重新订阅。</div>
+    <div class="lab">
+      <div class="lab-head"><b>演练二 · setNotifyValue 一步 vs Android 两步</b><span class="hint">漏了 CCCD 那步会怎样</span></div>
+      <div class="controls">
+        <div class="seg" id="pf7"><button data-p="ios" class="on">iOS 模式</button><button data-p="and">Android 模式</button></div>
+        <button class="btn" id="sub7" type="button">订阅</button>
+        <button class="btn ghost" id="cccd7" type="button">writeDescriptor(CCCD)</button>
+        <button class="btn teal" id="push7" type="button">设备发通知</button>
+        <button class="btn ghost" id="re7" type="button">断开重连</button>
+      </div>
+      <div class="lab-body">
+        <div>
+          <div class="chips" id="chips7b"></div>
+          <div class="key" id="hint7b"><span class="tag">提示</span>点「订阅」开始</div>
+        </div>
+        <div class="logcat"><div class="logcat-head"><span>delegate</span><span>live</span></div><div class="logcat-body" id="log7b"></div></div>
+      </div>
+      <div class="lab-foot"><span class="hint">Android 模式只做第一步就点「设备发通知」→ 收不到；iOS 模式一键全搞定；重连后都要重订</span></div>
+    </div>
+    <div class="key"><span class="tag">看懂这两场演练</span>iOS setNotifyValue 系统代劳本地+CCCD 两步，等 didUpdateNotificationState 确认 isNotifying；值走 didUpdateValueFor。重连重新订阅——两个平台同一条铁律。</div>
   </section>
 
   <section id="quiz">
-    <h2><span class="no">自测</span>三个问题</h2>
+    <h2><span class="no">自测</span>六个问题</h2>
     <div class="card" id="quiz-box"></div>
     <p id="quiz-done" style="display:none;font-weight:700;color:#1E7268;">全对。下一课讲分包与流控。</p>
   </section>
 
   <section id="map">
-    <h2><span class="no">回顾</span>速查</h2>
-    <table><tr><th>iOS</th><th>Android 对照</th></tr><tr><td>setNotifyValue 一行</td><td>setNotify+writeDescriptor 两步</td></tr><tr><td>didUpdateNotificationState</td><td>onDescriptorWrite</td></tr><tr><td>didUpdateValueFor</td><td>onCharacteristicChanged</td></tr></table>
-    <div class="note"><span class="tag">说明</span>本页为教学简化，工程细节以正文与官方规范为准；演练为模拟，非真实设备通信。</div>
-    <footer>青竹蓝牙学堂 · 蓝牙小课堂iOS 第七课 · C7 · <a href="../index.html">回到学堂</a></footer>
+    <h2><span class="no">回顾</span>速查表</h2>
+    <table>
+      <tr><th>iOS</th><th>Android 对照</th></tr>
+      <tr><td>setNotifyValue 一行（iOS 5）</td><td>setNotify + writeDescriptor 两步</td></tr>
+      <tr><td>didUpdateNotificationStateFor</td><td>onDescriptorWrite</td></tr>
+      <tr><td>didUpdateValueFor</td><td>onCharacteristicChanged</td></tr>
+      <tr><td>ch.isNotifying</td><td>自己记订阅状态</td></tr>
+      <tr><td>indicate 确认系统自动回</td><td>同样栈自动回</td></tr>
+      <tr><td>重连重订（会话作废）</td><td>同样重订</td></tr>
+    </table>
+    <div class="note"><span class="tag">说明</span>本页为教学整理，API 版本已对照 Apple 官方文档核实；演练为模拟，非真实设备通信。</div>
+  </section>
+
+  <section id="refs">
+    <h2><span class="no">依据</span>参考链接</h2>
+    <div class="card refs">
+      <h3 style="margin-top:0;">Apple 官方文档</h3>
+      <ul>
+        <li><a href="https://developer.apple.com/documentation/corebluetooth/cbperipheral/setnotifyvalue(_:for:)" target="_blank" rel="noopener">setNotifyValue(_:for:)</a> <span class="src">— iOS 5；订阅/退订语义</span></li>
+        <li><a href="https://developer.apple.com/documentation/corebluetooth/cbperipheraldelegate/peripheral(_:didupdatenotificationstatefor:error:)" target="_blank" rel="noopener">peripheral(_:didUpdateNotificationStateFor:error:)</a> <span class="src">— 订阅确认回调</span></li>
+      </ul>
+      <h3>CoreBluetooth API 参考</h3>
+      <ul>
+        <li><a href="https://developer.apple.com/documentation/corebluetooth/cbcharacteristic" target="_blank" rel="noopener">CBCharacteristic</a> <span class="src">— isNotifying / value / properties</span></li>
+        <li><a href="https://developer.apple.com/documentation/corebluetooth/cbcharacteristicproperties/notifyencryptionrequired" target="_blank" rel="noopener">notifyEncryptionRequired</a> <span class="src">— iOS 6；加密订阅要求</span></li>
+        <li><a href="https://developer.apple.com/documentation/corebluetooth/cbperipheraldelegate/peripheral(_:didupdatevaluefor:error:)-1xyna" target="_blank" rel="noopener">peripheral(_:didUpdateValueFor:error:)</a> <span class="src">— 读与通知共用的值回调</span></li>
+      </ul>
+      <h3>实测与深入</h3>
+      <ul>
+        <li><a href="https://punchthrough.com/core-bluetooth-guide/" target="_blank" rel="noopener">Punch Through · Core Bluetooth Ultimate Guide</a> <span class="src">— 订阅与 CCCD 的工程细节</span></li>
+      </ul>
+    </div>
+    <div class="next-links">
+      <a href="06-read-write.html">← C6 读与写</a>
+      <a href="08-chunk-flowcontrol.html">C8 分包与流控 →</a>
+    </div>
+    <footer>青竹蓝牙学堂 · 蓝牙小课堂 iOS 第七课 · C7 · <a href="../index.html">回到学堂</a></footer>
   </section>
 </main>
 <aside class="toc" id="toc">
   <div class="toc-title">本课目录</div>
-  <a href="#set">setNotify</a>
-  <a href="#value">值回调</a>
-  <a href="#verify">验证</a>
-  <a href="#lab">动手演练</a>
+  <a href="#set">setNotify 一步</a>
+  <a href="#value">notify/indicate</a>
+  <a href="#verify">验证与重订</a>
+  <a href="#lab">两场演练</a>
   <a href="#quiz">本课自测</a>
-  <a href="#map">回顾与速查</a>
+  <a href="#map">速查表</a>
+  <a href="#refs">参考链接</a>
 </aside>
 </div>
 <script>
@@ -281,11 +381,72 @@
     document.getElementById('log7').innerHTML+='<div>'+(n?'<span class="ok">didUpdateValueFor 6A 09 → 24.10°C</span>':'<span class="err">未订阅，无值</span>')+'</div>';});
 })();
 
+// 演练二：iOS 一步 vs Android 两步
+(function(){
+  var mode='ios', local=false, cccd=false;
+  var log=document.getElementById('log7b');
+  function line(html){ var d=document.createElement('div'); d.innerHTML=html; log.appendChild(d); log.scrollTop=log.scrollHeight; }
+  function render(){
+    document.getElementById('chips7b').innerHTML=
+      '<span class="chip '+(mode==='ios'?'on':'')+'">'+(mode==='ios'?'iOS':'Android')+' 模式</span>'+
+      '<span class="chip '+(local?'on':'')+'">本地登记: '+(local?'✓':'✗')+'</span>'+
+      '<span class="chip '+(cccd?'on':'bad')+'">远端 CCCD: '+(cccd?'已开':'未开')+'</span>';
+    var hint='点「订阅」开始';
+    if(local&&cccd) hint='订阅完整，点「设备发通知」看值流入';
+    else if(local&&!cccd) hint='只做了本地登记！设备不知道你要订阅——点 writeDescriptor(CCCD) 补第二步';
+    document.getElementById('hint7b').innerHTML='<span class="tag">提示</span>'+hint;
+    document.getElementById('cccd7').style.display=(mode==='and')?'':'none';
+  }
+  document.querySelectorAll('#pf7 button').forEach(function(b){b.addEventListener('click',function(){
+    document.querySelectorAll('#pf7 button').forEach(function(x){x.classList.remove('on');});
+    b.classList.add('on'); mode=b.getAttribute('data-p'); local=false; cccd=false; log.innerHTML='';
+    line('<span class="c">// 切换到 '+(mode==='ios'?'iOS：setNotifyValue 一行封装':'Android：两步都要自己做')+'</span>');
+    render();
+  });});
+  document.getElementById('sub7').addEventListener('click',function(){
+    if(mode==='ios'){
+      local=true; cccd=true;
+      line('<span class="api">setNotifyValue(true, for: ch)</span>');
+      line('<span class="c">// 系统：① 本地登记 ② 写 CCCD=0x0001（notify）</span>');
+      line('<span class="ok">didUpdateNotificationStateFor → isNotifying=true</span>');
+    } else {
+      local=true;
+      line('<span class="api">setCharacteristicNotification(ch, true)</span>');
+      line('<span class="warn">// 只完成本地登记，设备端 CCCD 还是 0x0000</span>');
+    }
+    render();
+  });
+  document.getElementById('cccd7').addEventListener('click',function(){
+    if(mode==='ios'){ line('<span class="c">// iOS 没有这一步，系统已代写</span>'); return; }
+    if(!local){ line('<span class="warn">// 先做第一步 setCharacteristicNotification</span>'); return; }
+    cccd=true;
+    line('<span class="api">writeDescriptor(CCCD, ENABLE_NOTIFICATION_VALUE)</span>');
+    line('<span class="ok">onDescriptorWrite → 设备开始推送</span>');
+    render();
+  });
+  document.getElementById('push7').addEventListener('click',function(){
+    if(local&&cccd){
+      line(mode==='ios'?'<span class="ok">didUpdateValueFor → 24.10°C</span>':'<span class="ok">onCharacteristicChanged → 24.10°C</span>');
+    } else if(local&&!cccd){
+      line('<span class="err">设备没发：CCCD 未开。本地以为订上了，这就是 Android 漏第二步的坑</span>');
+    } else {
+      line('<span class="err">未订阅，无值</span>');
+    }
+  });
+  document.getElementById('re7').addEventListener('click',function(){
+    local=false; cccd=false;
+    line('<span class="warn">断开 → 重连：本地订阅登记作废（新会话）</span>');
+    line('<span class="c">// 两个平台都要重新订阅；iOS 重放 setNotifyValue 清单</span>');
+    render();
+  });
+  render();
+})();
+
 const tocLinks=[...document.querySelectorAll('.toc a')];
 const secs=tocLinks.map(a=>document.getElementById(a.getAttribute('href').slice(1)));
 const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){tocLinks.forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+e.target.id));}});},{rootMargin:'-20% 0px -70% 0px'});
 secs.forEach(s=>s&&io.observe(s));
-const QUIZ=[{"q":"1. iOS 订阅要手动写 CCCD 吗？","opts":[["不用，setNotifyValue 系统代劳",true,"对。"],["要",false,"Android 才手动。"],["要两步",false,"iOS 一行。"]]},{"q":"2. 订阅成功看哪个回调？","opts":[["didUpdateNotificationState isNotifying",true,"对。"],["didWriteValueFor",false,"那是写。"],["didConnect",false,"那是连接。"]]},{"q":"3. 通知值走哪个回调？","opts":[["didUpdateValueFor",true,"对。"],["didUpdateNotificationState",false,"那是状态。"],["didDiscover",false,"发现。"]]}];
+const QUIZ=[{"q":"1. iOS 订阅要手动写 CCCD 吗？","opts":[["不用，setNotifyValue 系统代劳",true,"对。"],["要",false,"Android 才手动。"],["要两步",false,"iOS 一行。"]]},{"q":"2. 订阅成功看哪个回调？","opts":[["didUpdateNotificationState isNotifying",true,"对。"],["didWriteValueFor",false,"那是写。"],["didConnect",false,"那是连接。"]]},{"q":"3. 通知值走哪个回调？","opts":[["didUpdateValueFor",true,"对。"],["didUpdateNotificationState",false,"那是状态。"],["didDiscover",false,"发现。"]]},{"q":"4. Indicate 的逐条确认谁回？","opts":[["系统协议栈自动回",true,"对。App 无感，但吞吐因此低于 notify。"],["App 手动回",false,"不用你写代码。"],["设备自己确认",false,"是中心侧确认。"]]},{"q":"5. 重连后 isNotifying=false，怎么办？","opts":[["重新 setNotifyValue（重放订阅清单）",true,"对。本地登记随会话作废。"],["沿用旧订阅",false,"收不到回调。"],["重启 App",false,"不必。"]]},{"q":"6. 订阅回调报 insufficientAuthentication？","opts":[["特征要求加密链路，先配对",true,"对。EncryptionRequired 位，见 C10。"],["特征不支持 notify",false,"那是另一种失败。"],["MTU 太小",false,"无关。"]]}];
 let solved=0; const box=document.getElementById('quiz-box');
 QUIZ.forEach((item,qi)=>{
   const h=document.createElement('div'); h.className='quiz-q'; h.textContent=item.q; box.appendChild(h);

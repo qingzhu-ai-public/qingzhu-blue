@@ -172,6 +172,10 @@
   .ctl-row label{display:inline-flex;align-items:center;gap:10px;}
   .ctl-row input[type=range]{accent-color:var(--coral);width:160px;}
   .ctl-row .chk input{accent-color:var(--coral);}
+  .api-lv{display:inline-block;font-family:ui-monospace,Consolas,monospace;font-size:11.5px;font-weight:800;color:#2F58A8;background:var(--blue-soft);border:1px solid var(--blue-line);border-radius:999px;padding:0 8px;white-space:nowrap;}
+  .refs{font-size:14px;}
+  .refs li{margin:7px 0;}
+  .refs .src{font-size:12px;color:var(--faint);}
 </style>
 </head>
 <body style="--coral:#E8590C;--coral-soft:#FBEADF;--coral-line:#F2C4A4">
@@ -200,74 +204,210 @@
 <main>
   <div class="crumb">蓝牙小课堂 / iOS 第四课 · C4</div>
   <h1>连接与重连：<em>didConnect</em> 与断开恢复</h1>
-  <p class="lead">connect 异步，等 didConnect；断开走 didDisconnectPeripheral。iOS 没有 autoConnect 参数，重连靠 retrievePeripherals + 再 connect。这一课讲连接生命周期与恢复。</p>
-  <div class="meta"><span>平台：iOS/Swift</span><span>约 12 分钟</span><span>含交互演练</span><span>前置：C3</span></div>
+  <p class="lead">connect 异步，等 didConnect；断开走 didDisconnectPeripheral。iOS 没有 Android 式 autoConnect 参数，但 connect 请求永不超时、设备出现即连——这本身就是重连机制。这一课把连接 API、四个连接状态、options 键、iOS 17 自动重连与连接事件监听逐一讲清。</p>
+  <div class="meta"><span>平台：iOS/Swift</span><span>约 25 分钟</span><span>iOS 5 → 17</span><span>含两场交互演练</span><span>前置：C3</span></div>
   <div class="journey">
-    <div class="j-step"><span class="n">1</span><span class="t">connect</span><span class="s">异步</span></div>
-    <div class="j-step"><span class="n">2</span><span class="t">回调</span><span class="s">didConnect</span></div>
-    <div class="j-step"><span class="n">3</span><span class="t">断开</span><span class="s">didDisconnect</span></div>
-    <div class="j-step"><span class="n">4</span><span class="t">重连</span><span class="s">retrieve</span></div>
-    <div class="j-step"><span class="n">5</span><span class="t">动手</span><span class="s">走状态</span></div>
+    <div class="j-step"><span class="n">1</span><span class="t">connect</span><span class="s">API 与状态</span></div>
+    <div class="j-step"><span class="n">2</span><span class="t">重连</span><span class="s">pending 与 17</span></div>
+    <div class="j-step"><span class="n">3</span><span class="t">取消</span><span class="s">cancel 与共享</span></div>
+    <div class="j-step"><span class="n">4</span><span class="t">动手</span><span class="s">两场演练</span></div>
+    <div class="j-step"><span class="n">5</span><span class="t">自测</span><span class="s">六个问题</span></div>
   </div>
 
   <section id="connect">
-    <h2><span class="no">第 1 步</span>connect 与三个回调</h2>
-    
+    <h2><span class="no">第 1 步</span>connect 与三个回调、四个状态</h2>
       <pre>central.connect(peripheral, options: nil)
 // didConnect / didFailToConnect / didDisconnectPeripheral</pre>
-      <div class="recap"><b>本步收束：</b>connect 异步，三回调分管成功/失败/断开。</div>
+    <table>
+      <tr><th>API / 回调</th><th>作用</th><th>引入</th></tr>
+      <tr><td><code>connect(_:options:)</code></td><td>发起连接；<b>请求永不超时</b>，设备不在场就一直挂着（pending）</td><td><span class="api-lv">iOS 5</span></td></tr>
+      <tr><td><code>cancelPeripheralConnection(_:)</code></td><td>取消活跃或挂起的连接请求</td><td><span class="api-lv">iOS 5</span></td></tr>
+      <tr><td><code>didConnect</code></td><td>连接建立；接下来才能 discoverServices</td><td><span class="api-lv">iOS 5</span></td></tr>
+      <tr><td><code>didFailToConnect(error:)</code></td><td>连接请求失败（如设备拒绝、参数非法）</td><td><span class="api-lv">iOS 5</span></td></tr>
+      <tr><td><code>didDisconnectPeripheral(error:)</code></td><td>断开；error 为 nil = 本地主动断，非 nil = 意外断（超时/链路丢失）</td><td><span class="api-lv">iOS 5</span></td></tr>
+    </table>
+    <h3>1.1 CBPeripheral.state：四个连接状态</h3>
+    <table>
+      <tr><th>状态</th><th>含义</th></tr>
+      <tr><td><code>.disconnected</code></td><td>没连（或已断开）</td></tr>
+      <tr><td><code>.connecting</code></td><td>connect 已发出，等 didConnect（可能挂很久）</td></tr>
+      <tr><td><code>.connected</code></td><td>已连接，可发现/读写</td></tr>
+      <tr><td><code>.disconnecting</code></td><td>cancel 已发出，等 didDisconnect</td></tr>
+    </table>
+    <p>枚举 <code>CBPeripheralState</code> 自 <span class="api-lv">iOS 7</span> 可用。retrieve 取回的对象先查 state：已 .connected 就跳过 connect 直接发现服务。</p>
+    <figure>
+      <svg viewBox="0 0 760 220" role="img" aria-label="连接状态机">
+        <defs><marker id="ar4" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#A39B8E"/></marker></defs>
+        <rect x="20" y="70" width="160" height="70" rx="12" fill="#F4F2EC" stroke="#E8E4DC"/>
+        <text x="100" y="100" text-anchor="middle" font-size="13" font-weight="bold" fill="#7A7267">.disconnected</text>
+        <text x="100" y="122" text-anchor="middle" font-size="11" fill="#A39B8E">起点 / 断开后</text>
+        <rect x="250" y="70" width="160" height="70" rx="12" fill="#FBF3E4" stroke="#EDD9B4"/>
+        <text x="330" y="100" text-anchor="middle" font-size="13" font-weight="bold" fill="#8A5510">.connecting</text>
+        <text x="330" y="122" text-anchor="middle" font-size="11" fill="#A8762A">pending：永不超时</text>
+        <rect x="480" y="70" width="160" height="70" rx="12" fill="#E9F4F2" stroke="#BFE0DB"/>
+        <text x="560" y="100" text-anchor="middle" font-size="13" font-weight="bold" fill="#1E7268">.connected</text>
+        <text x="560" y="122" text-anchor="middle" font-size="11" fill="#4E8A80">可发现 / 读写 / 订阅</text>
+        <line x1="180" y1="95" x2="248" y2="95" stroke="#A39B8E" stroke-width="2" marker-end="url(#ar4)"/>
+        <text x="214" y="85" text-anchor="middle" font-size="10.5" fill="#A39B8E">connect()</text>
+        <line x1="410" y1="95" x2="478" y2="95" stroke="#2A9D8F" stroke-width="2" marker-end="url(#ar4)"/>
+        <text x="444" y="85" text-anchor="middle" font-size="10.5" fill="#1E7268">didConnect</text>
+        <path d="M560,140 L560,185 L100,185 L100,142" fill="none" stroke="#D95B43" stroke-width="2" marker-end="url(#ar4)"/>
+        <text x="330" y="178" text-anchor="middle" font-size="11" fill="#B04A35">didDisconnectPeripheral(error:)：意外断带 error，主动断 error=nil</text>
+        <path d="M330,70 L330,30 L100,30 L100,68" fill="none" stroke="#A39B8E" stroke-width="1.6" marker-end="url(#ar4)"/>
+        <text x="215" y="22" text-anchor="middle" font-size="10.5" fill="#A39B8E">cancel（取消 pending）/ didFailToConnect</text>
+        <text x="660" y="105" text-anchor="middle" font-size="10.5" fill="#A39B8E">cancel →</text>
+        <text x="660" y="122" text-anchor="middle" font-size="10.5" fill="#A39B8E">.disconnecting</text>
+      </svg>
+      <figcaption>connect 后进入 connecting 并可能长期停留；断开一律回到 disconnected，重连要重新走全流程。</figcaption>
+    </figure>
+    <h3>1.2 connect options 键</h3>
+    <table>
+      <tr><th>键</th><th>作用</th><th>引入</th></tr>
+      <tr><td><code>CBConnectPeripheralOptionNotifyOnConnectionKey</code></td><td>App 被挂起时连接成功，系统弹提示横幅</td><td><span class="api-lv">iOS 6</span></td></tr>
+      <tr><td><code>CBConnectPeripheralOptionNotifyOnDisconnectionKey</code></td><td>App 被挂起时断开，系统弹提示横幅</td><td><span class="api-lv">iOS 5</span></td></tr>
+      <tr><td><code>CBConnectPeripheralOptionEnableAutoReconnect</code></td><td>链路掉线后<b>系统自动发起重连</b>（见第 2 步）</td><td><span class="api-lv">iOS 17</span></td></tr>
+    </table>
+      <div class="recap"><b>本步收束：</b>connect 异步，三回调分管成功/失败/断开；四状态查 peripheral.state；options 按需加。</div>
   </section>
 
   <section id="reconnect">
-    <h2><span class="no">第 2 步</span>retrievePeripherals 找回再 connect</h2>
-    
+    <h2><span class="no">第 2 步</span>重连三条路：pending connect、手动 retrieve、iOS 17 自动</h2>
       <pre>let known = central.retrievePeripherals(withIdentifiers: [savedID])
 known.forEach { central.connect($0) }
 // 或 retrieveConnectedPeripherals(withServices:) 找系统已连的</pre>
-      <div class="key"><span class="tag">重点 · 与 Android 对照</span>iOS 无 autoConnect 参数；长期重连靠保存 identifier + retrieve + connect，或监听 didDisconnect 后重试。重连当新会话重新发现/订阅。</div>
-      <div class="recap"><b>本步收束：</b>保存 identifier，retrieve 再 connect；重连新会话。</div>
+    <h3>2.1 路一：connect 本身就是「等设备出现」</h3>
+    <p>对不在场的设备 connect <b>不会失败也不会超时</b>：请求挂在系统里，设备一出现就自动完成连接并回调 didConnect。所以「断开后立刻再 connect」就是最简单的重连——不需要设备在场。这也是后台恢复（C9）的基础：挂起的 connect 能让系统在有事件时唤醒你的 App。</p>
+    <pre><span class="cm">// 意外断开 → 立即重挂 connect（设备回来即连上）</span>
+func centralManager(_ c: CBCentralManager, didDisconnectPeripheral p: CBPeripheral, error: Error?) {
+  clearLocalState(p)                 <span class="cm">// 清订阅登记，重连当新会话</span>
+  if error != nil { c.connect(p, options: nil) }   <span class="cm">// 意外断才自动重连</span>
+}</pre>
+    <h3>2.2 路二：冷启动用 retrieve 找回</h3>
+    <p>App 重启后对象没了，但系统还记得设备：存下 identifier，启动时 <code>retrievePeripherals(withIdentifiers:)</code> 取回再 connect；设备可能已被其他 App 连到系统，用 <code>retrieveConnectedPeripherals(withServices:)</code> 查（两者均 iOS 7，见 C3）。</p>
+    <h3>2.3 路三：iOS 17 系统级自动重连</h3>
+    <pre>central.connect(p, options: [CBConnectPeripheralOptionEnableAutoReconnect: <span class="num">true</span>])
+<span class="cm">// iOS 17+：链路掉线后系统自动重新发起连接，App 无需在 didDisconnect 里手动 connect</span></pre>
+    <h3>2.4 监听对端发起的连接/断开：registerForConnectionEvents</h3>
+    <pre><span class="cm">// iOS 13+：外设主动连上来 / 断开 / 订阅变化，也能收到回调（配合后台恢复很有用）</span>
+central.registerForConnectionEvents(options: [
+  .peripheralUUIDs: [savedUUID]      <span class="cm">// CBConnectionEventMatchingOption</span>
+])
+func centralManager(_ c: CBCentralManager, connectionEventDidOccur event: CBConnectionEvent,
+                    for p: CBPeripheral) {
+  <span class="cm">// .peerConnected / .peerDisconnected / .notifyEnabled …</span>
+}</pre>
+      <div class="key"><span class="tag">重点 · 与 Android 对照</span>Android 用 autoConnect=true 让栈慢慢等；iOS 的 connect 天生就是「无限等待」语义，没有 autoConnect 参数。iOS 17 的 EnableAutoReconnect 补上的是「掉线后系统自动再连」，对应 Android 栈层行为。<b>重连当新会话</b>：重新 discoverServices、重新 setNotifyValue，别沿用旧对象登记。</div>
+      <div class="recap"><b>本步收束：</b>保存 identifier，retrieve 再 connect；意外断立即重挂；iOS 17 可交给系统自动重连；重连新会话。</div>
   </section>
 
   <section id="cancel">
-    <h2><span class="no">第 3 步</span>cancelPeripheralConnection</h2>
-    
+    <h2><span class="no">第 3 步</span>cancelPeripheralConnection：取消与共享连接</h2>
       <p>主动断用 <code>cancelPeripheralConnection</code>；系统可能因共享连接不立即断。断开后清理本地订阅登记，重连重新核对。</p>
-      <div class="recap"><b>本步收束：</b>主动断 cancel；重连重新核对订阅。</div>
+    <pre>central.cancelPeripheralConnection(peripheral)
+<span class="cm">// 取消 pending 请求：立即生效，不再有 didConnect</span>
+<span class="cm">// 取消活跃连接：本地会话结束（didDisconnect error=nil），</span>
+<span class="cm">// 但若其他 App / 系统服务还连着同一设备，物理链路可能保持</span></pre>
+    <ul>
+      <li><b>cancel 是「本地退订」不是「强制断链」</b>：BLE 连接是系统级共享资源，别的 App 还在用就不会断物理链路。</li>
+      <li><b>挂起的 connect 也能 cancel</b>：不想要「设备出现即连」的语义时，记得取消，否则设备一出现你的 App 可能被后台唤醒。</li>
+      <li><b>断开后清理</b>：订阅登记、写队列、分包缓冲都按会话作废；重连后重新发现、重新订阅、重新核对 CCCD。</li>
+      <li><b>自己加超时</b>：connect 永不超时是特性也是坑——前台连接建议自配 10–15 秒定时器，超时 cancel 并提示用户。</li>
+    </ul>
+      <div class="recap"><b>本步收束：</b>主动断 cancel；共享链路可能不断；重连重新核对订阅；前台连接自配超时。</div>
   </section>
 
   <section id="lab">
-    <h2><span class="no">动手</span>走连接/断开/重连状态</h2>
-    <p>点 connect→didConnect→断开→retrieve 重连。观察重连后要重新发现/订阅。</p>
+    <h2><span class="no">动手</span>两场演练：连接状态机、pending connect 与自动重连</h2>
+    <p>演练一点 connect→didConnect→断开→retrieve 重连，观察重连后要重新发现/订阅。演练二亲手体验「connect 永不超时」：对不在场的设备挂 connect，快进时间，再让设备出现。</p>
     <div class="lab">
-      <div class="lab-head"><b>连接状态演练</b><span class="hint">retrieve + connect 重连</span></div>
+      <div class="lab-head"><b>演练一 · 连接状态演练</b><span class="hint">retrieve + connect 重连</span></div>
       <div class="controls"><div class="seg" id="c4"><button data-c="conn">connect</button><button data-c="ok">didConnect</button><button data-c="disc">didDisconnect</button><button data-c="re">retrieve+connect</button></div></div>
       <div class="lab-body"><div><div class="chips" id="st4"></div></div><div class="logcat"><div class="logcat-head"><span>delegate</span><span>live</span></div><div class="logcat-body" id="log4"><span class="c">// connect</span></div></div></div>
       <div class="lab-foot"><span class="hint">重连后需重新 discoverServices + setNotifyValue</span></div>
     </div>
-    <div class="key"><span class="tag">看懂这场演练</span>connect 异步三回调；iOS 无 autoConnect，重连靠保存 identifier+retrieve+connect。重连当新会话重新发现/订阅。</div>
+    <div class="lab">
+      <div class="lab-head"><b>演练二 · pending connect 永不超时</b><span class="hint">设备不在场也能挂连接请求</span></div>
+      <div class="controls">
+        <button class="btn" id="pcConn" type="button">connect（设备不在场）</button>
+        <button class="btn ghost" id="pcWait" type="button">快进 10 分钟</button>
+        <button class="btn teal" id="pcAppear" type="button">设备上电出现</button>
+        <button class="btn ghost" id="pcDrop" type="button">链路掉线（意外）</button>
+        <button class="btn ghost" id="pcCancel" type="button">cancel</button>
+        <div class="seg" id="pcAuto"><button data-a="0" class="on">iOS ≤16 手动</button><button data-a="1">iOS 17 autoReconnect</button></div>
+      </div>
+      <div class="lab-body">
+        <div>
+          <div class="chips" id="pcChips"></div>
+          <div class="stats">
+            <div class="stat-box"><b id="pcClock">0</b><small>已等待（分钟）</small></div>
+            <div class="stat-box good"><b id="pcState">disconnected</b><small>peripheral.state</small></div>
+          </div>
+        </div>
+        <div class="logcat"><div class="logcat-head"><span>delegate</span><span>live</span></div><div class="logcat-body" id="pcLog"></div></div>
+      </div>
+      <div class="lab-foot"><span class="hint">挂起 10 分钟也不失败；设备一出现立即 didConnect。切到 iOS 17 模式再断开，看系统自动重连</span></div>
+    </div>
+    <div class="key"><span class="tag">看懂这两场演练</span>connect 异步三回调；pending 请求永不超时是 iOS 重连与后台唤醒的基石。iOS 17 起掉线自动重连可交给系统；无论哪条路，重连都当新会话重新发现/订阅。</div>
   </section>
 
   <section id="quiz">
-    <h2><span class="no">自测</span>三个问题</h2>
+    <h2><span class="no">自测</span>六个问题</h2>
     <div class="card" id="quiz-box"></div>
     <p id="quiz-done" style="display:none;font-weight:700;color:#1E7268;">全对。下一课讲服务与特征发现。</p>
   </section>
 
   <section id="map">
-    <h2><span class="no">回顾</span>速查</h2>
-    <table><tr><th>操作</th><th>回调</th></tr><tr><td>connect</td><td>didConnect</td></tr><tr><td>失败</td><td>didFailToConnect</td></tr><tr><td>断开</td><td>didDisconnect</td></tr><tr><td>重连</td><td>retrieve+connect</td></tr></table>
-    <div class="note"><span class="tag">说明</span>本页为教学简化，工程细节以正文与官方规范为准；演练为模拟，非真实设备通信。</div>
-    <footer>青竹蓝牙学堂 · 蓝牙小课堂iOS 第四课 · C4 · <a href="../index.html">回到学堂</a></footer>
+    <h2><span class="no">回顾</span>速查表</h2>
+    <table>
+      <tr><th>场景</th><th>操作 / 回调</th></tr>
+      <tr><td>发起连接</td><td>connect(_:options:)，异步等 didConnect</td></tr>
+      <tr><td>连接失败 / 断开</td><td>didFailToConnect / didDisconnectPeripheral（error 区分主动与意外）</td></tr>
+      <tr><td>意外断重连</td><td>didDisconnect 里立即再 connect（pending 等设备回来）</td></tr>
+      <tr><td>冷启动找回设备</td><td>retrievePeripherals(withIdentifiers:) + connect</td></tr>
+      <tr><td>掉线系统自动重连</td><td>CBConnectPeripheralOptionEnableAutoReconnect（iOS 17）</td></tr>
+      <tr><td>对端主动连/断</td><td>registerForConnectionEvents（iOS 13）+ connectionEventDidOccur</td></tr>
+      <tr><td>主动断开 / 放弃等待</td><td>cancelPeripheralConnection；共享链路可能不断</td></tr>
+      <tr><td>前台连接超时</td><td>自配定时器，超时 cancel（系统不替你超时）</td></tr>
+    </table>
+    <div class="note"><span class="tag">说明</span>本页为教学整理，API 版本已对照 Apple 官方文档核实；演练为模拟，非真实设备通信。</div>
+  </section>
+
+  <section id="refs">
+    <h2><span class="no">依据</span>参考链接</h2>
+    <div class="card refs">
+      <h3 style="margin-top:0;">Apple 官方文档</h3>
+      <ul>
+        <li><a href="https://developer.apple.com/documentation/corebluetooth/cbcentralmanager/connect(_:options:)" target="_blank" rel="noopener">connect(_:options:)</a> <span class="src">— iOS 5；「请求不超时」的官方说明</span></li>
+        <li><a href="https://developer.apple.com/documentation/corebluetooth/cbcentralmanager/cancelperipheralconnection(_:)" target="_blank" rel="noopener">cancelPeripheralConnection(_:)</a> <span class="src">— iOS 5；取消活跃或挂起连接、共享连接语义</span></li>
+      </ul>
+      <h3>CoreBluetooth API 参考</h3>
+      <ul>
+        <li><a href="https://developer.apple.com/documentation/corebluetooth/cbperipheralstate" target="_blank" rel="noopener">CBPeripheralState</a> <span class="src">— iOS 7；四个连接状态</span></li>
+        <li><a href="https://developer.apple.com/documentation/corebluetooth/cbconnectperipheraloptionenableautoreconnect" target="_blank" rel="noopener">CBConnectPeripheralOptionEnableAutoReconnect</a> <span class="src">— iOS 17；系统自动重连</span></li>
+        <li><a href="https://developer.apple.com/documentation/corebluetooth/cbconnectperipheraloptionnotifyondisconnectionkey" target="_blank" rel="noopener">NotifyOnDisconnectionKey</a> / <a href="https://developer.apple.com/documentation/corebluetooth/cbconnectperipheraloptionnotifyonconnectionkey" target="_blank" rel="noopener">NotifyOnConnectionKey</a> <span class="src">— iOS 5 / 6；挂起时系统横幅</span></li>
+        <li><a href="https://developer.apple.com/documentation/corebluetooth/cbcentralmanager/registerforconnectionevents(options:)" target="_blank" rel="noopener">registerForConnectionEvents(options:)</a> <span class="src">— iOS 13；对端连接事件监听</span></li>
+      </ul>
+      <h3>实测与深入</h3>
+      <ul>
+        <li><a href="https://punchthrough.com/core-bluetooth-guide/" target="_blank" rel="noopener">Punch Through · Core Bluetooth Ultimate Guide</a> <span class="src">— 连接/重连工程策略与坑</span></li>
+      </ul>
+    </div>
+    <div class="next-links">
+      <a href="03-scan-identifier.html">← C3 扫描 identifier</a>
+      <a href="05-services-characteristics.html">C5 服务与特征 →</a>
+    </div>
+    <footer>青竹蓝牙学堂 · 蓝牙小课堂 iOS 第四课 · C4 · <a href="../index.html">回到学堂</a></footer>
   </section>
 </main>
 <aside class="toc" id="toc">
   <div class="toc-title">本课目录</div>
-  <a href="#connect">连接</a>
-  <a href="#reconnect">重连</a>
-  <a href="#cancel">取消</a>
-  <a href="#lab">动手演练</a>
+  <a href="#connect">连接 API 与状态</a>
+  <a href="#reconnect">重连三条路</a>
+  <a href="#cancel">取消与共享</a>
+  <a href="#lab">两场演练</a>
   <a href="#quiz">本课自测</a>
-  <a href="#map">回顾与速查</a>
+  <a href="#map">速查表</a>
+  <a href="#refs">参考链接</a>
 </aside>
 </div>
 <script>
@@ -280,11 +420,68 @@ known.forEach { central.connect($0) }
   paint();
 })();
 
+// 演练二：pending connect 永不超时
+(function(){
+  var pending=false, connected=false, auto=false, clock=0, present=false;
+  var log=document.getElementById('pcLog');
+  function line(html){ var d=document.createElement('div'); d.innerHTML='<span class="t">[t+'+clock+'min]</span> '+html; log.appendChild(d); log.scrollTop=log.scrollHeight; }
+  function st(){ return connected?'connected':(pending?'connecting':'disconnected'); }
+  function render(){
+    document.getElementById('pcClock').textContent=clock;
+    document.getElementById('pcState').textContent=st();
+    document.getElementById('pcChips').innerHTML=
+      '<span class="chip '+(pending?'on':'')+'">pending 请求: '+(pending?'挂起中':'无')+'</span>'+
+      '<span class="chip '+(present?'on':'bad')+'">设备: '+(present?'在场':'不在场')+'</span>'+
+      '<span class="chip '+(auto?'on':'')+'">'+(auto?'iOS 17 autoReconnect':'手动重连模式')+'</span>';
+  }
+  document.getElementById('pcConn').addEventListener('click',function(){
+    if(connected){ line('<span class="c">// 已连接</span>'); return; }
+    if(pending){ line('<span class="c">// 请求已在挂起，别重复 connect</span>'); return; }
+    pending=true;
+    line('<span class="api">connect(peripheral)</span> <span class="c">// 设备不在场：请求挂进系统，不报错</span>');
+    render();
+  });
+  document.getElementById('pcWait').addEventListener('click',function(){
+    clock+=10;
+    if(pending) line('<span class="c">// 10 分钟过去：仍 connecting，没有 didFailToConnect——永不超时</span>');
+    else if(connected) line('<span class="c">// 连接保持中</span>');
+    else line('<span class="c">// 时间流逝，无事发生</span>');
+    render();
+  });
+  document.getElementById('pcAppear').addEventListener('click',function(){
+    present=true;
+    if(pending){ pending=false; connected=true; line('<span class="ok">设备出现 → 系统完成连接 → didConnect</span>'); line('<span class="c">// 接下来 discoverServices + setNotifyValue（新会话）</span>'); }
+    else line('<span class="c">// 设备在场，但你没有挂 connect，不会自动连</span>');
+    render();
+  });
+  document.getElementById('pcDrop').addEventListener('click',function(){
+    if(!connected){ line('<span class="c">// 当前没有活跃连接</span>'); return; }
+    connected=false; present=false;
+    line('<span class="warn">didDisconnectPeripheral(error: 链路超时)</span>');
+    if(auto){ pending=true; line('<span class="ok">iOS 17：系统自动重挂 connect（又进入 pending）</span>'); }
+    else { line('<span class="c">// 手动模式：需要 App 自己在 didDisconnect 里再 connect</span>'); }
+    render();
+  });
+  document.getElementById('pcCancel').addEventListener('click',function(){
+    if(pending){ pending=false; line('<span class="api">cancelPeripheralConnection()</span> <span class="c">// pending 请求取消，设备出现也不再连</span>'); }
+    else if(connected){ connected=false; line('<span class="api">cancelPeripheralConnection()</span>'); line('<span class="ok">didDisconnectPeripheral(error: nil)</span> <span class="c">// 本地会话结束；共享链路可能保持</span>'); }
+    else line('<span class="c">// 没有可取消的连接</span>');
+    render();
+  });
+  document.querySelectorAll('#pcAuto button').forEach(function(b){b.addEventListener('click',function(){
+    document.querySelectorAll('#pcAuto button').forEach(function(x){x.classList.remove('on');});
+    b.classList.add('on'); auto=b.getAttribute('data-a')==='1';
+    line('<span class="c">// 切换：'+(auto?'connect options 加 EnableAutoReconnect:true（iOS 17+）':'传统手动重连')+'</span>');
+    render();
+  });});
+  render();
+})();
+
 const tocLinks=[...document.querySelectorAll('.toc a')];
 const secs=tocLinks.map(a=>document.getElementById(a.getAttribute('href').slice(1)));
 const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){tocLinks.forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+e.target.id));}});},{rootMargin:'-20% 0px -70% 0px'});
 secs.forEach(s=>s&&io.observe(s));
-const QUIZ=[{"q":"1. iOS 有 autoConnect 参数吗？","opts":[["没有，靠 retrieve+connect 重连",true,"对。"],["有",false,"Android 才有。"],["用 autoConnect=true",false,"iOS 无此参数。"]]},{"q":"2. 断开回调是？","opts":[["didDisconnectPeripheral",true,"对。"],["onConnectionStateChange",false,"Android。"],["didFailToConnect",false,"那是失败。"]]},{"q":"3. 重连后要？","opts":[["重新发现/订阅（新会话）",true,"对。"],["沿用旧订阅",false,"要重新核对。"],["不用管",false,"会丢数据。"]]}];
+const QUIZ=[{"q":"1. iOS 有 autoConnect 参数吗？","opts":[["没有，connect 本身就是无限等待语义",true,"对。iOS 17 另有 EnableAutoReconnect 选项管掉线自动重连。"],["有",false,"Android 才有。"],["用 autoConnect=true",false,"iOS 无此参数。"]]},{"q":"2. 断开回调是？","opts":[["didDisconnectPeripheral",true,"对。"],["onConnectionStateChange",false,"Android。"],["didFailToConnect",false,"那是失败。"]]},{"q":"3. 重连后要？","opts":[["重新发现/订阅（新会话）",true,"对。"],["沿用旧订阅",false,"要重新核对。"],["不用管",false,"会丢数据。"]]},{"q":"4. 对不在场的设备 connect 会？","opts":[["请求一直挂起，设备出现即连",true,"对。永不超时，这是重连与后台唤醒的基础。"],["立刻 didFailToConnect",false,"不会失败。"],["30 秒后超时",false,"系统不替你超时，前台要自配定时器。"]]},{"q":"5. iOS 17 的 EnableAutoReconnect 管什么？","opts":[["链路掉线后系统自动重新发起连接",true,"对。App 不必在 didDisconnect 里手动 connect。"],["首次连接更快",false,"与首连速度无关。"],["后台扫描",false,"那是 C9 的话题。"]]},{"q":"6. cancel 后物理链路一定断吗？","opts":[["不一定，其他 App 共享连接时保持",true,"对。cancel 结束的是你的本地会话。"],["一定断",false,"BLE 连接是系统级共享资源。"],["一定不断",false,"没人共享时就断。"]]}];
 let solved=0; const box=document.getElementById('quiz-box');
 QUIZ.forEach((item,qi)=>{
   const h=document.createElement('div'); h.className='quiz-q'; h.textContent=item.q; box.appendChild(h);

@@ -172,6 +172,10 @@
   .ctl-row label{display:inline-flex;align-items:center;gap:10px;}
   .ctl-row input[type=range]{accent-color:var(--coral);width:160px;}
   .ctl-row .chk input{accent-color:var(--coral);}
+  .api-lv{display:inline-block;font-family:ui-monospace,Consolas,monospace;font-size:11.5px;font-weight:800;color:#2F58A8;background:var(--blue-soft);border:1px solid var(--blue-line);border-radius:999px;padding:0 8px;white-space:nowrap;}
+  .refs{font-size:14px;}
+  .refs li{margin:7px 0;}
+  .refs .src{font-size:12px;color:var(--faint);}
 </style>
 </head>
 <body style="--coral:#E8590C;--coral-soft:#FBEADF;--coral-line:#F2C4A4">
@@ -200,73 +204,199 @@
 <main>
   <div class="crumb">蓝牙小课堂 / iOS 第六课 · C6</div>
   <h1>读与写：<em>withResponse</em> 的取舍</h1>
-  <p class="lead">readValue 走 didUpdateValueFor；writeValue 分 withResponse（等 didWriteValueFor）与 withoutResponse（无逐条确认）。这一课讲两种写与成功分层。</p>
-  <div class="meta"><span>平台：iOS/Swift</span><span>约 11 分钟</span><span>含交互演练</span><span>前置：C5</span></div>
+  <p class="lead">readValue 走 didUpdateValueFor；writeValue 分 withResponse（等 didWriteValueFor）与 withoutResponse（无逐条确认）。这一课把读写 API、两种写的 ATT 本质、MTU 与 maximumWriteValueLength、无响应写流控逐一讲清。学完你能回答：一次最多写多少字节、长数据谁来分包、连发无响应写为什么不丢。</p>
+  <div class="meta"><span>平台：iOS/Swift</span><span>约 24 分钟</span><span>iOS 5 → 11</span><span>含两场交互演练</span><span>前置：C5</span></div>
   <div class="journey">
     <div class="j-step"><span class="n">1</span><span class="t">读</span><span class="s">readValue</span></div>
-    <div class="j-step"><span class="n">2</span><span class="t">写</span><span class="s">两种</span></div>
-    <div class="j-step"><span class="n">3</span><span class="t">确认</span><span class="s">分层</span></div>
-    <div class="j-step"><span class="n">4</span><span class="t">动手</span><span class="s">看交换</span></div>
+    <div class="j-step"><span class="n">2</span><span class="t">写</span><span class="s">两种写与 MTU</span></div>
+    <div class="j-step"><span class="n">3</span><span class="t">流控</span><span class="s">canSend…</span></div>
+    <div class="j-step"><span class="n">4</span><span class="t">动手</span><span class="s">两场演练</span></div>
+    <div class="j-step"><span class="n">5</span><span class="t">自测</span><span class="s">六个问题</span></div>
   </div>
 
   <section id="read">
     <h2><span class="no">第 1 步</span>readValue → didUpdateValueFor</h2>
-    
       <pre>peripheral.readValue(for: ch)
 // didUpdateValueFor characteristic → ch.value</pre>
-      <div class="recap"><b>本步收束：</b>读和通知共用 didUpdateValueFor 回调。</div>
+    <table>
+      <tr><th>API / 回调</th><th>作用</th><th>引入</th></tr>
+      <tr><td><code>readValue(for: CBCharacteristic)</code></td><td>读特征值；结果更新到 ch.value 并回调</td><td><span class="api-lv">iOS 5</span></td></tr>
+      <tr><td><code>readValue(for: CBDescriptor)</code></td><td>读描述符（如用户描述 0x2901）</td><td><span class="api-lv">iOS 5</span></td></tr>
+      <tr><td><code>peripheral(_:didUpdateValueFor:error:)</code></td><td>读到值 / 通知到达，共用此回调</td><td><span class="api-lv">iOS 5</span></td></tr>
+    </table>
+    <ul>
+      <li><b>值存在对象上</b>：回调里读 <code>ch.value</code>（Data?），不是回调参数直接给数据——这是与 Android（回调带 byte[]）的形态差异。</li>
+      <li><b>长值自动分段</b>：值超过 MTU 时系统自动用 Read Blob 续读拼好，App 无感知。</li>
+      <li><b>别轮询</b>：能订阅的特征用 setNotifyValue（C7），readValue 只用于一次性取值。</li>
+      <li><b>error 要查</b>：readNotPermitted / insufficientAuthentication 等 ATT 错误从这里来（C10 配对场景常见）。</li>
+    </ul>
+      <div class="recap"><b>本步收束：</b>读和通知共用 didUpdateValueFor 回调；值在 ch.value；长值系统拼。</div>
   </section>
 
   <section id="write">
-    <h2><span class="no">第 2 步</span>withResponse vs withoutResponse</h2>
-    
-      <table><tr><th>类型</th><th>ATT</th><th>确认</th></tr>
-        <tr><td>.withResponse</td><td>Write Request</td><td>didWriteValueFor</td></tr>
-        <tr><td>.withoutResponse</td><td>Write Command</td><td>无逐条确认</td></tr></table>
-      <div class="key"><span class="tag">重点</span>didWriteValueFor 只确认 ATT 层接受，业务生效要读回或等业务回执。withoutResponse 适合高频可丢，关键命令用 withResponse。</div>
-      <div class="recap"><b>本步收束：</b>关键命令 withResponse；成功只到 ATT 层。</div>
+    <h2><span class="no">第 2 步</span>withResponse vs withoutResponse：两种写与 MTU</h2>
+      <table><tr><th>类型</th><th>ATT</th><th>确认</th><th>引入</th></tr>
+        <tr><td>.withResponse</td><td>Write Request</td><td>didWriteValueFor</td><td><span class="api-lv">iOS 5</span></td></tr>
+        <tr><td>.withoutResponse</td><td>Write Command</td><td>无逐条确认</td><td><span class="api-lv">iOS 5</span></td></tr></table>
+    <pre><span class="cm">// 关键命令：带响应写，等确认</span>
+p.writeValue(configData, for: ch, type: .withResponse)
+func peripheral(_ p: CBPeripheral, didWriteValueFor ch: CBCharacteristic, error: Error?) {
+  <span class="cm">// error == nil：ATT 层接受了；业务生效还要读回或等业务回执</span>
+}
+
+<span class="cm">// 高频数据：无响应写，先查流控（见第 3 步）</span>
+if p.canSendWriteWithoutResponse {
+  p.writeValue(chunk, for: ch, type: .withoutResponse)
+}</pre>
+    <h3>2.1 一次最多写多少：maximumWriteValueLength</h3>
+    <table>
+      <tr><th>API</th><th>返回</th><th>引入</th></tr>
+      <tr><td><code>maximumWriteValueLength(for: .withoutResponse)</code></td><td><b>ATT_MTU − 3</b>（Write Command 头部占 3 字节）；MTU 23 时只有 20</td><td><span class="api-lv">iOS 9</span></td></tr>
+      <tr><td><code>maximumWriteValueLength(for: .withResponse)</code></td><td>通常 <b>512</b>：超长值系统自动走 Prepare/Execute 长写</td><td><span class="api-lv">iOS 9</span></td></tr>
+    </table>
+    <pre>let n = p.maximumWriteValueLength(for: .withoutResponse)  <span class="cm">// 连接后查询</span>
+<span class="cm">// 协商 MTU 185 → n = 182；发 1000 字节要自己切 6 片（C8）</span></pre>
+    <figure>
+      <svg viewBox="0 0 760 230" role="img" aria-label="两种写的路径">
+        <defs><marker id="ar6" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#A39B8E"/></marker></defs>
+        <rect x="10" y="80" width="170" height="70" rx="12" fill="#ECF1FB" stroke="#C9D8F2"/>
+        <text x="95" y="110" text-anchor="middle" font-size="13" font-weight="bold" fill="#2F58A8">writeValue(data)</text>
+        <text x="95" y="130" text-anchor="middle" font-size="11" fill="#5F7FB5">选 type 分两条路</text>
+        <rect x="260" y="20" width="220" height="70" rx="12" fill="#E9F4F2" stroke="#BFE0DB"/>
+        <text x="370" y="48" text-anchor="middle" font-size="13" font-weight="bold" fill="#1E7268">.withResponse</text>
+        <text x="370" y="68" text-anchor="middle" font-size="11" fill="#4E8A80">Write Request · 逐条确认 · 可长写 512</text>
+        <rect x="260" y="140" width="220" height="70" rx="12" fill="#FBF3E4" stroke="#EDD9B4"/>
+        <text x="370" y="168" text-anchor="middle" font-size="13" font-weight="bold" fill="#8A5510">.withoutResponse</text>
+        <text x="370" y="188" text-anchor="middle" font-size="11" fill="#A8762A">Write Command · 无确认 · ≤ MTU−3</text>
+        <rect x="540" y="20" width="210" height="70" rx="12" fill="#E9F4F2" stroke="#BFE0DB"/>
+        <text x="645" y="48" text-anchor="middle" font-size="12" font-weight="bold" fill="#1E7268">didWriteValueFor</text>
+        <text x="645" y="68" text-anchor="middle" font-size="11" fill="#4E8A80">仅 ATT 层；业务生效另验</text>
+        <rect x="540" y="140" width="210" height="70" rx="12" fill="#FBF3E4" stroke="#EDD9B4"/>
+        <text x="645" y="168" text-anchor="middle" font-size="12" font-weight="bold" fill="#8A5510">canSendWriteWithoutResponse</text>
+        <text x="645" y="188" text-anchor="middle" font-size="11" fill="#A8762A">流控：满了等 ready 回调</text>
+        <line x1="180" y1="100" x2="258" y2="60" stroke="#2A9D8F" stroke-width="2" marker-end="url(#ar6)"/>
+        <line x1="180" y1="130" x2="258" y2="170" stroke="#C07A1E" stroke-width="2" marker-end="url(#ar6)"/>
+        <line x1="480" y1="55" x2="538" y2="55" stroke="#2A9D8F" stroke-width="2" marker-end="url(#ar6)"/>
+        <line x1="480" y1="175" x2="538" y2="175" stroke="#C07A1E" stroke-width="2" marker-end="url(#ar6)"/>
+      </svg>
+      <figcaption>带响应写换确认与长写能力；无响应写换吞吐，代价是自己管流控与分包。</figcaption>
+    </figure>
+      <div class="key"><span class="tag">重点</span>didWriteValueFor 只确认 ATT 层接受，业务生效要读回或等业务回执。withoutResponse 适合高频可丢，关键命令用 withResponse。<b>iOS 不暴露 requestMtu</b>：MTU 由系统在连接时自动协商（这点与 Android 手动 requestMtu 不同），你只能用 maximumWriteValueLength 查询结果。</div>
+      <div class="recap"><b>本步收束：</b>关键命令 withResponse；成功只到 ATT 层；单包上限查 maximumWriteValueLength（iOS 9）。</div>
   </section>
 
   <section id="flow">
-    <h2><span class="no">第 3 步</span>canSendWriteWithoutResponse</h2>
-    
+    <h2><span class="no">第 3 步</span>canSendWriteWithoutResponse：无响应写流控</h2>
       <p>withoutResponse 连发要看 <code>canSendWriteWithoutResponse</code>，满了等 <code>peripheralIsReadyToSendWriteWithoutResponse</code> 再发，防丢。</p>
-      <div class="recap"><b>本步收束：</b>无响应写要流控，等 ready 再发。</div>
+    <table>
+      <tr><th>API</th><th>作用</th><th>引入</th></tr>
+      <tr><td><code>canSendWriteWithoutResponse</code></td><td>Bool：发送缓冲现在有没有空位</td><td><span class="api-lv">iOS 11</span></td></tr>
+      <tr><td><code>peripheralIsReady(toSendWriteWithoutResponse:)</code></td><td>缓冲从满变空时回调，继续发下一批</td><td><span class="api-lv">配 iOS 11</span></td></tr>
+    </table>
+    <pre><span class="cm">// 标准流控循环：队列 + canSend + ready 回调</span>
+func pump() {
+  while p.canSendWriteWithoutResponse, let chunk = queue.first {
+    queue.removeFirst()
+    p.writeValue(chunk, for: ch, type: .withoutResponse)
+  }
+}
+func peripheralIsReady(toSendWriteWithoutResponse p: CBPeripheral) {
+  pump()   <span class="cm">// 缓冲又有空位，接着发</span>
+}</pre>
+    <ul>
+      <li><b>iOS 11 之前</b>：没有流控 API，连发无响应写会静默丢包——老代码只能靠延时或改用 withResponse。</li>
+      <li><b>canSend 为 false 时硬发</b>：数据可能被丢弃且无任何回调，这是无响应写「丢数据」的头号原因。</li>
+      <li><b>文档标注说明</b>：peripheralIsReady 的文档页标 iOS 5（协议引入版本），但它与 canSendWriteWithoutResponse 配对使用，实际按 iOS 11+ 对待。</li>
+      <li>分包与队列的完整工程实现见 C8。</li>
+    </ul>
+      <div class="recap"><b>本步收束：</b>无响应写要流控，canSend 为真才发，等 ready 再续；iOS 11 起才有这套 API。</div>
   </section>
 
   <section id="lab">
-    <h2><span class="no">动手</span>点读/两种写，看确认差异</h2>
-    <p>点 read / withResponse / withoutResponse，看回调与确认层次。</p>
+    <h2><span class="no">动手</span>两场演练：读写确认差异、MTU 与单包上限</h2>
+    <p>演练一点 read / withResponse / withoutResponse，看回调与确认层次。演练二拖动 ATT MTU，看两种写的单包上限与 1000 字节要切几片。</p>
     <div class="lab">
-      <div class="lab-head"><b>读写交换演练</b><span class="hint">withResponse 有 didWriteValueFor</span></div>
+      <div class="lab-head"><b>演练一 · 读写交换演练</b><span class="hint">withResponse 有 didWriteValueFor</span></div>
       <div class="controls"><div class="seg" id="o6"><button data-o="read" class="on">read</button><button data-o="wr">withResponse</button><button data-o="wo">withoutResponse</button></div></div>
       <div class="lab-body"><div class="logcat" style="grid-column:1/-1;"><div class="logcat-head"><span>delegate</span><span>live</span></div><div class="logcat-body" id="log6"></div></div></div>
       <div class="lab-foot"><span class="hint">withoutResponse 无 didWriteValueFor</span></div>
     </div>
-    <div class="key"><span class="tag">看懂这场演练</span>readValue 与通知共用 didUpdateValueFor；withResponse 等 didWriteValueFor（仅 ATT 层），withoutResponse 无逐条确认需流控。业务生效另验。</div>
+    <div class="lab">
+      <div class="lab-head"><b>演练二 · MTU 与单包上限</b><span class="hint">maximumWriteValueLength 的两种答案</span></div>
+      <div class="controls"><div class="ctl"><label>ATT MTU</label><input type="range" id="mtu6" min="23" max="517" value="23" step="1"><span class="val" id="mtu6v">23</span></div></div>
+      <div class="lab-body">
+        <div>
+          <div class="stats">
+            <div class="stat-box"><b id="wo6">20</b><small>withoutResponse 单包上限</small></div>
+            <div class="stat-box good"><b id="wr6">512</b><small>withResponse 单包上限</small></div>
+            <div class="stat-box bad"><b id="chunks6">50</b><small>1000 字节无响应写片数</small></div>
+          </div>
+          <div class="chips" id="mtuchips"></div>
+        </div>
+        <div class="logcat"><div class="logcat-head"><span>计算</span><span>live</span></div><div class="logcat-body" id="mtulog"></div></div>
+      </div>
+      <div class="lab-foot"><span class="hint">MTU 23 是默认值；iOS 连接时自动协商更大 MTU，用 API 查询别猜</span></div>
+    </div>
+    <div class="key"><span class="tag">看懂这两场演练</span>readValue 与通知共用 didUpdateValueFor；withResponse 等 didWriteValueFor（仅 ATT 层），withoutResponse 无逐条确认需流控。单包上限 = MTU−3（无响应）或 512（带响应长写）。</div>
   </section>
 
   <section id="quiz">
-    <h2><span class="no">自测</span>三个问题</h2>
+    <h2><span class="no">自测</span>六个问题</h2>
     <div class="card" id="quiz-box"></div>
     <p id="quiz-done" style="display:none;font-weight:700;color:#1E7268;">全对。下一课讲订阅与通知。</p>
   </section>
 
   <section id="map">
-    <h2><span class="no">回顾</span>速查</h2>
-    <table><tr><th>操作</th><th>回调</th></tr><tr><td>readValue</td><td>didUpdateValueFor</td></tr><tr><td>withResponse</td><td>didWriteValueFor</td></tr><tr><td>withoutResponse</td><td>无（流控）</td></tr></table>
-    <div class="note"><span class="tag">说明</span>本页为教学简化，工程细节以正文与官方规范为准；演练为模拟，非真实设备通信。</div>
-    <footer>青竹蓝牙学堂 · 蓝牙小课堂iOS 第六课 · C6 · <a href="../index.html">回到学堂</a></footer>
+    <h2><span class="no">回顾</span>速查表</h2>
+    <table>
+      <tr><th>场景</th><th>操作 / 回调</th></tr>
+      <tr><td>一次性取值</td><td>readValue → didUpdateValueFor → ch.value</td></tr>
+      <tr><td>关键命令</td><td>writeValue(.withResponse) → didWriteValueFor（仅 ATT 层）</td></tr>
+      <tr><td>高频数据</td><td>writeValue(.withoutResponse) + canSend 流控</td></tr>
+      <tr><td>单包上限</td><td>maximumWriteValueLength(for:)（iOS 9）：MTU−3 / 512</td></tr>
+      <tr><td>MTU 协商</td><td>iOS 自动协商，无 requestMtu；查询用上面的 API</td></tr>
+      <tr><td>连发防丢</td><td>canSendWriteWithoutResponse + peripheralIsReady（iOS 11）</td></tr>
+      <tr><td>业务生效确认</td><td>读回核对或等设备业务回执，别信 ATT 确认</td></tr>
+    </table>
+    <div class="note"><span class="tag">说明</span>本页为教学整理，API 版本已对照 Apple 官方文档核实；演练为模拟，非真实设备通信。</div>
+  </section>
+
+  <section id="refs">
+    <h2><span class="no">依据</span>参考链接</h2>
+    <div class="card refs">
+      <h3 style="margin-top:0;">Apple 官方文档</h3>
+      <ul>
+        <li><a href="https://developer.apple.com/documentation/corebluetooth/cbperipheral/readvalue(for:)-6u2kr" target="_blank" rel="noopener">readValue(for: CBCharacteristic)</a> <span class="src">— iOS 5</span></li>
+        <li><a href="https://developer.apple.com/documentation/corebluetooth/cbperipheral/writevalue(_:for:type:)" target="_blank" rel="noopener">writeValue(_:for:type:)</a> <span class="src">— iOS 5；两种写的语义</span></li>
+        <li><a href="https://developer.apple.com/documentation/corebluetooth/cbperipheral/maximumwritevaluelength(for:)" target="_blank" rel="noopener">maximumWriteValueLength(for:)</a> <span class="src">— iOS 9；单包上限权威出处</span></li>
+      </ul>
+      <h3>CoreBluetooth API 参考</h3>
+      <ul>
+        <li><a href="https://developer.apple.com/documentation/corebluetooth/cbcharacteristicwritetype" target="_blank" rel="noopener">CBCharacteristicWriteType</a> <span class="src">— withResponse / withoutResponse</span></li>
+        <li><a href="https://developer.apple.com/documentation/corebluetooth/cbperipheral/cansendwritewithoutresponse" target="_blank" rel="noopener">canSendWriteWithoutResponse</a> <span class="src">— iOS 11；流控开关</span></li>
+        <li><a href="https://developer.apple.com/documentation/corebluetooth/cbperipheraldelegate/peripheralisready(tosendwritewithoutresponse:)" target="_blank" rel="noopener">peripheralIsReady(toSendWriteWithoutResponse:)</a> <span class="src">— 缓冲恢复回调（配 iOS 11 使用）</span></li>
+      </ul>
+      <h3>实测与深入</h3>
+      <ul>
+        <li><a href="https://punchthrough.com/core-bluetooth-guide/" target="_blank" rel="noopener">Punch Through · Core Bluetooth Ultimate Guide</a> <span class="src">— 写类型取舍与吞吐实测</span></li>
+      </ul>
+    </div>
+    <div class="next-links">
+      <a href="05-services-characteristics.html">← C5 服务与特征</a>
+      <a href="07-notify-indicate.html">C7 通知与指示 →</a>
+    </div>
+    <footer>青竹蓝牙学堂 · 蓝牙小课堂 iOS 第六课 · C6 · <a href="../index.html">回到学堂</a></footer>
   </section>
 </main>
 <aside class="toc" id="toc">
   <div class="toc-title">本课目录</div>
   <a href="#read">读</a>
-  <a href="#write">两种写</a>
+  <a href="#write">两种写与 MTU</a>
   <a href="#flow">无响应流控</a>
-  <a href="#lab">动手演练</a>
+  <a href="#lab">两场演练</a>
   <a href="#quiz">本课自测</a>
-  <a href="#map">回顾与速查</a>
+  <a href="#map">速查表</a>
+  <a href="#refs">参考链接</a>
 </aside>
 </div>
 <script>
@@ -280,11 +410,34 @@
   show('read');
 })();
 
+// 演练二：MTU 与单包上限
+(function(){
+  var slider=document.getElementById('mtu6');
+  function calc(){
+    var mtu=parseInt(slider.value,10);
+    var wo=mtu-3, wr=512, chunks=Math.ceil(1000/wo);
+    document.getElementById('mtu6v').textContent=mtu;
+    document.getElementById('wo6').textContent=wo;
+    document.getElementById('wr6').textContent=wr;
+    document.getElementById('chunks6').textContent=chunks;
+    document.getElementById('mtuchips').innerHTML=
+      '<span class="chip '+(mtu===23?'bad':'on')+'">MTU '+mtu+(mtu===23?'（默认未协商）':'（已协商）')+'</span>'+
+      '<span class="chip">Write Command 头 3 字节</span>';
+    document.getElementById('mtulog').innerHTML=
+      '<div><span class="api">maximumWriteValueLength(for: .withoutResponse)</span> <span class="ok">= '+mtu+' − 3 = '+wo+'</span></div>'+
+      '<div><span class="api">maximumWriteValueLength(for: .withResponse)</span> <span class="ok">= 512（长写）</span></div>'+
+      '<div><span class="c">// 1000 字节 ÷ '+wo+' = '+chunks+' 片（无响应写要自己切，见 C8）</span></div>'+
+      (mtu===23?'<div><span class="warn">// MTU 23 是连接默认值；iOS 会自动协商更大值</span></div>':'');
+  }
+  slider.addEventListener('input',calc);
+  calc();
+})();
+
 const tocLinks=[...document.querySelectorAll('.toc a')];
 const secs=tocLinks.map(a=>document.getElementById(a.getAttribute('href').slice(1)));
 const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){tocLinks.forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+e.target.id));}});},{rootMargin:'-20% 0px -70% 0px'});
 secs.forEach(s=>s&&io.observe(s));
-const QUIZ=[{"q":"1. 读的回调是？","opts":[["didUpdateValueFor",true,"对。与通知共用。"],["didWriteValueFor",false,"那是写。"],["didDiscover",false,"那是发现。"]]},{"q":"2. 关键配置命令用？","opts":[[".withResponse",true,"对。"],[".withoutResponse",false,"无确认。"],["随便",false,"取舍不同。"]]},{"q":"3. didWriteValueFor 代表业务生效吗？","opts":[["不，仅 ATT 层",true,"对。"],["是",false,"要读回/回执。"],["看 MTU",false,"无关。"]]}];
+const QUIZ=[{"q":"1. 读的回调是？","opts":[["didUpdateValueFor",true,"对。与通知共用。"],["didWriteValueFor",false,"那是写。"],["didDiscover",false,"那是发现。"]]},{"q":"2. 关键配置命令用？","opts":[[".withResponse",true,"对。"],[".withoutResponse",false,"无确认。"],["随便",false,"取舍不同。"]]},{"q":"3. didWriteValueFor 代表业务生效吗？","opts":[["不，仅 ATT 层",true,"对。"],["是",false,"要读回/回执。"],["看 MTU",false,"无关。"]]},{"q":"4. MTU 185 时，无响应写单包最多？","opts":[["182 字节（MTU−3）",true,"对。Write Command 头占 3 字节。"],["185",false,"要减头部。"],["512",false,"那是带响应长写。"]]},{"q":"5. canSendWriteWithoutResponse 哪个版本引入？","opts":[["iOS 11",true,"对。之前连发无响应写只能靠延时，易丢。"],["iOS 5",false,"5 没有流控 API。"],["iOS 17",false,"17 引入的是自动重连选项。"]]},{"q":"6. .withResponse 能写超过 MTU 的数据吗？","opts":[["能，系统自动长写（上限通常 512）",true,"对。Prepare/Execute 由系统完成，App 无感。"],["不能，必须自己分包",false,"带响应写系统替你分。"],["能，无上限",false,"上限 512。"]]}];
 let solved=0; const box=document.getElementById('quiz-box');
 QUIZ.forEach((item,qi)=>{
   const h=document.createElement('div'); h.className='quiz-q'; h.textContent=item.q; box.appendChild(h);
