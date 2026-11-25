@@ -28,7 +28,14 @@
   .logo span{color:var(--coral);}
   .topnav{margin-left:auto;display:flex;gap:18px;font-size:14px;}
   .topnav a{color:var(--muted);} .topnav a:hover{color:var(--coral);text-decoration:none;}
-  .layout{max-width:1080px;margin:0 auto;padding:32px 20px 80px;display:grid;grid-template-columns:200px minmax(0,1fr);gap:40px;}
+  .layout{max-width:1280px;margin:0 auto;padding:32px 20px 80px;display:grid;grid-template-columns:230px minmax(0,1fr) 200px;gap:32px;}
+  section{scroll-margin-top:76px;}
+  .boardnav{position:sticky;top:84px;align-self:start;font-size:13.5px;max-height:calc(100vh - 110px);overflow-y:auto;}
+  .boardnav a{display:block;color:var(--muted);padding:6px 12px;border-left:2px solid var(--line);line-height:1.5;}
+  .boardnav a .c{display:inline-block;font-family:ui-monospace,Consolas,monospace;font-size:11px;font-weight:800;color:var(--faint);margin-right:6px;}
+  .boardnav a:hover{color:var(--coral);text-decoration:none;}
+  .boardnav a.cur{color:var(--coral);border-left-color:var(--coral);font-weight:700;background:linear-gradient(90deg,var(--coral-soft),transparent);}
+  .boardnav a.cur .c{color:var(--coral);}
   .toc{position:sticky;top:84px;align-self:start;font-size:14px;}
   .toc-title{font-size:12px;font-weight:700;color:var(--faint);letter-spacing:2px;margin-bottom:10px;}
   .toc a{display:block;color:var(--muted);padding:5px 12px;border-left:2px solid var(--line);line-height:1.5;}
@@ -132,6 +139,10 @@
   .next-links a{display:inline-block;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:9px 18px;font-size:14px;font-weight:600;}
   .next-links a:hover{border-color:var(--coral);text-decoration:none;}
   footer{border-top:1px solid var(--line);margin-top:56px;padding-top:20px;font-size:13px;color:var(--faint);}
+  @media (max-width:1100px){
+    .layout{grid-template-columns:minmax(0,1fr) 200px;gap:24px;}
+    .boardnav{display:none;}
+  }
   @media (max-width:900px){
     .layout{grid-template-columns:1fr;gap:0;}
     .toc{display:none;}
@@ -145,19 +156,21 @@
 <div class="topbar"><div class="topbar-in">
   <a class="logo" href="../index.html">青竹<span>蓝牙学堂</span></a>
   <nav class="topnav">
-    <a href="../">学堂首页</a>
-    <a href="../">上一课</a>
-    <a href="../index.html">课程地图</a>
+    <a href="../index.html">学堂首页</a>
   </nav>
 </div></div>
 <div class="layout">
-<aside class="toc" id="toc">
-  <div class="toc-title">本课目录</div>
-  <a href="#a">ble 模块与对象</a>
-  <a href="#b">角色与对照</a>
-  <a href="#lab">动手演练</a>
-  <a href="#quiz">本课自测</a>
-  <a href="#map">回顾与速查</a>
+<aside class="boardnav">
+  <div class="toc-title">鸿蒙 · 课程</div>
+  <a href="01-overview.html" class="cur"><span class="c">D1</span>BLE 总览</a>
+  <a href="02-permission-adapter.html"><span class="c">D2</span>权限与 adapter</a>
+  <a href="03-scan-filter.html"><span class="c">D3</span>扫描与过滤</a>
+  <a href="04-connect-discovery.html"><span class="c">D4</span>连接与发现</a>
+  <a href="05-read-write.html"><span class="c">D5</span>读写</a>
+  <a href="06-notify.html"><span class="c">D6</span>通知订阅</a>
+  <a href="07-peripheral.html"><span class="c">D7</span>外设广播</a>
+  <a href="08-troubleshooting.html"><span class="c">D8</span>排障</a>
+  <a href="09-project.html"><span class="c">D9</span>实战工程</a>
 </aside>
 <main>
   <div class="crumb">蓝牙小课堂 / 鸿蒙第一课 · D1</div>
@@ -203,16 +216,20 @@ ble.createGattServerDevice()           // 外设服务端</pre><div class="recap
   <section id="map">
     <h2><span class="no">回顾</span>速查</h2>
     <table><tr><th>鸿蒙</th><th>Android</th></tr><tr><td>startBLEScan</td><td>startScan</td></tr><tr><td>createGattClientDevice</td><td>connectGatt</td></tr><tr><td>getServices</td><td>discoverServices</td></tr></table>
-    <h3>接下来读什么</h3>
-    <div class="next-links">
-      <a href="../">← 上一课</a>
-      <a href="../">学堂首页 · 课程地图</a>
-      <a href="../index.html">课程地图</a>
-    </div>
+    <h3>上一课 / 下一课</h3>
+    <div class="next-links"><a href="02-permission-adapter.html">下一课 →</a></div>
     <div class="note"><span class="tag">说明</span>本页为教学简化，工程细节以正文与官方规范为准；演练为模拟，非真实设备通信。</div>
-    <footer>青竹蓝牙学堂 · 蓝牙小课堂鸿蒙第一课 · D1 · <a href="../">回到学堂</a></footer>
+    <footer>青竹蓝牙学堂 · 蓝牙小课堂鸿蒙第一课 · D1 · <a href="../index.html">回到学堂</a></footer>
   </section>
 </main>
+<aside class="toc" id="toc">
+  <div class="toc-title">本课目录</div>
+  <a href="#a">ble 模块与对象</a>
+  <a href="#b">角色与对照</a>
+  <a href="#lab">动手演练</a>
+  <a href="#quiz">本课自测</a>
+  <a href="#map">回顾与速查</a>
+</aside>
 </div>
 <script>
 (function(){var API="点按钮看鸿蒙写法与 Android 对照。";var CMP="ble.startBLEScan(filters, options)\nlet dev = ble.createGattClientDevice(deviceId)\ndev.connect()\ndev.getServices()";var NT="Android: startScan / connectGatt / discoverServices";function show(k){document.getElementById("d1code").textContent=(k==="api"?API:CMP);document.getElementById("d1log").innerHTML="<div><span class=\"ok\">"+(k==="api"?"本平台写法":"Android 对照")+"</span></div><div><span class=\"c\">// "+(k==="api"?NT:"概念相同，API 名不同")+"</span></div>";}document.querySelectorAll("#d1 button").forEach(function(b){b.addEventListener("click",function(){document.querySelectorAll("#d1 button").forEach(function(x){x.classList.remove("on");});b.classList.add("on");show(b.getAttribute("data-k"));});});show("api");})();

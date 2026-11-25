@@ -28,7 +28,14 @@
   .logo span{color:var(--coral);}
   .topnav{margin-left:auto;display:flex;gap:18px;font-size:14px;}
   .topnav a{color:var(--muted);} .topnav a:hover{color:var(--coral);text-decoration:none;}
-  .layout{max-width:1080px;margin:0 auto;padding:32px 20px 80px;display:grid;grid-template-columns:200px minmax(0,1fr);gap:40px;}
+  .layout{max-width:1280px;margin:0 auto;padding:32px 20px 80px;display:grid;grid-template-columns:230px minmax(0,1fr) 200px;gap:32px;}
+  section{scroll-margin-top:76px;}
+  .boardnav{position:sticky;top:84px;align-self:start;font-size:13.5px;max-height:calc(100vh - 110px);overflow-y:auto;}
+  .boardnav a{display:block;color:var(--muted);padding:6px 12px;border-left:2px solid var(--line);line-height:1.5;}
+  .boardnav a .c{display:inline-block;font-family:ui-monospace,Consolas,monospace;font-size:11px;font-weight:800;color:var(--faint);margin-right:6px;}
+  .boardnav a:hover{color:var(--coral);text-decoration:none;}
+  .boardnav a.cur{color:var(--coral);border-left-color:var(--coral);font-weight:700;background:linear-gradient(90deg,var(--coral-soft),transparent);}
+  .boardnav a.cur .c{color:var(--coral);}
   .toc{position:sticky;top:84px;align-self:start;font-size:14px;}
   .toc-title{font-size:12px;font-weight:700;color:var(--faint);letter-spacing:2px;margin-bottom:10px;}
   .toc a{display:block;color:var(--muted);padding:5px 12px;border-left:2px solid var(--line);line-height:1.5;}
@@ -132,6 +139,10 @@
   .next-links a{display:inline-block;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:9px 18px;font-size:14px;font-weight:600;}
   .next-links a:hover{border-color:var(--coral);text-decoration:none;}
   footer{border-top:1px solid var(--line);margin-top:56px;padding-top:20px;font-size:13px;color:var(--faint);}
+  @media (max-width:1100px){
+    .layout{grid-template-columns:minmax(0,1fr) 200px;gap:24px;}
+    .boardnav{display:none;}
+  }
   @media (max-width:900px){
     .layout{grid-template-columns:1fr;gap:0;}
     .toc{display:none;}
@@ -145,20 +156,26 @@
 <div class="topbar"><div class="topbar-in">
   <a class="logo" href="../index.html">青竹<span>蓝牙学堂</span></a>
   <nav class="topnav">
-    <a href="../">学堂首页</a>
-    <a href="02-permissions-manifest.html">上一课</a>
-    <a href="../index.html">课程地图</a>
+    <a href="../index.html">学堂首页</a>
   </nav>
 </div></div>
 <div class="layout">
-<aside class="toc" id="toc">
-  <div class="toc-title">本课目录</div>
-  <a href="#scan">扫描回调</a>
-  <a href="#filter">ScanFilter</a>
-  <a href="#limit">限流与后台</a>
-  <a href="#lab">动手演练</a>
-  <a href="#quiz">本课自测</a>
-  <a href="#map">回顾与速查</a>
+<aside class="boardnav">
+  <div class="toc-title">Android · 课程</div>
+  <a href="01-android-overview.html"><span class="c">B1</span>蓝牙全景</a>
+  <a href="02-permissions-manifest.html"><span class="c">B2</span>权限与清单</a>
+  <a href="03-scan-filter.html" class="cur"><span class="c">B3</span>扫描与过滤</a>
+  <a href="04-connection-lifecycle.html"><span class="c">B4</span>连接生命周期</a>
+  <a href="05-discovery-readwrite.html"><span class="c">B5</span>发现与读写</a>
+  <a href="06-notify-cccd.html"><span class="c">B6</span>订阅与 CCCD</a>
+  <a href="07-mtu-phy-params.html"><span class="c">B7</span>MTU PHY 参数</a>
+  <a href="08-fragmentation-flowcontrol.html"><span class="c">B8</span>分包与流控</a>
+  <a href="09-statemachine-queue.html"><span class="c">B9</span>状态机与队列</a>
+  <a href="10-background-fgs-cdm.html"><span class="c">B10</span>后台 FGS CDM</a>
+  <a href="11-pairing-le-security.html"><span class="c">B11</span>配对与安全</a>
+  <a href="12-hci-snoop-errors.html"><span class="c">B12</span>HCI 抓包排障</a>
+  <a href="13-vendor-matrix.html"><span class="c">B13</span>厂商矩阵</a>
+  <a href="14-bthome-project.html"><span class="c">B14</span>BTHome 实战</a>
 </aside>
 <main>
   <div class="crumb">蓝牙小课堂 / Android 第三课 · B3</div>
@@ -227,16 +244,21 @@ scanner.startScan(filters, settings, cb)</pre>
   <section id="map">
     <h2><span class="no">回顾</span>速查</h2>
     <table><tr><th>要点</th><th>记住</th></tr><tr><td>startScan</td><td>filters+settings+callback</td></tr><tr><td>ScanFilter</td><td>字段必须真实在广播里</td></tr><tr><td>限流</td><td>30s 启停&gt;5 次</td></tr><tr><td>后台</td><td>带过滤；离线用 PendingIntent</td></tr></table>
-    <h3>接下来读什么</h3>
-    <div class="next-links">
-      <a href="02-permissions-manifest.html">← 上一课</a>
-      <a href="../">学堂首页 · 课程地图</a>
-      <a href="../index.html">课程地图</a>
-    </div>
+    <h3>上一课 / 下一课</h3>
+    <div class="next-links"><a href="02-permissions-manifest.html">← 上一课</a><a href="04-connection-lifecycle.html">下一课 →</a></div>
     <div class="note"><span class="tag">说明</span>本页为教学简化，工程细节以正文与官方规范为准；演练为模拟，非真实设备通信。</div>
-    <footer>青竹蓝牙学堂 · 蓝牙小课堂Android 第三课 · B3 · <a href="../">回到学堂</a></footer>
+    <footer>青竹蓝牙学堂 · 蓝牙小课堂Android 第三课 · B3 · <a href="../index.html">回到学堂</a></footer>
   </section>
 </main>
+<aside class="toc" id="toc">
+  <div class="toc-title">本课目录</div>
+  <a href="#scan">扫描回调</a>
+  <a href="#filter">ScanFilter</a>
+  <a href="#limit">限流与后台</a>
+  <a href="#lab">动手演练</a>
+  <a href="#quiz">本课自测</a>
+  <a href="#map">回顾与速查</a>
+</aside>
 </div>
 <script>
 
