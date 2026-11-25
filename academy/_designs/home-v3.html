@@ -7,7 +7,10 @@ a{color:inherit;text-decoration:none;}
 .top{position:sticky;top:0;z-index:50;background:rgba(250,243,236,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);}
 .top-in{max-width:1180px;margin:0 auto;padding:0 20px;height:56px;display:flex;align-items:center;gap:16px;}
 .logo{font-weight:800;font-size:17px;} .logo span{color:var(--ac);}
-.nav{margin-left:auto;display:flex;gap:14px;font-size:13px;color:var(--mut);} .nav a:hover{color:var(--ac);}
+.nav{margin-left:auto;display:flex;gap:14px;align-items:center;font-size:13px;color:var(--mut);} .nav a:hover{color:var(--ac);}
+.nav .gh{display:inline-flex;align-items:center;gap:6px;background:#FBEADF;border:1px solid #F2C4A4;border-radius:999px;padding:5px 14px;color:var(--ac);font-weight:700;}
+.nav .gh:hover{background:#fff;}
+.nav .gh svg{flex:none;}
 .wrap{max-width:1180px;margin:0 auto;padding:36px 20px 90px;}
 .hero{position:relative;overflow:hidden;background:var(--world);border-radius:24px;padding:46px 40px;color:#F5EFE7;display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap;margin-bottom:26px;box-shadow:var(--shadow-card);}
 .hero:after{content:"";position:absolute;right:-70px;top:-70px;width:260px;height:260px;border-radius:50%;background:radial-gradient(circle,rgba(232,89,12,.38),transparent 70%);pointer-events:none;}
@@ -32,7 +35,7 @@ footer{margin-top:36px;color:var(--mut);font-size:13px;text-align:center;}
 @media(prefers-reduced-motion:reduce){.tile{opacity:1;transform:none;}}
 .sw{position:fixed;right:16px;bottom:16px;z-index:99;display:flex;gap:6px;align-items:center;background:rgba(20,20,20,.85);color:#fff;border-radius:999px;padding:6px 12px;font-size:12px;backdrop-filter:blur(6px);} .sw a{color:#bbb;text-decoration:none;padding:2px 8px;border-radius:999px;} .sw a.on{background:#fff;color:#111;font-weight:700;}
 </style></head><body>
-<div class="top"><div class="top-in"><a class="logo" href="home-v3.html">青竹<span>蓝牙学堂</span></a><nav class="nav"><a href="#base">通用基础</a><a href="#android">Android 实战</a><a href="#ios">iOS 实战</a><a href="#harmonyos">HarmonyOS 实战</a><a href="#flutter">Flutter 实战</a><a href="#rn">React Native 实战</a></nav></div></div>
+<div class="top"><div class="top-in"><a class="logo" href="home-v3.html">青竹<span>蓝牙学堂</span></a><nav class="nav"><a href="#base">通用基础</a><a href="#android">Android 实战</a><a href="#ios">iOS 实战</a><a href="#harmonyos">HarmonyOS 实战</a><a href="#flutter">Flutter 实战</a><a href="#rn">React Native 实战</a><a class="gh" href="https://github.com/qingzhu-ai-public/qingzhu-ble-android" target="_blank" rel="noopener"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8"/></svg>GitHub 项目</a></nav></div></div>
 <div class="wrap">
   <div class="hero"><div><h1>蓝牙，<em>一课一课</em>做明白</h1><p class="dek">实物直讲 + 流程图 + 可点击演练 + 自测。先修通用基础，再落到你用的端。</p></div>
   <div class="kpi"><div><b>62</b><span>正课</span></div><div><b>6</b><span>技术栈</span></div><div><b>100%</b><span>已上线</span></div></div></div>
