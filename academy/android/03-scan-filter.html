@@ -172,6 +172,10 @@
   .ctl-row label{display:inline-flex;align-items:center;gap:10px;}
   .ctl-row input[type=range]{accent-color:var(--coral);width:160px;}
   .ctl-row .chk input{accent-color:var(--coral);}
+  .api-lv{display:inline-block;font-family:ui-monospace,Consolas,monospace;font-size:11.5px;font-weight:800;color:#2F58A8;background:var(--blue-soft);border:1px solid var(--blue-line);border-radius:999px;padding:0 8px;white-space:nowrap;}
+  .refs{font-size:14px;}
+  .refs li{margin:7px 0;}
+  .refs .src{font-size:12px;color:var(--faint);}
 </style>
 </head>
 <body style="--coral:#E8590C;--coral-soft:#FBEADF;--coral-line:#F2C4A4">
@@ -202,87 +206,359 @@
 </aside>
 <main>
   <div class="crumb">蓝牙小课堂 / Android 第三课 · B3</div>
-  <h1>扫描与过滤：<em>ScanFilter</em> 与限流</h1>
-  <p class="lead">startScan 把附近广播全收进来，费电又吵。ScanFilter 让系统只把匹配的交给你。这一课讲过滤怎么建、为什么加了过滤设备消失，以及 Android 的扫描限流。</p>
-  <div class="meta"><span>平台：Android/Kotlin</span><span>约 12 分钟</span><span>含交互演练</span><span>前置：B2</span></div>
+  <h1>扫描与过滤：<em>扫描 API 全景</em>与系统限制</h1>
+  <p class="lead">Android 给 BLE 扫描提供了一整套 API：从拿扫描器、建过滤、调扫描参数，到回调交付、后台 PendingIntent，再到系统强加的权限门和限流阀。这一课把每个类、每个方法、每个常量逐一讲清，并给出官方依据。学完你能回答：为什么加了过滤设备消失、为什么扫描悄悄没结果、为什么后台扫不到。</p>
+  <div class="meta"><span>平台：Android/Kotlin</span><span>约 30 分钟</span><span>API 18 → 36</span><span>含交互演练</span><span>前置：B2</span></div>
   <div class="journey">
-    <div class="j-step"><span class="n">1</span><span class="t">扫描</span><span class="s">startScan</span></div>
-    <div class="j-step"><span class="n">2</span><span class="t">过滤</span><span class="s">ScanFilter</span></div>
-    <div class="j-step"><span class="n">3</span><span class="t">限流</span><span class="s">5 次/30s</span></div>
-    <div class="j-step"><span class="n">4</span><span class="t">后台</span><span class="s">PendingIntent</span></div>
-    <div class="j-step"><span class="n">5</span><span class="t">动手</span><span class="s">建过滤</span></div>
+    <div class="j-step"><span class="n">1</span><span class="t">全景</span><span class="s">API 地图</span></div>
+    <div class="j-step"><span class="n">2</span><span class="t">入口</span><span class="s">startScan 族</span></div>
+    <div class="j-step"><span class="n">3</span><span class="t">过滤</span><span class="s">ScanFilter</span></div>
+    <div class="j-step"><span class="n">4</span><span class="t">调参</span><span class="s">ScanSettings</span></div>
+    <div class="j-step"><span class="n">5</span><span class="t">限制</span><span class="s">权限与限流</span></div>
+    <div class="j-step"><span class="n">6</span><span class="t">动手</span><span class="s">两场演练</span></div>
   </div>
 
-  <section id="scan">
-    <h2><span class="no">第 1 步</span>startScan + ScanCallback</h2>
-    
-      <pre>val cb = object : ScanCallback() {
-  override fun onScanResult(type:Int, r:ScanResult) {
+  <section id="map">
+    <h2><span class="no">第 1 步</span>扫描 API 全景：一次扫描经过什么</h2>
+    <p>先把地图铺开。一次 BLE 扫描，从你的 App 到空中无线电，要经过四层；结果再原路返回。系统在其中两道关口卡你：<b>权限门</b>（没权限就没结果）和<b>限流阀</b>（启停太频、扫太久就降级）。</p>
+    <figure>
+      <svg viewBox="0 0 760 250" role="img" aria-label="扫描数据流">
+        <defs><marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#A39B8E"/></marker></defs>
+        <rect x="10" y="20" width="170" height="90" rx="12" fill="#ECF1FB" stroke="#C9D8F2"/>
+        <text x="95" y="48" text-anchor="middle" font-size="14" font-weight="bold" fill="#2F58A8">App 进程</text>
+        <text x="95" y="70" text-anchor="middle" font-size="11" fill="#5F7FB5">startScan / stopScan</text>
+        <text x="95" y="88" text-anchor="middle" font-size="11" fill="#5F7FB5">ScanCallback 收结果</text>
+        <rect x="220" y="20" width="150" height="90" rx="12" fill="#FBEDE9" stroke="#F0CFC6"/>
+        <text x="295" y="48" text-anchor="middle" font-size="14" font-weight="bold" fill="#B04A35">权限门</text>
+        <text x="295" y="70" text-anchor="middle" font-size="11" fill="#C08475">BLUETOOTH_SCAN</text>
+        <text x="295" y="88" text-anchor="middle" font-size="11" fill="#C08475">位置权限 / 开关</text>
+        <rect x="410" y="20" width="160" height="90" rx="12" fill="#FBF3E4" stroke="#EDD9B4"/>
+        <text x="490" y="48" text-anchor="middle" font-size="14" font-weight="bold" fill="#8A5510">蓝牙栈 ScanManager</text>
+        <text x="490" y="70" text-anchor="middle" font-size="11" fill="#A8762A">限流 5 次/30s</text>
+        <text x="490" y="88" text-anchor="middle" font-size="11" fill="#A8762A">超时降级 / 熄屏策略</text>
+        <rect x="610" y="20" width="140" height="90" rx="12" fill="#E9F4F2" stroke="#BFE0DB"/>
+        <text x="680" y="48" text-anchor="middle" font-size="14" font-weight="bold" fill="#1E7268">控制器 / 无线电</text>
+        <text x="680" y="70" text-anchor="middle" font-size="11" fill="#4E8A80">硬件过滤 offload</text>
+        <text x="680" y="88" text-anchor="middle" font-size="11" fill="#4E8A80">扫描窗口 / 间隔</text>
+        <line x1="180" y1="65" x2="218" y2="65" stroke="#A39B8E" stroke-width="2" marker-end="url(#ar)"/>
+        <line x1="370" y1="65" x2="408" y2="65" stroke="#A39B8E" stroke-width="2" marker-end="url(#ar)"/>
+        <line x1="570" y1="65" x2="608" y2="65" stroke="#A39B8E" stroke-width="2" marker-end="url(#ar)"/>
+        <path d="M680,110 L680,180 L95,180 L95,112" fill="none" stroke="#2A9D8F" stroke-width="2" marker-end="url(#ar)"/>
+        <text x="390" y="172" text-anchor="middle" font-size="12" fill="#1E7268" font-weight="bold">ScanResult（设备 + RSSI + 广播字节）沿回调返回</text>
+        <text x="390" y="225" text-anchor="middle" font-size="12" fill="#A39B8E">过滤可在控制器硬件完成：不匹配的广播根本不唤醒你的进程</text>
+      </svg>
+      <figcaption>扫描请求向右穿过权限门与限流阀，结果向左回到 ScanCallback。</figcaption>
+    </figure>
+    <table>
+      <tr><th>类</th><th>职责</th><th>引入</th></tr>
+      <tr><td><code>BluetoothManager</code> / <code>BluetoothAdapter</code></td><td>拿适配器、查硬件能力、拿扫描器</td><td><span class="api-lv">18 / 21</span></td></tr>
+      <tr><td><code>BluetoothLeScanner</code></td><td>扫描的启动 / 停止 / 冲刷入口</td><td><span class="api-lv">21</span></td></tr>
+      <tr><td><code>ScanFilter</code></td><td>找什么：按广播字段过滤</td><td><span class="api-lv">21</span></td></tr>
+      <tr><td><code>ScanSettings</code></td><td>怎么找：功耗、回调方式、批处理、PHY</td><td><span class="api-lv">21</span></td></tr>
+      <tr><td><code>ScanCallback</code></td><td>怎么交付：逐条 / 批量 / 失败</td><td><span class="api-lv">21</span></td></tr>
+      <tr><td><code>ScanResult</code> / <code>ScanRecord</code></td><td>看到了什么：设备、信号、广播内容</td><td><span class="api-lv">21</span></td></tr>
+      <tr><td><code>PendingIntent</code> 版扫描</td><td>进程不在也能被结果唤醒</td><td><span class="api-lv">26</span></td></tr>
+    </table>
+    <div class="recap"><b>本步收束：</b>一次扫描 = 找什么（Filter）× 怎么找（Settings）× 怎么交付（Callback），中间隔着权限门和限流阀。</div>
+  </section>
+
+  <section id="entry">
+    <h2><span class="no">第 2 步</span>拿到扫描器，认清老 API</h2>
+    <h3>2.1 现代入口：BluetoothManager → Adapter → LeScanner</h3>
+    <pre><span class="cm">// 推荐路径：先 Manager 再 Adapter</span>
+val manager = context.getSystemService(BluetoothManager::class.java)
+val adapter = manager.adapter          <span class="cm">// 不支持蓝牙时为 null</span>
+val scanner = adapter?.bluetoothLeScanner  <span class="cm">// 蓝牙关闭时为 null！</span>
+if (scanner == null) { <span class="cm">/* 提示开蓝牙，而不是崩溃 */</span> }</pre>
+    <div class="key"><span class="tag">重点</span><code>getBluetoothLeScanner()</code> 在<b>蓝牙未开启时返回 null</b>，这是官方文档明确写的。每次扫描前都要判空，别缓存一个可能失效的 scanner。</div>
+    <h3>2.2 能力查询：先问硬件支不支持</h3>
+    <table>
+      <tr><th>方法</th><th>问什么</th><th>引入</th></tr>
+      <tr><td><code>isOffloadedFilteringSupported()</code></td><td>过滤能否下沉到控制器硬件（FIRST_MATCH / MATCH_LOST 依赖它）</td><td><span class="api-lv">21</span></td></tr>
+      <tr><td><code>isOffloadedScanBatchingSupported()</code></td><td>能否硬件批处理（reportDelay &gt; 0 依赖它）</td><td><span class="api-lv">21</span></td></tr>
+      <tr><td><code>isLeCodedPhySupported()</code></td><td>能否扫 LE Coded（远距离）PHY</td><td><span class="api-lv">26</span></td></tr>
+      <tr><td><code>isLe2MPhySupported()</code> / <code>isLeExtendedAdvertisingSupported()</code></td><td>2M 高速 / 扩展广播能力</td><td><span class="api-lv">26</span></td></tr>
+    </table>
+    <h3>2.3 老 API：startLeScan（认识即可，别用）</h3>
+    <pre><span class="cm">// API 18 引入，API 21 起废弃。没有过滤、没有参数、不能批处理</span>
+adapter.startLeScan { device, rssi, scanRecord -> <span class="cm">/* 全收 */</span> }
+adapter.stopLeScan(callback)</pre>
+    <p>它只能「全收」，费电且无法后台。维护老代码时认得它，新代码一律用 <code>BluetoothLeScanner</code>。</p>
+    <h3>2.4 别和经典蓝牙发现混淆</h3>
+    <p><code>adapter.startDiscovery()</code> 是<b>经典蓝牙</b>的 inquiry，约 12 秒、极费电，和 BLE 扫描是两套东西，<b>不能同时扫</b>（官方指南明确）。连接经典设备前还要 <code>cancelDiscovery()</code>。本课只讲 BLE。</p>
+    <div class="recap"><b>本步收束：</b>Manager→Adapter→LeScanner，判空；先查硬件能力；startLeScan 已废弃；startDiscovery 是经典蓝牙，别混用。</div>
+  </section>
+
+  <section id="startscan">
+    <h2><span class="no">第 3 步</span>startScan 家族：六个方法逐一讲</h2>
+    <table>
+      <tr><th>方法</th><th>作用</th><th>引入</th></tr>
+      <tr><td><code>startScan(callback)</code></td><td>默认参数、无过滤，全收</td><td><span class="api-lv">21</span></td></tr>
+      <tr><td><code>startScan(filters, settings, callback)</code></td><td>主力：带过滤和参数，结果走回调</td><td><span class="api-lv">21</span></td></tr>
+      <tr><td><code>startScan(filters, settings, pendingIntent)</code></td><td>后台：结果经 PendingIntent 投递，可唤醒进程；<b>返回 int</b>（0 成功）</td><td><span class="api-lv">26</span></td></tr>
+      <tr><td><code>stopScan(callback)</code></td><td>停止，须传<b>同一个</b> callback 实例</td><td><span class="api-lv">21</span></td></tr>
+      <tr><td><code>stopScan(pendingIntent)</code></td><td>停止 PendingIntent 扫描</td><td><span class="api-lv">26</span></td></tr>
+      <tr><td><code>flushPendingScanResults(callback)</code></td><td>立刻冲刷控制器里积压的批处理结果</td><td><span class="api-lv">21</span></td></tr>
+    </table>
+    <h3>3.1 主力用法：带过滤 + 限时停止</h3>
+    <pre>val cb = object : ScanCallback() {
+  override fun onScanResult(type: Int, r: ScanResult) {
     val dev = r.device; val rssi = r.rssi
-    val record = r.scanRecord   // 原始广播字节
+    val record = r.scanRecord   <span class="cm">// 原始广播字节</span>
   }
-  override fun onScanFailed(code:Int) { /* 1 重复注册 2 注册失败 6 过频 */ }
+  override fun onScanFailed(code: Int) { <span class="cm">/* 见第 4 步错误码 */</span> }
 }
-scanner.startScan(filters, settings, cb)</pre>
-      <div class="recap"><b>本步收束：</b>每个广播回调一次 onScanResult；onScanFailed 的 1/2/6 各有含义。</div>
+val filters = listOf(ScanFilter.Builder()
+  .setServiceUuid(ParcelUuid.fromString(<span class="str">"00001809-0000-1000-8000-00805F9B34FB"</span>)).build())
+val settings = ScanSettings.Builder()
+  .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY).build()
+scanner.startScan(filters, settings, cb)
+handler.postDelayed({ scanner.stopScan(cb) }, <span class="num">10_000</span>)  <span class="cm">// 官方建议：找到就停，永远限时</span></pre>
+    <p>官方指南两条铁律：<b>找到目标立刻停扫</b>；<b>永远给扫描设时限，不要循环扫</b>。filters 和 settings 都允许传 null（等价无过滤 / 默认参数）。</p>
+    <h3>3.2 后台用法：PendingIntent 版</h3>
+    <pre>val intent = Intent(context, ScanReceiver::class.java)
+val pi = PendingIntent.getBroadcast(context, <span class="num">0</span>, intent,
+    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE)
+val ret = scanner.startScan(filters, settings, pi)  <span class="cm">// ret==0 才算成功</span>
+<span class="cm">// Receiver 里取结果：</span>
+val results = intent.getParcelableArrayListExtra&lt;ScanResult&gt;(BluetoothLeScanner.EXTRA_LIST_SCAN_RESULT)
+val err = intent.getIntExtra(BluetoothLeScanner.EXTRA_ERROR_CODE, -<span class="num">1</span>)</pre>
+    <ul>
+      <li>进程被杀也能被匹配结果唤醒，适合「设备出现就干活」的场景。</li>
+      <li>三个 extra：<code>EXTRA_LIST_SCAN_RESULT</code>（结果列表）、<code>EXTRA_ERROR_CODE</code>（错误码）、<code>EXTRA_CALLBACK_TYPE</code>（回调类型），均 <span class="api-lv">26</span>。</li>
+      <li><b>坑：</b>创建 PendingIntent 时<b>不要用 FLAG_CANCEL_CURRENT</b>，否则 stopScan(pi) 可能停不掉（官方文档警告）。</li>
+      <li>Android 15 起，<b>强行停止应用会取消它的所有 PendingIntent</b>，包括扫描——被强停后扫描就没了。</li>
+    </ul>
+    <div class="recap"><b>本步收束：</b>前台用 callback 版并限时；后台用 PendingIntent 版并检查返回值；stop 要配对；别用 FLAG_CANCEL_CURRENT。</div>
+  </section>
+
+  <section id="callback">
+    <h2><span class="no">第 4 步</span>ScanCallback 与六个错误码</h2>
+    <table>
+      <tr><th>回调</th><th>何时触发</th></tr>
+      <tr><td><code>onScanResult(callbackType, result)</code></td><td>每收到一条匹配广播（逐条模式）</td></tr>
+      <tr><td><code>onBatchScanResults(results)</code></td><td>批处理模式（reportDelay&gt;0）攒够一批后</td></tr>
+      <tr><td><code>onScanFailed(errorCode)</code></td><td>扫描启动失败</td></tr>
+    </table>
+    <table>
+      <tr><th>码</th><th>常量</th><th>含义与对策</th><th>公开</th></tr>
+      <tr><td>1</td><td>ALREADY_STARTED</td><td>同参数扫描已在跑 → 别重复 start</td><td><span class="api-lv">21</span></td></tr>
+      <tr><td>2</td><td>APPLICATION_REGISTRATION_FAILED</td><td>App 注册失败 → 常伴随限流，退避重试</td><td><span class="api-lv">21</span></td></tr>
+      <tr><td>3</td><td>INTERNAL_ERROR</td><td>栈内部错误 → 重试 / 重启蓝牙</td><td><span class="api-lv">21</span></td></tr>
+      <tr><td>4</td><td>FEATURE_UNSUPPORTED</td><td>低功耗扫描特性不支持 → 换参数</td><td><span class="api-lv">21</span></td></tr>
+      <tr><td>5</td><td>OUT_OF_HARDWARE_RESOURCES</td><td>硬件过滤资源耗尽 → 减少过滤条件</td><td><span class="api-lv">33</span></td></tr>
+      <tr><td>6</td><td>SCANNING_TOO_FREQUENTLY</td><td>启停过频被限流 → 等 30s 再 stop+start</td><td><span class="api-lv">33</span></td></tr>
+    </table>
+    <div class="key"><span class="tag">重点 · 最阴的坑</span>限流发生时，<b>很多版本根本不回调 onScanFailed</b>：扫描「看起来启动了」，但一条结果都没有，只有 logcat 里一行包名为「?」的 <i>scanning too frequently</i>。AOSP 框架把 scannerId 置为 -2 后直接静默。所以<b>不能只靠 onScanFailed 判断扫描健康，要监控结果流</b>：长时间没结果就主动重启。</div>
+    <div class="recap"><b>本步收束：</b>三个回调、六个错误码；5/6 到 API 33 才公开；限流常静默，靠结果流监控兜底。</div>
+  </section>
+
+  <section id="result">
+    <h2><span class="no">第 5 步</span>ScanResult 与 ScanRecord：看到的是什么</h2>
+    <h3>5.1 ScanResult 字段</h3>
+    <table>
+      <tr><th>字段 / 方法</th><th>含义</th><th>引入</th></tr>
+      <tr><td><code>device</code></td><td>BluetoothDevice，后续连接的入口</td><td><span class="api-lv">21</span></td></tr>
+      <tr><td><code>rssi</code></td><td>信号强度 dBm，有效范围 [-127, 126]，波动大</td><td><span class="api-lv">21</span></td></tr>
+      <tr><td><code>timestampNanos</code></td><td><b>开机起算</b>的纳秒时间戳（对齐 SystemClock.elapsedRealtimeNanos），不是 wall clock</td><td><span class="api-lv">21</span></td></tr>
+      <tr><td><code>scanRecord</code></td><td>广播 + 扫描响应的合并内容</td><td><span class="api-lv">21</span></td></tr>
+      <tr><td><code>primaryPhy</code> / <code>secondaryPhy</code></td><td>主 / 次广播信道 PHY（1M / Coded）</td><td><span class="api-lv">26</span></td></tr>
+      <tr><td><code>isLegacy</code> / <code>isConnectable</code></td><td>是否传统广播 / 是否可连接</td><td><span class="api-lv">26</span></td></tr>
+      <tr><td><code>advertisingSid</code> / <code>txPower</code> / <code>periodicAdvertisingInterval</code></td><td>扩展广播集 ID / 发射功率 / 周期广播间隔</td><td><span class="api-lv">26</span></td></tr>
+      <tr><td><code>dataStatus</code></td><td>数据完整 / 截断（DATA_COMPLETE / DATA_TRUNCATED）</td><td><span class="api-lv">33</span></td></tr>
+    </table>
+    <h3>5.2 ScanRecord：把广播字节解析成人话</h3>
+    <table>
+      <tr><th>方法</th><th>拿到什么</th><th>引入</th></tr>
+      <tr><td><code>getDeviceName()</code></td><td>广播里的名字（可能来自扫描响应）</td><td><span class="api-lv">21</span></td></tr>
+      <tr><td><code>getServiceUuids()</code></td><td>广播里声明的服务 UUID 列表</td><td><span class="api-lv">21</span></td></tr>
+      <tr><td><code>getManufacturerSpecificData()</code></td><td>厂商 ID → 数据（SparseArray）；传 ID 取单条</td><td><span class="api-lv">21</span></td></tr>
+      <tr><td><code>getServiceData()</code></td><td>服务 UUID → 数据（Map）；传 UUID 取单条</td><td><span class="api-lv">21</span></td></tr>
+      <tr><td><code>getTxPowerLevel()</code> / <code>getAdvertiseFlags()</code></td><td>发射功率 / 广播标志</td><td><span class="api-lv">21</span></td></tr>
+      <tr><td><code>getBytes()</code> / <code>parseFromBytes()</code></td><td>原始字节 / 从字节重建（排查神器）</td><td><span class="api-lv">21</span></td></tr>
+      <tr><td><code>getServiceSolicitationUuids()</code></td><td>服务征询 UUID</td><td><span class="api-lv">29</span></td></tr>
+      <tr><td><code>getAdvertisingDataMap()</code></td><td>AD Type → 原始数据 的完整 Map（配 DATA_TYPE_* 常量）</td><td><span class="api-lv">33</span></td></tr>
+    </table>
+    <pre><span class="cm">// 例：解析 iBeacon（厂商 ID 0x004C = Apple）</span>
+val mfr = result.scanRecord?.getManufacturerSpecificData(<span class="num">0x004C</span>)
+<span class="cm">// 排查「过滤为什么没命中」：先打印原始字节</span>
+val raw = result.scanRecord?.bytes?.joinToString(<span class="str">" "</span>) { <span class="str">"%02X"</span>.format(it) }</pre>
+    <div class="recap"><b>本步收束：</b>timestampNanos 是开机时钟；名字 / UUID 必须真在广播里；排查先 getBytes 看 RAW。</div>
   </section>
 
   <section id="filter">
-    <h2><span class="no">第 2 步</span>过滤条件必须真的在广播里</h2>
-    
-      <pre>val f = ScanFilter.Builder()
-  .setServiceUuid(ParcelUuid.fromString("00001809-0000-1000-8000-00805F9B34FB"))
-  .build()</pre>
-      <div class="key"><span class="tag">重点 · 高频坑</span>服务 UUID 过滤失效，多半是 <b>UUID 根本没写进广播</b>（设备连接后才暴露服务）。名字过滤失效可能是名字在扫描响应里平台没交付。RSSI 过滤慎用（波动大）。排查先去掉全部过滤看原始字节。</div>
-      <div class="recap"><b>本步收束：</b>过滤字段必须真实存在于广播；筛不到先去掉过滤看 RAW。</div>
-  </section>
-
-  <section id="limit">
-    <h2><span class="no">第 3 步</span>7.0 限流、8.1 熄屏、后台 PendingIntent</h2>
-    
-      <ul><li>Android 7.0 起 <b>30 秒内启停扫描超 5 次</b>被限流（onScanFailed 2/6）。</li>
-        <li>8.1 起<b>熄屏时不带过滤器的扫描暂停</b>——后台扫描务必带 ScanFilter。</li>
-        <li>进程未运行也要收匹配：用 <code>startScan(filters, settings, PendingIntent)</code>。</li></ul>
-      <div class="recap"><b>本步收束：</b>别频繁启停；后台带过滤；离线匹配用 PendingIntent。</div>
-  </section>
-
-  <section id="lab">
-    <h2><span class="no">动手</span>勾选过滤条件，看目标设备还匹配吗</h2>
-    <p>目标设备广播里有名字 XiaoWen-T 和服务 1809，但没有厂商数据。勾选过滤条件，看它是否还被匹配。体会「过滤了广播里没有的字段→设备消失」。</p>
+    <h2><span class="no">第 6 步</span>ScanFilter：全部过滤条件逐一讲</h2>
+    <table>
+      <tr><th>Builder 方法</th><th>过滤依据</th><th>引入</th></tr>
+      <tr><td><code>setDeviceName(name)</code></td><td>广播 / 扫描响应里的名字</td><td><span class="api-lv">21</span></td></tr>
+      <tr><td><code>setDeviceAddress(mac)</code></td><td>MAC 地址。<b>随机地址会轮换</b>，隐私设备别用它</td><td><span class="api-lv">21</span></td></tr>
+      <tr><td><code>setServiceUuid(uuid[, mask])</code></td><td>广播声明的服务 UUID，mask 可只比部分位</td><td><span class="api-lv">21</span></td></tr>
+      <tr><td><code>setServiceData(uuid, data[, mask])</code></td><td>服务数据（如 BTHome 0xFCD2）</td><td><span class="api-lv">21</span></td></tr>
+      <tr><td><code>setManufacturerData(id, data[, mask])</code></td><td>厂商数据（如 iBeacon 0x004C）</td><td><span class="api-lv">21</span></td></tr>
+      <tr><td><code>setServiceSolicitationUuid(uuid[, mask])</code></td><td>服务征询 UUID</td><td><span class="api-lv">29</span></td></tr>
+      <tr><td><code>setAdvertisingDataType(type)</code></td><td>按 AD Type 存在性过滤（SIG 分配值）</td><td><span class="api-lv">33</span></td></tr>
+      <tr><td><code>setAdvertisingDataTypeWithData(type, data, mask)</code></td><td>按 AD Type + 内容过滤</td><td><span class="api-lv">33</span></td></tr>
+    </table>
+    <p><b>组合语义：</b>同一个 ScanFilter 内多个条件是<b>与</b>（都要满足）；列表里多个 ScanFilter 之间是<b>或</b>（命中任一即交付）。空列表 = 全收。支持 offload 时过滤在控制器硬件完成，不匹配的广播不唤醒 CPU。</p>
+    <div class="key"><span class="tag">重点 · 高频坑</span>服务 UUID 过滤失效，多半是 <b>UUID 根本没写进广播</b>（设备连接后才暴露服务）。名字过滤失效可能是名字在扫描响应里平台没交付。RSSI 过滤慎用（波动大）。排查先去掉全部过滤看原始字节。</div>
     <div class="lab">
-      <div class="lab-head"><b>ScanFilter 演练</b><span class="hint">目标广播：有名字、有 1809、无厂商数据</span></div>
+      <div class="lab-head"><b>演练一 · ScanFilter 匹配</b><span class="hint">目标广播：有名字、有 1809、无厂商数据</span></div>
       <div class="controls"><div class="seg" id="f3"><button data-f="name">按名字</button><button data-f="uuid">按 1809</button><button data-f="mfr">按厂商数据</button></div></div>
       <div class="lab-body"><div><div class="chips" id="match3"></div><pre id="code3" style="margin:10px 0;"></pre></div><div class="logcat"><div class="logcat-head"><span>扫描结果</span><span>live</span></div><div class="logcat-body" id="log3"></div></div></div>
       <div class="lab-foot"><span class="hint">勾「按厂商数据」→ 设备消失，因为广播里根本没有厂商数据</span></div>
     </div>
-    <div class="key"><span class="tag">看懂这场演练</span>过滤是「与」逻辑：每个条件都必须在广播里真实存在。勾了广播没有的字段（如厂商数据），设备就被滤掉。这正是「加了过滤设备消失」的根因。</div>
+    <div class="recap"><b>本步收束：</b>过滤字段必须真实存在于广播；条件内与、条件间或；筛不到先去过滤看 RAW。</div>
+  </section>
+
+  <section id="settings">
+    <h2><span class="no">第 7 步</span>ScanSettings：全部扫描参数逐一讲</h2>
+    <h3>7.1 setScanMode：功耗与速度的档位</h3>
+    <table>
+      <tr><th>模式</th><th>值</th><th>行为</th><th>引入</th></tr>
+      <tr><td>SCAN_MODE_OPPORTUNISTIC</td><td>-1</td><td>不自己开扫，<b>搭别人扫描的便车</b>被动听结果</td><td><span class="api-lv">23</span></td></tr>
+      <tr><td>SCAN_MODE_LOW_POWER</td><td>0</td><td>默认档，最省电；<b>App 不在前台时被强制用这档</b></td><td><span class="api-lv">21</span></td></tr>
+      <tr><td>SCAN_MODE_BALANCED</td><td>1</td><td>折中，适合前台较长时间扫描</td><td><span class="api-lv">21</span></td></tr>
+      <tr><td>SCAN_MODE_LOW_LATENCY</td><td>2</td><td>最高占空比，最快发现；<b>只建议前台短时使用</b></td><td><span class="api-lv">21</span></td></tr>
+    </table>
+    <p>「档位」本质是<b>扫描窗口 / 扫描间隔</b>这对参数。一组实测参考值（不同厂商 / 版本会调）：LOW_POWER ≈ 140/1400ms（听 10% 时间）、BALANCED ≈ 183/730ms（≈25%）、LOW_LATENCY ≈ 100/100ms（≈100%）。窗口短于广播间隔时会漏包——这就是低功耗档「发现慢」的物理原因。</p>
+    <h3>7.2 其余参数</h3>
+    <table>
+      <tr><th>Builder 方法</th><th>作用</th><th>引入</th></tr>
+      <tr><td><code>setCallbackType(flags)</code></td><td>ALL_MATCHES(1) 每条都报；FIRST_MATCH(2) 首次出现报；MATCH_LOST(4) 消失报；可按位或。后两者需硬件 offload 支持</td><td><span class="api-lv">23</span></td></tr>
+      <tr><td><code>setMatchMode(mode)</code></td><td>AGGRESSIVE 弱信号也尽快报；STICKY 要更强信号 / 更多次 sightings 才报</td><td><span class="api-lv">23</span></td></tr>
+      <tr><td><code>setNumOfMatches(n)</code></td><td>ONE / FEW / MAX：硬件匹配上报的广播条数档位</td><td><span class="api-lv">23</span></td></tr>
+      <tr><td><code>setReportDelay(ms)</code></td><td>0 立即报；&gt;0 批处理，攒到 max(ms, 5000) 或缓冲满才走 onBatchScanResults；需硬件批处理支持</td><td><span class="api-lv">21</span></td></tr>
+      <tr><td><code>setLegacy(bool)</code></td><td>默认 true 只收传统（≤4.2）广播；false 才收 BLE 5 扩展广播</td><td><span class="api-lv">26</span></td></tr>
+      <tr><td><code>setPhy(phy)</code></td><td>仅 legacy=false 时生效：1M / CODED / ALL_SUPPORTED(255)；选不支持的 PHY 会启动失败</td><td><span class="api-lv">26</span></td></tr>
+      <tr><td><code>setScanType(type)</code></td><td>ACTIVE（等扫描响应）/ PASSIVE（收到即报，不等响应）</td><td><span class="api-lv">36.1</span></td></tr>
+      <tr><td><code>setRssiThreshold(dbm)</code></td><td>只收 RSSI ≥ 阈值的广播，[-127,126]</td><td><span class="api-lv">36.1</span></td></tr>
+    </table>
+    <p><code>setScanResultType</code> 已废弃（只剩 FULL 一种），不用管。MATCH_LOST 在各厂商上表现不稳，工程上更可靠的做法是<b>自己用定时器清理超时未见设备</b>（如 10 秒没再见到就移除）。</p>
+    <pre>val settings = ScanSettings.Builder()
+  .setScanMode(ScanSettings.SCAN_MODE_BALANCED)
+  .setCallbackType(ScanSettings.CALLBACK_TYPE_ALL_MATCHES)
+  .setReportDelay(<span class="num">0</span>)            <span class="cm">// 前台逐条；后台批处理改 &gt;0</span>
+  .setLegacy(<span class="num">false</span>)             <span class="cm">// 要收 BLE5 扩展广播才关</span>
+  .build()</pre>
+    <div class="recap"><b>本步收束：</b>前台短扫 LOW_LATENCY、长扫 BALANCED、后台 LOW_POWER；批处理走 onBatchScanResults；扩展广播要 legacy=false。</div>
+  </section>
+
+  <section id="limits">
+    <h2><span class="no">第 8 步</span>权限门与限流阀：系统不告诉你的规则</h2>
+    <h3>8.1 权限随版本变（详见 B2）</h3>
+    <table>
+      <tr><th>版本</th><th>扫描需要什么</th></tr>
+      <tr><td>≤ 5.1（API ≤22）</td><td>BLUETOOTH / BLUETOOTH_ADMIN，安装即授</td></tr>
+      <tr><td>6.0 – 9（23–28）</td><td>+ 位置权限（粗即可）+ 系统位置开关打开，否则<b>一条结果都没有</b></td></tr>
+      <tr><td>10 – 11（29–30）</td><td>位置必须 <b>ACCESS_FINE_LOCATION</b></td></tr>
+      <tr><td>12+（31+）</td><td><b>BLUETOOTH_SCAN</b>；声明 <code>neverForLocation</code> 可免位置，否则仍需 FINE；连接另需 BLUETOOTH_CONNECT</td></tr>
+    </table>
+    <p><code>neverForLocation</code> 是「我绝不拿蓝牙推导位置」的强声明，代价是<b>部分信标类广播数据会被系统滤掉</b>——扫信标的项目要实测。</p>
+    <h3>8.2 三道限流阀</h3>
+    <ul>
+      <li><b>启停限流（7.0 起，未写进官方文档）：</b>30 秒内 startScan 超 5 次即被限，常<b>静默</b>（见第 4 步）。冷却后需 stop+start 才恢复，不会自动恢复。</li>
+      <li><b>熄屏暂停（8.1 起，官方文档写明）：</b>不带过滤的扫描在熄屏时停止交付，亮屏恢复。所以<b>后台扫描必须带 ScanFilter</b>。</li>
+      <li><b>长扫降级（13 QPR1 起覆盖带过滤扫描）：</b>扫描运行超过 <code>scan_timeout_millis</code>，ScanManager 把它悄悄降到低功耗档（无过滤的降到 opportunistic），<b>不通知 App</b>，回调还在只是变稀。AOSP 默认曾为 30 分钟，Android 15 起降到 10 分钟，实测有的机型 5 分钟。可用 <code>adb shell device_config get bluetooth scan_timeout_millis</code> 查。</li>
+    </ul>
+    <div class="key"><span class="tag">工程对策</span>长扫场景：<b>在超时前主动重启扫描</b>（如每 4 分钟，留足余量），重启计入 5 次/30s 配额所以别太频；同时<b>监控结果流</b>，久无结果就重启。后台再叠加 PendingIntent + 前台服务（见 B10）。</div>
+    <div class="lab">
+      <div class="lab-head"><b>演练二 · 限流阀</b><span class="hint">30 秒窗口内最多 5 次 startScan，第 6 次静默失败</span></div>
+      <div class="controls">
+        <button class="btn" id="thStart" type="button">startScan</button>
+        <button class="btn ghost" id="thStop" type="button">stopScan</button>
+        <button class="btn teal" id="thWait" type="button">快进 30 秒</button>
+      </div>
+      <div class="lab-body">
+        <div>
+          <div class="chips" id="thQuota"></div>
+          <div class="stats">
+            <div class="stat-box"><b id="thCount">0</b><small>窗口内 start 次数</small></div>
+            <div class="stat-box good"><b id="thOk">0</b><small>成功启动</small></div>
+            <div class="stat-box bad"><b id="thBlocked">0</b><small>被限流</small></div>
+          </div>
+        </div>
+        <div class="logcat"><div class="logcat-head"><span>logcat</span><span>live</span></div><div class="logcat-body" id="thLog"></div></div>
+      </div>
+      <div class="lab-foot"><span class="hint">连点 6 次 startScan：第 6 次「看起来成功」却无结果，只有包名「?」的一行日志——这就是静默限流</span></div>
+    </div>
+    <div class="recap"><b>本步收束：</b>权限按版本给齐；别频繁启停；后台带过滤；长扫主动重启 + 监控结果流。</div>
   </section>
 
   <section id="quiz">
-    <h2><span class="no">自测</span>三个问题</h2>
+    <h2><span class="no">自测</span>六个问题</h2>
     <div class="card" id="quiz-box"></div>
     <p id="quiz-done" style="display:none;font-weight:700;color:#1E7268;">全对。下一课讲连接生命周期。</p>
   </section>
 
-  <section id="map">
-    <h2><span class="no">回顾</span>速查</h2>
-    <table><tr><th>要点</th><th>记住</th></tr><tr><td>startScan</td><td>filters+settings+callback</td></tr><tr><td>ScanFilter</td><td>字段必须真实在广播里</td></tr><tr><td>限流</td><td>30s 启停&gt;5 次</td></tr><tr><td>后台</td><td>带过滤；离线用 PendingIntent</td></tr></table>
-    <div class="note"><span class="tag">说明</span>本页为教学简化，工程细节以正文与官方规范为准；演练为模拟，非真实设备通信。</div>
-    <footer>青竹蓝牙学堂 · 蓝牙小课堂Android 第三课 · B3 · <a href="../index.html">回到学堂</a></footer>
+  <section id="cheatsheet">
+    <h2><span class="no">回顾</span>速查表</h2>
+    <table>
+      <tr><th>场景</th><th>用什么</th></tr>
+      <tr><td>拿扫描器</td><td>BluetoothManager → adapter → bluetoothLeScanner，判空</td></tr>
+      <tr><td>前台找设备</td><td>startScan(filters, settings, cb)，LOW_LATENCY，限时停</td></tr>
+      <tr><td>后台等设备</td><td>startScan(filters, settings, PendingIntent)，带过滤</td></tr>
+      <tr><td>只要某类设备</td><td>ScanFilter：UUID / 厂商数据 / 服务数据，字段必须真在广播里</td></tr>
+      <tr><td>省电长扫</td><td>LOW_POWER + reportDelay 批处理 + onBatchScanResults</td></tr>
+      <tr><td>收 BLE5 扩展广播</td><td>setLegacy(false) + setPhy</td></tr>
+      <tr><td>扫描没结果</td><td>查权限 → 查过滤字段 → 查限流 / 熄屏 / 长扫降级 → 看 RAW</td></tr>
+      <tr><td>启动失败</td><td>onScanFailed 1/2/3/4/5/6 对表处理；无回调也要监控结果流</td></tr>
+    </table>
+    <div class="note"><span class="tag">说明</span>本页为教学整理，API 级别与行为以官方文档和 AOSP 源码为准；演练为模拟，非真实设备通信。窗口/间隔与超时数值随机型和版本变化。</div>
+  </section>
+
+  <section id="refs">
+    <h2><span class="no">依据</span>参考链接</h2>
+    <div class="card refs">
+      <h3 style="margin-top:0;">官方指南</h3>
+      <ul>
+        <li><a href="https://developer.android.com/develop/connectivity/bluetooth/ble/find-ble-devices" target="_blank" rel="noopener">Find BLE devices</a> <span class="src">— startScan 用法、限时停止、BLE 与经典不可同扫</span></li>
+        <li><a href="https://developer.android.com/develop/connectivity/bluetooth/bt-permissions" target="_blank" rel="noopener">Bluetooth permissions</a> <span class="src">— 各版本权限、neverForLocation</span></li>
+      </ul>
+      <h3>API 参考（级别与行为的权威出处）</h3>
+      <ul>
+        <li><a href="https://developer.android.com/reference/android/bluetooth/BluetoothAdapter" target="_blank" rel="noopener">BluetoothAdapter</a> <span class="src">— getBluetoothLeScanner、能力查询、startLeScan</span></li>
+        <li><a href="https://developer.android.com/reference/android/bluetooth/le/BluetoothLeScanner" target="_blank" rel="noopener">BluetoothLeScanner</a> <span class="src">— 六个方法、PendingIntent extras、熄屏暂停说明</span></li>
+        <li><a href="https://developer.android.com/reference/android/bluetooth/le/ScanCallback" target="_blank" rel="noopener">ScanCallback</a> <span class="src">— 三个回调、六个错误码</span></li>
+        <li><a href="https://developer.android.com/reference/android/bluetooth/le/ScanFilter.Builder" target="_blank" rel="noopener">ScanFilter.Builder</a> <span class="src">— 全部过滤条件</span></li>
+        <li><a href="https://developer.android.com/reference/android/bluetooth/le/ScanSettings" target="_blank" rel="noopener">ScanSettings</a> / <a href="https://developer.android.com/reference/android/bluetooth/le/ScanSettings.Builder" target="_blank" rel="noopener">ScanSettings.Builder</a> <span class="src">— 模式、回调类型、批处理、PHY、36.1 新参数</span></li>
+        <li><a href="https://developer.android.com/reference/android/bluetooth/le/ScanResult" target="_blank" rel="noopener">ScanResult</a> / <a href="https://developer.android.com/reference/android/bluetooth/le/ScanRecord" target="_blank" rel="noopener">ScanRecord</a> <span class="src">— 结果字段与广播解析</span></li>
+      </ul>
+      <h3>AOSP 源码（限流与降级的实现）</h3>
+      <ul>
+        <li><a href="https://android.googlesource.com/platform/packages/modules/Bluetooth/+/refs/heads/main/framework/java/android/bluetooth/le/BluetoothLeScanner.java" target="_blank" rel="noopener">BluetoothLeScanner.java</a> <span class="src">— 限流时 scannerId=-2 静默处理</span></li>
+        <li><a href="https://cs.android.com/android/platform/superproject/main/+/main:packages/modules/Bluetooth/android/app/src/com/android/bluetooth/scan/ScanManager.java" target="_blank" rel="noopener">ScanManager.java</a> <span class="src">— 5 次/30s、scan_timeout_millis 降级</span></li>
+      </ul>
+      <h3>实测与深入</h3>
+      <ul>
+        <li><a href="https://dev.to/nedmah/your-android-ble-scan-quietly-dies-after-5-minutes-and-you-dont-even-know-it-1l60" target="_blank" rel="noopener">Your Android BLE scan quietly dies after 5 minutes</a> <span class="src">— 长扫降级实测、窗口/间隔参考值、重启策略（2026-11）</span></li>
+        <li><a href="https://punchthrough.com/android-ble-guide/" target="_blank" rel="noopener">Punch Through · Android BLE Ultimate Guide</a> <span class="src">— 5 次/30s 静默限流、扫描模式选型</span></li>
+        <li><a href="https://punchthrough.com/android-ble-scan-filter/" target="_blank" rel="noopener">Punch Through · Android BLE Scan Filter</a> <span class="src">— 过滤语义、MATCH_LOST 的坑</span></li>
+      </ul>
+    </div>
+    <div class="next-links">
+      <a href="02-permissions-manifest.html">← B2 权限与清单</a>
+      <a href="04-connection-lifecycle.html">B4 连接生命周期 →</a>
+    </div>
+    <footer>青竹蓝牙学堂 · 蓝牙小课堂 Android 第三课 · B3 · <a href="../index.html">回到学堂</a></footer>
   </section>
 </main>
 <aside class="toc" id="toc">
   <div class="toc-title">本课目录</div>
-  <a href="#scan">扫描回调</a>
-  <a href="#filter">ScanFilter</a>
-  <a href="#limit">限流与后台</a>
-  <a href="#lab">动手演练</a>
+  <a href="#map">API 全景</a>
+  <a href="#entry">入口与老 API</a>
+  <a href="#startscan">startScan 家族</a>
+  <a href="#callback">回调与错误码</a>
+  <a href="#result">结果与广播解析</a>
+  <a href="#filter">ScanFilter + 演练一</a>
+  <a href="#settings">ScanSettings</a>
+  <a href="#limits">权限限流 + 演练二</a>
   <a href="#quiz">本课自测</a>
-  <a href="#map">回顾与速查</a>
+  <a href="#cheatsheet">速查表</a>
+  <a href="#refs">参考链接</a>
 </aside>
 </div>
 <script>
-
+// 演练一：ScanFilter 匹配
 (function(){
   var has={name:true,uuid:true,mfr:false}; var on={name:false,uuid:false,mfr:false};
   function calc(){
@@ -298,11 +574,63 @@ scanner.startScan(filters, settings, cb)</pre>
   calc();
 })();
 
+// 演练二：限流阀（30s 窗口 5 次）
+(function(){
+  var starts=[], ok=0, blocked=0, scanning=false, clock=0;
+  var log=document.getElementById('thLog');
+  function line(html){ var d=document.createElement('div'); d.innerHTML='<span class="t">[t+'+clock+'s]</span> '+html; log.appendChild(d); log.scrollTop=log.scrollHeight; }
+  function render(){
+    var now=clock;
+    starts=starts.filter(function(t){return now-t<30;});
+    document.getElementById('thCount').textContent=starts.length;
+    document.getElementById('thOk').textContent=ok;
+    document.getElementById('thBlocked').textContent=blocked;
+    var chips='';
+    for(var i=0;i<5;i++){ chips+='<span class="chip '+(i<starts.length?'on':'')+'">配额 '+(i+1)+'</span>'; }
+    chips+='<span class="chip '+(starts.length>=5?'bad':'')+'">'+(starts.length>=5?'窗口已满':'窗口 '+starts.length+'/5')+'</span>';
+    document.getElementById('thQuota').innerHTML=chips;
+  }
+  document.getElementById('thStart').addEventListener('click',function(){
+    starts.push(clock);
+    if(starts.length>5){
+      blocked++; scanning=false;
+      line('<span class="api">startScan()</span> <span class="c">// 表面上启动了</span>');
+      line('<span class="warn">? W BtGatt.ScanManager: app is scanning too frequently</span>');
+      line('<span class="err">…30 秒内无任何 onScanResult（静默限流）</span>');
+    } else {
+      ok++; scanning=true;
+      line('<span class="api">startScan()</span> <span class="ok">→ onScanResult 陆续到来</span>');
+    }
+    render();
+  });
+  document.getElementById('thStop').addEventListener('click',function(){
+    if(scanning){ scanning=false; line('<span class="api">stopScan()</span> <span class="c">// 注意：stop+start 也计入配额</span>'); }
+    else line('<span class="c">// 当前没有在扫</span>');
+    render();
+  });
+  document.getElementById('thWait').addEventListener('click',function(){
+    clock+=30; starts=[];
+    line('<span class="c">// 快进 30 秒，窗口清空；被限的扫描不会自动恢复，需 stop+start</span>');
+    render();
+  });
+  render();
+})();
+
+// 目录高亮
 const tocLinks=[...document.querySelectorAll('.toc a')];
 const secs=tocLinks.map(a=>document.getElementById(a.getAttribute('href').slice(1)));
 const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){tocLinks.forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+e.target.id));}});},{rootMargin:'-20% 0px -70% 0px'});
 secs.forEach(s=>s&&io.observe(s));
-const QUIZ=[{"q":"1. 服务 UUID 过滤失效最常见原因？","opts":[["UUID 没写进广播",true,"对。设备可能连接后才暴露服务。"],["权限没给",false,"权限问题会扫不到全部。"],["RSSI 太低",false,"与 UUID 无关。"]]},{"q":"2. onScanFailed=2/6 常见于？","opts":[["频繁启停被限流",true,"对。30 秒超 5 次。"],["设备坏了",false,"是 App 扫描行为。"],["名字太长",false,"无关。"]]},{"q":"3. 8.1 熄屏后台扫描要怎样？","opts":[["带 ScanFilter",true,"对。无过滤的扫描熄屏暂停。"],["不带过滤",false,"会被暂停。"],["提高 RSSI",false,"无关。"]]}];
+
+// 自测
+const QUIZ=[
+ {"q":"1. 服务 UUID 过滤失效最常见原因？","opts":[["UUID 没写进广播",true,"对。设备可能连接后才暴露服务，广播里根本没有。"],["权限没给",false,"权限问题会扫不到全部，不是单类设备消失。"],["RSSI 太低",false,"与 UUID 无关。"]]},
+ {"q":"2. 30 秒内第 6 次 startScan，多数版本会怎样？","opts":[["静默无结果，只有 logcat 一行",true,"对。常不回调 onScanFailed，要监控结果流。"],["立刻回调 onScanFailed(1)",false,"1 是重复注册，不是限流。"],["自动排队等冷却",false,"不会自动恢复，需 stop+start。"]]},
+ {"q":"3. 8.1 起熄屏后台扫描要怎样？","opts":[["带 ScanFilter",true,"对。无过滤的扫描熄屏暂停交付。"],["不带过滤",false,"会被暂停。"],["提高 RSSI",false,"无关。"]]},
+ {"q":"4. reportDelay 设为 5000，结果走哪个回调？","opts":[["onBatchScanResults",true,"对。批处理模式攒批交付，还需硬件批处理支持。"],["onScanResult 逐条",false,"reportDelay>0 走批量。"],["onScanFailed",false,"无关。"]]},
+ {"q":"5. 想收 BLE 5 扩展广播，怎么设？","opts":[["setLegacy(false)，按需 setPhy",true,"对。默认 legacy=true 只收传统广播。"],["setScanMode(LOW_LATENCY)",false,"模式管功耗，不管扩展广播。"],["setReportDelay(0)",false,"无关。"]]},
+ {"q":"6. 扫描跑了 6 分钟后结果变稀，最可能？","opts":[["长扫超时被系统悄悄降级",true,"对。scan_timeout_millis 到点降档，不通知 App；超时前主动重启可解。"],["设备没电了",false,"先怀疑系统降级。"],["权限被收回",false,"权限变化会直接扫不到，不是变稀。"]]}
+];
 let solved=0; const box=document.getElementById('quiz-box');
 QUIZ.forEach((item,qi)=>{
   const h=document.createElement('div'); h.className='quiz-q'; h.textContent=item.q; box.appendChild(h);
@@ -322,7 +650,6 @@ QUIZ.forEach((item,qi)=>{
   });
   box.appendChild(ex);
 });
-
 </script>
 </body>
 </html>

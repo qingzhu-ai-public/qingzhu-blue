@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>蓝牙小课堂 · B1 Android蓝牙全景 · 青竹蓝牙学堂</title>
+<title>蓝牙小课堂 · B1 蓝牙全景 · 青竹蓝牙学堂</title>
 <style>
   :root{
     --bg:#F7F6F2; --card:#FFFFFF; --ink:#2B2620; --muted:#7A7267; --faint:#A39B8E;
@@ -172,6 +172,10 @@
   .ctl-row label{display:inline-flex;align-items:center;gap:10px;}
   .ctl-row input[type=range]{accent-color:var(--coral);width:160px;}
   .ctl-row .chk input{accent-color:var(--coral);}
+  .api-lv{display:inline-block;font-family:ui-monospace,Consolas,monospace;font-size:11.5px;font-weight:800;color:#2F58A8;background:var(--blue-soft);border:1px solid var(--blue-line);border-radius:999px;padding:0 8px;white-space:nowrap;}
+  .refs{font-size:14px;}
+  .refs li{margin:7px 0;}
+  .refs .src{font-size:12px;color:var(--faint);}
 </style>
 </head>
 <body style="--coral:#E8590C;--coral-soft:#FBEADF;--coral-line:#F2C4A4">
@@ -202,86 +206,205 @@
 </aside>
 <main>
   <div class="crumb">蓝牙小课堂 / Android 第一课 · B1</div>
-  <h1>Android 蓝牙全景：<em>两条路</em>与 API 地图</h1>
-  <p class="lead">Android 上蓝牙有两条完全不同的路：经典蓝牙（BR/EDR）走 Profile/Socket，BLE 走 GATT。选错路后面代码全重来。这一课把两条路和核心 API 摆清。</p>
-  <div class="meta"><span>平台：Android/Kotlin</span><span>约 12 分钟</span><span>含交互演练</span><span>前置：通用基础</span></div>
+  <h1>Android 蓝牙全景：<em>两条路</em>、协议栈与 API 地图</h1>
+  <p class="lead">Android 上蓝牙有两条完全不同的路：经典蓝牙（BR/EDR）走 Profile/Socket，BLE 走 GATT。选错路后面代码全重来。这一课把两条路、协议栈分层、核心类与级别、GAP/GATT 角色摆清，作为整套 Android 课程的地图。</p>
+  <div class="meta"><span>平台：Android/Kotlin</span><span>约 22 分钟</span><span>API 18 → 36</span><span>含交互演练</span><span>前置：通用基础</span></div>
   <div class="journey">
     <div class="j-step"><span class="n">1</span><span class="t">两条路</span><span class="s">经典 vs BLE</span></div>
-    <div class="j-step"><span class="n">2</span><span class="t">API</span><span class="s">核心类</span></div>
-    <div class="j-step"><span class="n">3</span><span class="t">角色</span><span class="s">Central/Peripheral</span></div>
-    <div class="j-step"><span class="n">4</span><span class="t">动手</span><span class="s">认 API</span></div>
+    <div class="j-step"><span class="n">2</span><span class="t">协议栈</span><span class="s">分层</span></div>
+    <div class="j-step"><span class="n">3</span><span class="t">API</span><span class="s">核心类+级别</span></div>
+    <div class="j-step"><span class="n">4</span><span class="t">角色</span><span class="s">GAP/GATT</span></div>
+    <div class="j-step"><span class="n">5</span><span class="t">动手</span><span class="s">两场演练</span></div>
   </div>
 
   <section id="two">
     <h2><span class="no">第 1 步</span>经典蓝牙与 BLE 是两套接口</h2>
-    
-      <table><tr><th></th><th>经典蓝牙 BR/EDR</th><th>BLE</th></tr>
-        <tr><td>典型用途</td><td>音频 A2DP/HFP、串口 SPP、键鼠 HID</td><td>传感器、信标、低功耗交互</td></tr>
-        <tr><td>应用接口</td><td>RFCOMM Socket / 系统 Profile</td><td>GATT（服务/特征）</td></tr>
-        <tr><td>核心类</td><td>BluetoothSocket / BluetoothAdapter</td><td>BluetoothLeScanner / BluetoothGatt</td></tr>
-        <tr><td>功耗</td><td>较高</td><td>低，纽扣电池可行</td></tr></table>
-      <div class="recap"><b>本步收束：</b>先确认设备实现了哪条路，再选 API；iOS 普通 App 拿不到 SPP，Android 可以。</div>
+    <table>
+      <tr><th></th><th>经典蓝牙 BR/EDR</th><th>BLE（低功耗）</th></tr>
+      <tr><td>典型用途</td><td>音频 A2DP/HFP、串口 SPP、键鼠 HID</td><td>传感器、信标、价签、低功耗交互</td></tr>
+      <tr><td>应用接口</td><td>RFCOMM Socket / 系统 Profile 代理</td><td>GATT（服务 / 特征 / 描述符）</td></tr>
+      <tr><td>核心类</td><td>BluetoothSocket / BluetoothServerSocket / BluetoothAdapter</td><td>BluetoothLeScanner / BluetoothGatt / BluetoothGattServer</td></tr>
+      <tr><td>数据模型</td><td>字节流（像串口）</td><td>属性表（读 / 写 / 通知）</td></tr>
+      <tr><td>功耗</td><td>较高</td><td>低，纽扣电池可行</td></tr>
+      <tr><td>平台开放性</td><td>Android 开放 SPP；iOS 普通 App 不开放（需 MFi）</td><td>Android / iOS 都开放（iOS 用 CoreBluetooth）</td></tr>
+    </table>
+    <div class="key"><span class="tag">选型铁律</span>设备已定型时，<b>按它实现的路来</b>，并核对目标平台是否开放接口。双模设备（如手机）两条路都支持，但<b>同一时刻不能既扫经典又扫 BLE</b>。</div>
+    <div class="recap"><b>本步收束：</b>先确认设备走哪条路再选 API；经典字节流、BLE 属性表；iOS 拿不到 SPP。</div>
+  </section>
+
+  <section id="stack">
+    <h2><span class="no">第 2 步</span>协议栈分层：你的代码在哪一层</h2>
+    <figure>
+      <svg viewBox="0 0 760 250" role="img" aria-label="蓝牙协议栈分层">
+        <rect x="20" y="15" width="340" height="40" rx="8" fill="#ECF1FB" stroke="#C9D8F2"/>
+        <text x="190" y="40" text-anchor="middle" font-size="13" font-weight="bold" fill="#2F58A8">App：BluetoothAdapter / Gatt / Socket</text>
+        <rect x="20" y="65" width="340" height="40" rx="8" fill="#F4F2EC" stroke="#E8E4DC"/>
+        <text x="190" y="90" text-anchor="middle" font-size="13" fill="#7A7267">Framework API（android.bluetooth）</text>
+        <rect x="20" y="115" width="160" height="60" rx="8" fill="#E9F4F2" stroke="#BFE0DB"/>
+        <text x="100" y="140" text-anchor="middle" font-size="12" font-weight="bold" fill="#1E7268">BLE 主机栈</text>
+        <text x="100" y="160" text-anchor="middle" font-size="10" fill="#4E8A80">GAP·GATT·ATT·SM·L2CAP</text>
+        <rect x="200" y="115" width="160" height="60" rx="8" fill="#FBEDE9" stroke="#F0CFC6"/>
+        <text x="280" y="140" text-anchor="middle" font-size="12" font-weight="bold" fill="#B04A35">经典主机栈</text>
+        <text x="280" y="160" text-anchor="middle" font-size="10" fill="#C08475">SDP·RFCOMM·L2CAP</text>
+        <rect x="20" y="185" width="340" height="40" rx="8" fill="#26221C"/>
+        <text x="190" y="210" text-anchor="middle" font-size="13" fill="#EDE7DC">HCI（主机↔控制器接口，B12 抓包就在这）</text>
+        <rect x="400" y="15" width="340" height="210" rx="10" fill="#FBFAF7" stroke="#E8E4DC"/>
+        <text x="570" y="45" text-anchor="middle" font-size="13" font-weight="bold" fill="#2B2620">控制器（芯片固件）</text>
+        <text x="570" y="80" text-anchor="middle" font-size="12" fill="#7A7267">Link Layer：广播 / 扫描 / 连接 / 跳频</text>
+        <text x="570" y="110" text-anchor="middle" font-size="12" fill="#7A7267">PHY：1M / 2M / Coded（B7）</text>
+        <text x="570" y="150" text-anchor="middle" font-size="11" fill="#A39B8E">硬件过滤 / 批处理 offload 在这层</text>
+        <text x="570" y="185" text-anchor="middle" font-size="11" fill="#A39B8E">厂商差异主要在这层（B13）</text>
+      </svg>
+      <figcaption>App 只碰 Framework API；GATT/ATT/SM 在主机栈；HCI 之下是控制器。排障要分清问题在哪一层。</figcaption>
+    </figure>
+    <div class="recap"><b>本步收束：</b>App→Framework→主机栈(GATT/ATT/SM)→HCI→控制器；抓包看 HCI，厂商差异看控制器。</div>
   </section>
 
   <section id="api">
-    <h2><span class="no">第 2 步</span>BLE 一条链路的五个核心类</h2>
-    
-      <pre>BluetoothAdapter        本机蓝牙开关/状态
+    <h2><span class="no">第 3 步</span>核心类与 API 级别</h2>
+    <h3>3.1 BLE 一条链路的五个核心类</h3>
+    <pre>BluetoothAdapter        本机蓝牙开关/状态
    ↓ getBluetoothLeScanner()
-BluetoothLeScanner      startScan / stopScan
+BluetoothLeScanner      startScan / stopScan          <span class="cm">// B3</span>
    ↓ ScanCallback.onScanResult → BluetoothDevice
-BluetoothDevice         connectGatt()
+BluetoothDevice         connectGatt()                 <span class="cm">// B4</span>
    ↓
-BluetoothGatt           discoverServices / read / write / setNotify
+BluetoothGatt           discoverServices / read / write / setNotify  <span class="cm">// B5 B6</span>
    ↓ BluetoothGattCallback  各步回调</pre>
-      <div class="key"><span class="tag">重点</span>整条链路是<b>异步回调</b>驱动：每一步发起后等对应回调，不能同步阻塞等结果。后面 B9 会讲怎么把这些回调收进一个串行状态机。</div>
-      <div class="recap"><b>本步收束：</b>Adapter→Scanner→Device→Gatt→Callback，五类串起一条异步链路。</div>
+    <table>
+      <tr><th>类</th><th>职责</th><th>引入</th></tr>
+      <tr><td><code>BluetoothAdapter</code></td><td>本机开关 / 状态 / 能力查询</td><td>早期</td></tr>
+      <tr><td><code>BluetoothDevice</code></td><td>远端设备，connectGatt / 配对 / 经典 Socket</td><td>早期</td></tr>
+      <tr><td><code>BluetoothGatt</code> / <code>BluetoothGattCallback</code></td><td>GATT 客户端操作与回调</td><td><span class="api-lv">18</span></td></tr>
+      <tr><td><code>BluetoothGattServer</code> / <code>BluetoothGattServerCallback</code></td><td>手机当 GATT 服务端</td><td><span class="api-lv">18</span></td></tr>
+      <tr><td><code>BluetoothLeScanner</code> / <code>ScanFilter</code> / <code>ScanSettings</code></td><td>现代扫描</td><td><span class="api-lv">21</span></td></tr>
+      <tr><td><code>BluetoothLeAdvertiser</code> / <code>AdvertiseSettings</code></td><td>手机发 BLE 广播</td><td><span class="api-lv">21</span></td></tr>
+    </table>
+    <h3>3.2 经典蓝牙核心类</h3>
+    <table>
+      <tr><th>类 / 方法</th><th>职责</th></tr>
+      <tr><td><code>BluetoothDevice.createRfcommSocketToServiceRecord(uuid)</code></td><td>客户端按 SDP UUID 建 RFCOMM 连接</td></tr>
+      <tr><td><code>BluetoothAdapter.listenUsingRfcommWithServiceRecord(name, uuid)</code></td><td>服务端监听，返回 BluetoothServerSocket</td></tr>
+      <tr><td><code>BluetoothSocket.connect() / inputStream / outputStream</code></td><td>字节流收发（SPP 透传）</td></tr>
+      <tr><td><code>BluetoothAdapter.getProfileProxy(...)</code></td><td>拿 A2DP / HFP 等系统 Profile 代理</td></tr>
+    </table>
+    <div class="key"><span class="tag">重点</span>整条 BLE 链路是<b>异步回调</b>驱动：每一步发起后等对应回调，不能同步阻塞等结果。B9 会讲怎么把这些回调收进一个串行状态机。</div>
+    <div class="recap"><b>本步收束：</b>BLE 五类串异步链路（18/21 引入）；经典走 Socket/Profile；别阻塞等回调。</div>
   </section>
 
   <section id="role">
-    <h2><span class="no">第 3 步</span>手机通常当 Central + GATT Client</h2>
-    
-      <p>手机扫描并发起连接 = GAP Central；访问设备属性表 = GATT Client。手机也能当 Peripheral + GATT Server（B 选修讲 Advertiser / GATT Server）。两套角色可交叉。</p>
-      <div class="recap"><b>本步收束：</b>连接角色与数据角色分开，手机默认 Central+Client。</div>
+    <h2><span class="no">第 4 步</span>GAP 四角色 × GATT 两角色</h2>
+    <p><b>GAP</b> 管「连接关系」，<b>GATT</b> 管「数据访问」，两套角色可交叉。手机默认是 Central + GATT Client。</p>
+    <table>
+      <tr><th>GAP 角色</th><th>做什么</th><th>Android 支持</th></tr>
+      <tr><td>Broadcaster</td><td>只发广播（不可连接）</td><td>BluetoothLeAdvertiser（21）</td></tr>
+      <tr><td>Observer</td><td>只扫描不连接</td><td>BluetoothLeScanner（21）</td></tr>
+      <tr><td>Central</td><td>扫描并发起连接</td><td>connectGatt（18）</td></tr>
+      <tr><td>Peripheral</td><td>发可连接广播、被连</td><td>需 isMultipleAdvertisementSupported（21）</td></tr>
+    </table>
+    <table>
+      <tr><th>GATT 角色</th><th>做什么</th><th>对应类</th></tr>
+      <tr><td>Client</td><td>读 / 写 / 订阅对端属性</td><td>BluetoothGatt</td></tr>
+      <tr><td>Server</td><td>暴露本地属性表、发通知</td><td>BluetoothGattServer（18）</td></tr>
+    </table>
+    <div class="recap"><b>本步收束：</b>GAP 管连接、GATT 管数据；手机默认 Central+Client；当 Peripheral 要查硬件能力。</div>
+  </section>
+
+  <section id="adapter">
+    <h2><span class="no">第 5 步</span>BluetoothAdapter 关键方法</h2>
+    <table>
+      <tr><th>方法</th><th>作用</th><th>备注</th></tr>
+      <tr><td><code>BluetoothManager.getAdapter()</code></td><td>拿适配器（推荐）</td><td>getDefaultAdapter 已废弃</td></tr>
+      <tr><td><code>isEnabled() / getState()</code></td><td>蓝牙是否开 / 详细状态</td><td>扫描连接前先查</td></tr>
+      <tr><td><code>enable() / disable()</code></td><td>代码开关蓝牙</td><td><b>API 33 起废弃</b>，应引导用户去系统设置</td></tr>
+      <tr><td><code>startDiscovery() / cancelDiscovery()</code></td><td>经典 inquiry</td><td>费电，连经典前先 cancel</td></tr>
+      <tr><td><code>getBondedDevices()</code></td><td>已配对设备集合</td><td>B11</td></tr>
+      <tr><td><code>isMultipleAdvertisementSupported()</code></td><td>能否当 Peripheral</td><td>21</td></tr>
+    </table>
+    <div class="recap"><b>本步收束：</b>Manager 拿 adapter；先查开关；enable/disable 已废弃；经典发现要 cancel。</div>
   </section>
 
   <section id="lab">
-    <h2><span class="no">动手</span>切换两条路，看各自的核心 API</h2>
-    <p>点「经典蓝牙」或「BLE」，看这条路的典型用途与核心类。体会两者接口完全不同。</p>
+    <h2><span class="no">动手</span>两场演练</h2>
+    <h3>演练一 · 切换两条路，看核心 API</h3>
     <div class="lab">
       <div class="lab-head"><b>经典 / BLE API 对照</b><span class="hint">选错路代码全重来</span></div>
       <div class="controls"><div class="seg" id="path1"><button data-p="ble" class="on">BLE</button><button data-p="classic">经典蓝牙</button></div></div>
       <div class="lab-body"><div class="timeline"><div class="tl-title"><span>API 栈</span></div><div id="api1" style="font-size:14px;"></div></div><div class="logcat"><div class="logcat-head"><span>选型提示</span><span>live</span></div><div class="logcat-body" id="log1"></div></div></div>
       <div class="lab-foot"><span class="hint">传感器选 BLE；存量串口/音频看经典 Profile</span></div>
     </div>
-    <div class="key"><span class="tag">看懂这场演练</span>BLE 用 BluetoothLeScanner+BluetoothGatt 走 GATT；经典用 BluetoothSocket 走 RFCOMM/Profile。设备已定型时按它实现的路来，并核对目标平台是否开放接口。</div>
+    <h3>演练二 · 场景匹配角色与 API</h3>
+    <p>选一个产品场景，看手机该当什么 GAP/GATT 角色、用哪个核心类。</p>
+    <div class="lab">
+      <div class="lab-head"><b>角色匹配</b><span class="hint">GAP × GATT</span></div>
+      <div class="controls"><div class="seg" id="role1"><button data-r="sensor" class="on">读传感器</button><button data-r="beacon">收信标</button><button data-r="tag">配价签</button><button data-r="serve">手机当服务端</button></div></div>
+      <div class="lab-body single"><div id="roleOut" class="card" style="margin:0;"></div></div>
+    </div>
+    <div class="key"><span class="tag">看懂这两场演练</span>BLE 用 Scanner+Gatt 走 GATT，经典用 Socket 走 RFCOMM。读传感器/配价签=Central+Client；收信标=Observer；手机当服务端=Peripheral+Server（要查硬件能力）。</div>
   </section>
 
   <section id="quiz">
-    <h2><span class="no">自测</span>三个问题</h2>
+    <h2><span class="no">自测</span>六个问题</h2>
     <div class="card" id="quiz-box"></div>
     <p id="quiz-done" style="display:none;font-weight:700;color:#1E7268;">全对。下一课讲权限、开关与清单配置。</p>
   </section>
 
-  <section id="map">
-    <h2><span class="no">回顾</span>速查</h2>
-    <table><tr><th>类</th><th>职责</th></tr><tr><td>BluetoothAdapter</td><td>开关/状态</td></tr><tr><td>BluetoothLeScanner</td><td>扫描</td></tr><tr><td>BluetoothDevice</td><td>connectGatt</td></tr><tr><td>BluetoothGatt</td><td>发现/读写/订阅</td></tr><tr><td>BluetoothGattCallback</td><td>各步回调</td></tr></table>
-    <div class="note"><span class="tag">说明</span>本页为教学简化，工程细节以正文与官方规范为准；演练为模拟，非真实设备通信。</div>
-    <footer>青竹蓝牙学堂 · 蓝牙小课堂Android 第一课 · B1 · <a href="../index.html">回到学堂</a></footer>
+  <section id="cheatsheet">
+    <h2><span class="no">回顾</span>速查表</h2>
+    <table>
+      <tr><th>项</th><th>记住</th></tr>
+      <tr><td>两条路</td><td>经典 Socket/Profile；BLE GATT</td></tr>
+      <tr><td>BLE 链路</td><td>Adapter→Scanner→Device→Gatt→Callback</td></tr>
+      <tr><td>驱动方式</td><td>异步回调，别阻塞</td></tr>
+      <tr><td>角色</td><td>GAP 管连接、GATT 管数据；手机默认 Central+Client</td></tr>
+      <tr><td>开关蓝牙</td><td>enable/disable 已废弃，引导系统设置</td></tr>
+      <tr><td>排障分层</td><td>HCI 抓包（B12）、厂商控制器（B13）</td></tr>
+    </table>
+    <div class="note"><span class="tag">说明</span>本页为教学整理，API 级别与行为以官方文档为准；演练为模拟，非真实设备通信。</div>
+  </section>
+
+  <section id="refs">
+    <h2><span class="no">依据</span>参考链接</h2>
+    <div class="card refs">
+      <h3 style="margin-top:0;">官方指南</h3>
+      <ul>
+        <li><a href="https://developer.android.com/develop/connectivity/bluetooth" target="_blank" rel="noopener">Bluetooth 官方指南总览</a> <span class="src">— 经典与 BLE 两条路</span></li>
+        <li><a href="https://developer.android.com/develop/connectivity/bluetooth/ble/find-ble-devices" target="_blank" rel="noopener">Find BLE devices</a> <span class="src">— BLE 链路入口</span></li>
+      </ul>
+      <h3>API 参考</h3>
+      <ul>
+        <li><a href="https://developer.android.com/reference/android/bluetooth/BluetoothAdapter" target="_blank" rel="noopener">BluetoothAdapter</a> <span class="src">— 开关/状态/能力/getProfileProxy</span></li>
+        <li><a href="https://developer.android.com/reference/android/bluetooth/BluetoothGatt" target="_blank" rel="noopener">BluetoothGatt</a> / <a href="https://developer.android.com/reference/android/bluetooth/BluetoothGattServer" target="_blank" rel="noopener">BluetoothGattServer</a> <span class="src">— GATT 客户端/服务端</span></li>
+        <li><a href="https://developer.android.com/reference/android/bluetooth/BluetoothSocket" target="_blank" rel="noopener">BluetoothSocket</a> <span class="src">— 经典 RFCOMM</span></li>
+        <li><a href="https://developer.android.com/reference/android/bluetooth/le/BluetoothLeAdvertiser" target="_blank" rel="noopener">BluetoothLeAdvertiser</a> <span class="src">— 发广播</span></li>
+      </ul>
+      <h3>规范</h3>
+      <ul>
+        <li><a href="https://www.bluetooth.com/specifications/specs/" target="_blank" rel="noopener">Bluetooth Core Specification</a> <span class="src">— GAP/GATT/ATT/SM/L2CAP/HCI 分层定义</span></li>
+      </ul>
+    </div>
+    <div class="next-links">
+      <a href="../index.html">← 学堂首页</a>
+      <a href="02-permissions-manifest.html">B2 权限与清单 →</a>
+    </div>
+    <footer>青竹蓝牙学堂 · 蓝牙小课堂 Android 第一课 · B1 · <a href="../index.html">回到学堂</a></footer>
   </section>
 </main>
 <aside class="toc" id="toc">
   <div class="toc-title">本课目录</div>
   <a href="#two">两条路</a>
-  <a href="#api">API 地图</a>
-  <a href="#role">角色</a>
-  <a href="#lab">动手演练</a>
+  <a href="#stack">协议栈</a>
+  <a href="#api">核心类+级别</a>
+  <a href="#role">GAP/GATT 角色</a>
+  <a href="#adapter">Adapter 方法</a>
+  <a href="#lab">两场演练</a>
   <a href="#quiz">本课自测</a>
-  <a href="#map">回顾与速查</a>
+  <a href="#cheatsheet">速查表</a>
+  <a href="#refs">参考链接</a>
 </aside>
 </div>
 <script>
-
+// 演练一：两条路
 (function(){
   var D={ble:{api:'<p><b>BLE</b>：BluetoothAdapter → BluetoothLeScanner → BluetoothDevice.connectGatt → BluetoothGatt → BluetoothGattCallback</p><p>用途：传感器、信标、低功耗双向交互。数据按服务/特征组织。</p>',log:'<div><span class="ok">BLE</span> 低功耗、GATT 属性模型</div><div><span class="c">// 扫描 startScan，连接 connectGatt</span></div>'},
     classic:{api:'<p><b>经典</b>：BluetoothAdapter → BluetoothDevice.createRfcommSocketToServiceRecord → BluetoothSocket.connect → InputStream/OutputStream</p><p>用途：SPP 串口透传、A2DP/HFP 音频（系统接管）、HID。</p>',log:'<div><span class="ok">经典</span> RFCOMM Socket 字节流</div><div><span class="c">// iOS 普通 App 不开放 SPP，需 MFi</span></div>'}};
@@ -289,12 +412,30 @@ BluetoothGatt           discoverServices / read / write / setNotify
   document.querySelectorAll('#path1 button').forEach(function(b){b.addEventListener('click',function(){document.querySelectorAll('#path1 button').forEach(function(x){x.classList.remove('on');});b.classList.add('on');show(b.getAttribute('data-p'));});});
   show('ble');
 })();
-
+// 演练二：角色匹配
+(function(){
+  var R={sensor:['Central + GATT Client','BluetoothLeScanner + BluetoothGatt','扫描→connectGatt→discoverServices→read/notify'],
+    beacon:['Observer','BluetoothLeScanner（只扫不连）','startScan 收广播，解析厂商/服务数据'],
+    tag:['Central + GATT Client','BluetoothGatt（批量连接写入）','对每台 connectGatt→write，失败重试（B9）'],
+    serve:['Peripheral + GATT Server','BluetoothLeAdvertiser + BluetoothGattServer','需 isMultipleAdvertisementSupported；发可连接广播+暴露属性表']};
+  function show(k){ var r=R[k]; document.getElementById('roleOut').innerHTML='<div class="chips"><span class="chip on">'+r[0]+'</span></div><p style="margin:8px 0 4px;font-weight:700;">'+r[1]+'</p><p style="margin:0;color:var(--muted);font-size:14px;">'+r[2]+'</p>'; }
+  document.querySelectorAll('#role1 button').forEach(function(b){b.addEventListener('click',function(){document.querySelectorAll('#role1 button').forEach(function(x){x.classList.remove('on');});b.classList.add('on');show(b.getAttribute('data-r'));});});
+  show('sensor');
+})();
+// 目录高亮
 const tocLinks=[...document.querySelectorAll('.toc a')];
 const secs=tocLinks.map(a=>document.getElementById(a.getAttribute('href').slice(1)));
 const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){tocLinks.forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+e.target.id));}});},{rootMargin:'-20% 0px -70% 0px'});
 secs.forEach(s=>s&&io.observe(s));
-const QUIZ=[{"q":"1. BLE 扫描用哪个类？","opts":[["BluetoothLeScanner",true,"对。startScan/stopScan。"],["BluetoothSocket",false,"那是经典 RFCOMM。"],["BluetoothAdapter",false,"Adapter 管开关状态。"]]},{"q":"2. 连接 BLE 设备用？","opts":[["BluetoothDevice.connectGatt()",true,"对。"],["createRfcommSocket",false,"经典串口。"],["startScan",false,"那是扫描。"]]},{"q":"3. 整条 BLE 链路是什么驱动？","opts":[["异步回调",true,"对。每步等对应回调。"],["同步阻塞",false,"不能阻塞等结果。"],["轮询",false,"靠回调。"]]}];
+// 自测
+const QUIZ=[
+ {"q":"1. BLE 扫描用哪个类？","opts":[["BluetoothLeScanner",true,"对。startScan/stopScan。"],["BluetoothSocket",false,"那是经典 RFCOMM。"],["BluetoothAdapter",false,"Adapter 管开关状态。"]]},
+ {"q":"2. 连接 BLE 设备用？","opts":[["BluetoothDevice.connectGatt()",true,"对。"],["createRfcommSocket",false,"经典串口。"],["startScan",false,"那是扫描。"]]},
+ {"q":"3. 整条 BLE 链路是什么驱动？","opts":[["异步回调",true,"对。每步等对应回调。"],["同步阻塞",false,"不能阻塞等结果。"],["轮询",false,"靠回调。"]]},
+ {"q":"4. 手机当 GATT 服务端用哪个类？","opts":[["BluetoothGattServer",true,"对。18 引入。"],["BluetoothGatt",false,"那是客户端。"],["BluetoothSocket",false,"经典。"]]},
+ {"q":"5. GAP 与 GATT 角色分别管什么？","opts":[["GAP 管连接，GATT 管数据",true,"对。两套可交叉。"],["都管连接",false,"GATT 管数据访问。"],["都管数据",false,"GAP 管连接关系。"]]},
+ {"q":"6. 代码里 enable() 开关蓝牙现在推荐吗？","opts":[["不推荐，API 33 起废弃",true,"对。引导用户去系统设置。"],["推荐",false,"已废弃。"],["只能这样",false,"应跳设置页。"]]}
+];
 let solved=0; const box=document.getElementById('quiz-box');
 QUIZ.forEach((item,qi)=>{
   const h=document.createElement('div'); h.className='quiz-q'; h.textContent=item.q; box.appendChild(h);
@@ -314,7 +455,6 @@ QUIZ.forEach((item,qi)=>{
   });
   box.appendChild(ex);
 });
-
 </script>
 </body>
 </html>

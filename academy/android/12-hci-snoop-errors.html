@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>蓝牙小课堂 · B12 抓包与错误码排障 · 青竹蓝牙学堂</title>
+<title>蓝牙小课堂 · B12 抓包与错误码 · 青竹蓝牙学堂</title>
 <style>
   :root{
     --bg:#F7F6F2; --card:#FFFFFF; --ink:#2B2620; --muted:#7A7267; --faint:#A39B8E;
@@ -172,6 +172,10 @@
   .ctl-row label{display:inline-flex;align-items:center;gap:10px;}
   .ctl-row input[type=range]{accent-color:var(--coral);width:160px;}
   .ctl-row .chk input{accent-color:var(--coral);}
+  .api-lv{display:inline-block;font-family:ui-monospace,Consolas,monospace;font-size:11.5px;font-weight:800;color:#2F58A8;background:var(--blue-soft);border:1px solid var(--blue-line);border-radius:999px;padding:0 8px;white-space:nowrap;}
+  .refs{font-size:14px;}
+  .refs li{margin:7px 0;}
+  .refs .src{font-size:12px;color:var(--faint);}
 </style>
 </head>
 <body style="--coral:#E8590C;--coral-soft:#FBEADF;--coral-line:#F2C4A4">
@@ -203,102 +207,166 @@
 <main>
   <div class="crumb">蓝牙小课堂 / Android 第十二课 · B12</div>
   <h1>抓包与错误码：<em>先分来源</em>再查含义</h1>
-  <p class="lead">同一个 8，在 onConnectionStateChange 是 HCI 超时，在读写回调是 ATT 授权不足。这一课讲 HCI Snoop 怎么开、错误码按来源读、133 怎么定位。</p>
-  <div class="meta"><span>平台：Android/Kotlin</span><span>约 13 分钟</span><span>含交互演练</span><span>前置：B4</span></div>
+  <p class="lead">同一个 8，在 onConnectionStateChange 是 HCI 超时，在读写回调是 ATT 授权不足。这一课把四套错误码命名空间、HCI Snoop 抓取、空口 Sniffer、133 定位流程与日志规范逐一讲清，并给出官方依据。</p>
+  <div class="meta"><span>平台：Android/Kotlin</span><span>约 24 分钟</span><span>排障课</span><span>含交互演练</span><span>前置：B4</span></div>
   <div class="journey">
-    <div class="j-step"><span class="n">1</span><span class="t">来源</span><span class="s">回调+阶段</span></div>
+    <div class="j-step"><span class="n">1</span><span class="t">命名空间</span><span class="s">四套码</span></div>
     <div class="j-step"><span class="n">2</span><span class="t">HCI</span><span class="s">Snoop</span></div>
     <div class="j-step"><span class="n">3</span><span class="t">空口</span><span class="s">Sniffer</span></div>
     <div class="j-step"><span class="n">4</span><span class="t">133</span><span class="s">定位</span></div>
-    <div class="j-step"><span class="n">5</span><span class="t">动手</span><span class="s">读码</span></div>
+    <div class="j-step"><span class="n">5</span><span class="t">动手</span><span class="s">两场演练</span></div>
   </div>
 
-  <section id="source">
-    <h2><span class="no">第 1 步</span>错误码要和回调/阶段一起读</h2>
-    
-      <pre>坏：BLE error 8
-好：op=connect gen=3 cb=onConnectionStateChange status=8(0x08) newState=DISCONNECTED elapsed=30012ms</pre>
-      <div class="recap"><b>本步收束：</b>日志写全 op/gen/cb/status，查表不串。</div>
+  <section id="ns">
+    <h2><span class="no">第 1 步</span>四套错误码命名空间，别串</h2>
+    <table>
+      <tr><th>命名空间</th><th>出现处</th><th>典型值</th></tr>
+      <tr><td>HCI 连接码</td><td>onConnectionStateChange 的 status</td><td>0 成功 / 8 超时 / 19 对端断 / 22 本机断 / 62 建立失败 / 133 通用</td></tr>
+      <tr><td>GATT 操作码</td><td>读写/发现回调的 status</td><td>0 SUCCESS / 5 认证不足 / 13 长度非法 / 15 加密不足 / 143 拥塞 / 257 GATT_FAILURE</td></tr>
+      <tr><td>ATT 错误</td><td>对端回的 ATT Error Response</td><td>0x05 认证 / 0x08 授权 / 0x0F 加密</td></tr>
+      <tr><td>ScanCallback 错误</td><td>onScanFailed 的 errorCode</td><td>1 已启动 / 2 注册失败 / 3 内部 / 4 不支持 / 5 硬件资源 / 6 太频繁</td></tr>
+    </table>
+    <div class="key"><span class="tag">重点</span>同一个数字在不同命名空间含义完全不同。<b>8</b> 在连接回调是 HCI 超时，在 ATT 是授权不足；<b>2</b> 在扫描是注册失败/限流。日志必须写全 <code>op / gen / cb / status</code>，查表才不串。</div>
+    <div class="recap"><b>本步收束：</b>四套码各管一层；日志写全 op/gen/cb/status，按来源查表。</div>
   </section>
 
   <section id="hci">
-    <h2><span class="no">第 2 步</span>三层日志各看什么</h2>
-    
-      <table><tr><th>层</th><th>工具</th><th>确认</th></tr>
-        <tr><td>应用</td><td>自打日志</td><td>状态机/回调值</td></tr>
-        <tr><td>HCI</td><td>开发者选项 蓝牙HCI Snoop</td><td>主机发没发/控制器回没回/ATT 字节</td></tr>
-        <tr><td>空口</td><td>nRF Sniffer</td><td>设备实际发没发/时序</td></tr></table>
-      <div class="note"><span class="tag">注意</span>加密后空口载荷不可读，但时序/长度/方向仍可见。共享日志先处理设备标识与业务数据。</div>
-      <div class="recap"><b>本步收束：</b>HCI 看发没发/回没回，空口看实际发没发。</div>
+    <h2><span class="no">第 2 步</span>HCI Snoop：看主机发没发、控制器回没回</h2>
+    <ol>
+      <li>开发者选项 → 启用「蓝牙 HCI 信息收集」（Bluetooth HCI snoop log）。</li>
+      <li>复现问题，日志写入 <code>btsnoop_hci.log</code>（路径随厂商，常见 /data/misc/bluetooth/logs/）。</li>
+      <li><code>adb bugreport</code> 或 adb pull 取出，用 <b>Wireshark</b> 打开。</li>
+      <li>看 HCI Command/Event、ATT 请求/响应字节，确认主机发了什么、控制器回了什么。</li>
+    </ol>
+    <div class="note"><span class="tag">注意</span>加密后空口载荷不可读，但 HCI 层在主机侧仍可见明文 ATT（取决于抓取点）。共享日志先处理设备标识与业务数据。</div>
+    <div class="recap"><b>本步收束：</b>HCI Snoop 看发没发/回没回/ATT 字节；Wireshark 分析。</div>
   </section>
 
-  <section id="133">
-    <h2><span class="no">第 3 步</span>133 是通用错误，先定位阶段</h2>
-    
-      <div class="key"><span class="tag">重点</span>0x85=GATT_ERROR，平台用它报多种内部/连接错误。先确认失败在连接/发现/属性哪步，再找紧邻系统事件；一次只改一个变量复测（换手机/换固件）。不能直接怪固件。</div>
-      <div class="recap"><b>本步收束：</b>133 先定位阶段+HCI+对照，不直接下结论。</div>
+  <section id="air">
+    <h2><span class="no">第 3 步</span>空口 Sniffer：看设备实际发没发</h2>
+    <p>用 nRF Sniffer 等抓空口，确认设备<b>实际</b>发了什么、时序如何。三层各看一段：应用日志看状态机/回调值，HCI 看主机↔控制器，空口看控制器↔设备。三者对齐才能定位是哪一层的问题。</p>
+    <div class="recap"><b>本步收束：</b>应用/HCI/空口三层对齐；空口看实际发没发与时序。</div>
+  </section>
+
+  <section id="g133">
+    <h2><span class="no">第 4 步</span>133 是通用错误，先定位阶段</h2>
+    <div class="key"><span class="tag">重点</span>0x85 = GATT_ERROR，平台用它报多种内部/连接错误。先确认失败在<b>连接 / 发现 / 属性</b>哪步，再找紧邻系统事件；一次只改一个变量复测（换手机 / 换固件）。不能直接怪固件。常见诱因：GATT 客户端槽耗尽（约 6–7 个未 close）、连接超时、缓存陈旧。</div>
+    <div class="recap"><b>本步收束：</b>133 先定位阶段 + HCI + 对照，不直接下结论。</div>
   </section>
 
   <section id="lab">
-    <h2><span class="no">动手</span>选回调来源+status，读正确含义</h2>
+    <h2><span class="no">动手</span>两场演练</h2>
+    <h3>演练一 · 选回调来源 + status，读正确含义</h3>
     <p>选 status 出现的回调，右侧给正确含义与第一步。对比 8 在连接回调 vs 读写回调的不同。</p>
     <div class="lab">
       <div class="lab-head"><b>错误码来源演练</b><span class="hint">同数字不同来源含义不同</span></div>
-      <div class="controls"><div class="ctl"><label>status</label><span class="seg" id="s12"><button data-s="8" class="on">8</button><button data-s="133">133</button><button data-s="2">2</button></span></div><div class="ctl"><label>回调</label><span class="seg" id="cb12"><button data-c="conn" class="on">onConnectionStateChange</button><button data-c="rw">读写回调</button><button data-c="scan">onScanFailed</button></span></div></div>
+      <div class="controls"><div class="ctl"><label>status</label><span class="seg" id="s12"><button data-s="8" class="on">8</button><button data-s="133">133</button><button data-s="2">2</button></span></div><div class="ctl"><label>回调</label><span class="seg" id="cb12"><button data-c="conn" class="on">onConnectionStateChange</button><button data-c="rw">读写回调</button><button data-c="scan">onScanFailed</button></div></div>
       <div class="lab-body"><div class="key" id="mean12"></div><div class="logcat"><div class="logcat-head"><span>解读</span><span>live</span></div><div class="logcat-body" id="log12"></div></div></div>
       <div class="lab-foot"><span class="hint">8+conn=HCI超时；8+rw=ATT授权不足；2+scan=限流</span></div>
     </div>
-    <div class="key"><span class="tag">看懂这场演练</span>错误码必须和来源一起读：8 在连接回调是 HCI 超时、在读写回调是 ATT 授权不足；133 通用需定位；onScanFailed 2/6 是限流。日志写全 op/gen/cb/status。</div>
+    <h3>演练二 · 命名空间速查</h3>
+    <div class="lab">
+      <div class="lab-head"><b>四套码</b><span class="hint">选层看典型值</span></div>
+      <div class="controls"><div class="seg" id="ns12"><button data-n="hci" class="on">HCI</button><button data-n="gatt">GATT</button><button data-n="att">ATT</button><button data-n="scan">Scan</button></div></div>
+      <div class="lab-body single"><div id="nsOut12" class="card" style="margin:0;"></div></div>
+    </div>
+    <div class="key"><span class="tag">看懂这两场演练</span>错误码必须和来源一起读：8 在连接回调是 HCI 超时、在读写回调是 ATT 授权不足；133 通用需定位；onScanFailed 2/6 是限流。日志写全 op/gen/cb/status。</div>
   </section>
 
   <section id="quiz">
-    <h2><span class="no">自测</span>三个问题</h2>
+    <h2><span class="no">自测</span>六个问题</h2>
     <div class="card" id="quiz-box"></div>
     <p id="quiz-done" style="display:none;font-weight:700;color:#1E7268;">全对。下一课讲厂商兼容与机型矩阵。</p>
   </section>
 
-  <section id="map">
-    <h2><span class="no">回顾</span>速查</h2>
-    <table><tr><th>值+来源</th><th>含义</th></tr><tr><td>8+conn</td><td>HCI 超时</td></tr><tr><td>8+rw</td><td>ATT 授权不足</td></tr><tr><td>133</td><td>通用错误</td></tr><tr><td>2/6+scan</td><td>限流</td></tr></table>
-    <div class="note"><span class="tag">说明</span>本页为教学简化，工程细节以正文与官方规范为准；演练为模拟，非真实设备通信。</div>
-    <footer>青竹蓝牙学堂 · 蓝牙小课堂Android 第十二课 · B12 · <a href="../index.html">回到学堂</a></footer>
+  <section id="cheatsheet">
+    <h2><span class="no">回顾</span>速查表</h2>
+    <table>
+      <tr><th>值 + 来源</th><th>含义</th></tr>
+      <tr><td>8 + conn</td><td>HCI 超时</td></tr>
+      <tr><td>8 + rw（ATT）</td><td>授权不足</td></tr>
+      <tr><td>133</td><td>通用 GATT_ERROR，先定位</td></tr>
+      <tr><td>2 / 6 + scan</td><td>注册失败 / 太频繁</td></tr>
+      <tr><td>143 + rw</td><td>CONNECTION_CONGESTED</td></tr>
+    </table>
+    <div class="note"><span class="tag">说明</span>本页为教学整理，错误码以官方/AOSP 为准；演练为模拟。</div>
+  </section>
+
+  <section id="refs">
+    <h2><span class="no">依据</span>参考链接</h2>
+    <div class="card refs">
+      <h3 style="margin-top:0;">官方与源码</h3>
+      <ul>
+        <li><a href="https://developer.android.com/reference/android/bluetooth/BluetoothGatt" target="_blank" rel="noopener">BluetoothGatt</a> <span class="src">— GATT 操作码常量</span></li>
+        <li><a href="https://developer.android.com/reference/android/bluetooth/le/ScanCallback" target="_blank" rel="noopener">ScanCallback</a> <span class="src">— onScanFailed 错误码 1–6</span></li>
+        <li><a href="https://cs.android.com/android/platform/superproject/main/+/main:packages/modules/Bluetooth/system/stack/include/gatt_api.h" target="_blank" rel="noopener">AOSP gatt_api.h</a> <span class="src">— GATT_ERROR 0x85 等定义</span></li>
+      </ul>
+      <h3>抓包工具</h3>
+      <ul>
+        <li><a href="https://developer.android.com/develop/connectivity/bluetooth/bt-logging" target="_blank" rel="noopener">Bluetooth logging / HCI snoop</a> <span class="src">— 开启与抓取</span></li>
+        <li><a href="https://www.wireshark.org/" target="_blank" rel="noopener">Wireshark</a> <span class="src">— 分析 btsnoop_hci.log</span></li>
+        <li><a href="https://www.nordicsemi.com/Products/Development-hardware/nRF52840-Dongle" target="_blank" rel="noopener">nRF Sniffer</a> <span class="src">— 空口抓包</span></li>
+      </ul>
+    </div>
+    <div class="next-links">
+      <a href="11-pairing-le-security.html">← B11 配对与 LE 安全</a>
+      <a href="13-vendor-matrix.html">B13 厂商兼容矩阵 →</a>
+    </div>
+    <footer>青竹蓝牙学堂 · 蓝牙小课堂 Android 第十二课 · B12 · <a href="../index.html">回到学堂</a></footer>
   </section>
 </main>
 <aside class="toc" id="toc">
   <div class="toc-title">本课目录</div>
-  <a href="#source">先分来源</a>
-  <a href="#hci">HCI 与空口</a>
-  <a href="#133">133 定位</a>
-  <a href="#lab">动手演练</a>
+  <a href="#ns">四套命名空间</a>
+  <a href="#hci">HCI Snoop</a>
+  <a href="#air">空口 Sniffer</a>
+  <a href="#g133">133 定位</a>
+  <a href="#lab">两场演练</a>
   <a href="#quiz">本课自测</a>
-  <a href="#map">回顾与速查</a>
+  <a href="#cheatsheet">速查表</a>
+  <a href="#refs">参考链接</a>
 </aside>
 </div>
 <script>
-
+// 演练一：来源+status
 (function(){
   var s='8', cb='conn';
   function calc(){
-    var m,step;
-    if(s==='8'&&cb==='conn'){m='HCI 连接超时（链路监督超时）';step='查距离/干扰/连接参数/设备是否还在';}
-    else if(s==='8'&&cb==='rw'){m='ATT Insufficient Authorization（业务授权）';step='走厂商授权流程，配对没用';}
-    else if(s==='8'&&cb==='scan'){m='不常见组合';step='核对日志来源是否写错';}
-    else if(s==='133'){m='GATT_ERROR 通用内部错误';step='先定位阶段+紧邻系统事件+单变量复测';}
-    else if(s==='2'&&cb==='scan'){m='onScanFailed 应用注册失败/限流';step='频繁启停被限流，稍后再试';}
-    else {m='组合不典型';step='补全 op/gen/cb 再查表';}
-    document.getElementById('mean12').innerHTML='<span class="tag">含义</span><b>'+m+'</b>';
-    document.getElementById('log12').innerHTML='<div>status='+s+' cb='+cb+'</div><div><span class="ok">'+m+'</span></div><div><span class="c">// 第一步：'+step+'</span></div>';
+    var mean, step;
+    if(cb==='conn'){ if(s==='8'){mean='HCI 连接超时（0x08）';step='查 30s 直连超时/信号/对端是否在广播';} else if(s==='133'){mean='GATT_ERROR 通用';step='定位连接/发现/属性阶段 + HCI';} else {mean='HCI 码 2（按连接语境）';step='查 HCI 表，别套 ATT';} }
+    else if(cb==='rw'){ if(s==='8'){mean='ATT 授权不足（0x08）';step='走厂商业务授权，非配对';} else if(s==='133'){mean='GATT_ERROR';step='定位属性操作 + 槽位是否耗尽';} else {mean='GATT 码 2';step='查 GATT 表';} }
+    else { if(s==='2'){mean='APPLICATION_REGISTRATION_FAILED / 限流';step='查 5次/30s 限流，静默 scannerId=-2';} else if(s==='8'){mean='扫描语境无此码';step='onScanFailed 用 1–6';} else {mean='GATT_ERROR（扫描少见）';step='核对来源';} }
+    document.getElementById('mean12').innerHTML='<span class="tag">'+cb+' + status '+s+'</span> '+mean;
+    document.getElementById('log12').innerHTML='<div><span class="api">'+mean+'</span></div><div><span class="c">// 第一步：'+step+'</span></div>';
   }
   document.querySelectorAll('#s12 button').forEach(function(b){b.addEventListener('click',function(){document.querySelectorAll('#s12 button').forEach(function(x){x.classList.remove('on');});b.classList.add('on');s=b.getAttribute('data-s');calc();});});
   document.querySelectorAll('#cb12 button').forEach(function(b){b.addEventListener('click',function(){document.querySelectorAll('#cb12 button').forEach(function(x){x.classList.remove('on');});b.classList.add('on');cb=b.getAttribute('data-c');calc();});});
   calc();
 })();
-
+// 演练二：命名空间
+(function(){
+  var N={hci:'0 成功 · 8 超时 · 19 对端断 · 22 本机断 · 62 建立失败 · 133 通用',
+    gatt:'0 SUCCESS · 5 认证不足 · 13 长度非法 · 15 加密不足 · 143 拥塞 · 257 GATT_FAILURE',
+    att:'0x05 认证 · 0x08 授权 · 0x0F 加密',
+    scan:'1 已启动 · 2 注册失败 · 3 内部 · 4 不支持 · 5 硬件资源 · 6 太频繁'};
+  function show(k){ document.getElementById('nsOut12').innerHTML='<p style="margin:0;font-weight:700;">'+k.toUpperCase()+' 命名空间</p><p style="margin:6px 0 0;color:var(--muted);font-size:14px;">'+N[k]+'</p>'; }
+  document.querySelectorAll('#ns12 button').forEach(function(b){b.addEventListener('click',function(){document.querySelectorAll('#ns12 button').forEach(function(x){x.classList.remove('on');});b.classList.add('on');show(b.getAttribute('data-n'));});});
+  show('hci');
+})();
+// 目录高亮
 const tocLinks=[...document.querySelectorAll('.toc a')];
 const secs=tocLinks.map(a=>document.getElementById(a.getAttribute('href').slice(1)));
 const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){tocLinks.forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+e.target.id));}});},{rootMargin:'-20% 0px -70% 0px'});
 secs.forEach(s=>s&&io.observe(s));
-const QUIZ=[{"q":"1. 只有 status=8 能定根因吗？","opts":[["不能，先补回调/阶段/原始报文",true,"对。HCI 8 与 ATT 8 不同。"],["能",false,"来源不同含义不同。"],["是固件",false,"未必。"]]},{"q":"2. 133 能直接说固件问题吗？","opts":[["不能，通用错误需阶段+HCI+对照",true,"对。"],["能",false,"含义广。"],["是权限",false,"权限抛 SecurityException。"]]},{"q":"3. 加密后空口还能看到什么？","opts":[["时序/长度/方向",true,"对。载荷不可读。"],["载荷明文",false,"加密不可读。"],["什么都看不到",false,"时序可见。"]]}];
+// 自测
+const QUIZ=[
+ {"q":"1. status 8 在 onConnectionStateChange 是？","opts":[["HCI 连接超时",true,"对。"],["ATT 授权不足",false,"那是读写回调。"],["限流",false,"那是扫描。"]]},
+ {"q":"2. status 8 在读写回调（ATT）是？","opts":[["授权不足 0x08",true,"对。走业务授权。"],["HCI 超时",false,"那是连接回调。"],["成功",false,"0 才是。"]]},
+ {"q":"3. 133 是什么？","opts":[["通用 GATT_ERROR，先定位阶段",true,"对。0x85。"],["明确固件坏",false,"不能直接怪。"],["权限",false,"无关。"]]},
+ {"q":"4. HCI Snoop 看什么？","opts":[["主机发没发/控制器回没回/ATT 字节",true,"对。"],["空口时序",false,"那是 Sniffer。"],["UI",false,"无关。"]]},
+ {"q":"5. onScanFailed errorCode 6 是？","opts":[["SCANNING_TOO_FREQUENTLY",true,"对。限流。"],["超时",false,"那是 HCI。"],["授权",false,"那是 ATT。"]]},
+ {"q":"6. 日志要写全什么？","opts":[["op/gen/cb/status",true,"对。查表不串。"],["只 status",false,"会串。"],["只 cb",false,"不够。"]]}
+];
 let solved=0; const box=document.getElementById('quiz-box');
 QUIZ.forEach((item,qi)=>{
   const h=document.createElement('div'); h.className='quiz-q'; h.textContent=item.q; box.appendChild(h);
@@ -318,7 +386,6 @@ QUIZ.forEach((item,qi)=>{
   });
   box.appendChild(ex);
 });
-
 </script>
 </body>
 </html>

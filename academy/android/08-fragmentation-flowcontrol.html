@@ -172,6 +172,10 @@
   .ctl-row label{display:inline-flex;align-items:center;gap:10px;}
   .ctl-row input[type=range]{accent-color:var(--coral);width:160px;}
   .ctl-row .chk input{accent-color:var(--coral);}
+  .api-lv{display:inline-block;font-family:ui-monospace,Consolas,monospace;font-size:11.5px;font-weight:800;color:#2F58A8;background:var(--blue-soft);border:1px solid var(--blue-line);border-radius:999px;padding:0 8px;white-space:nowrap;}
+  .refs{font-size:14px;}
+  .refs li{margin:7px 0;}
+  .refs .src{font-size:12px;color:var(--faint);}
 </style>
 </head>
 <body style="--coral:#E8590C;--coral-soft:#FBEADF;--coral-line:#F2C4A4">
@@ -203,103 +207,191 @@
 <main>
   <div class="crumb">蓝牙小课堂 / Android 第八课 · B8</div>
   <h1>分包、重组与流控：<em>编号、超时、去重</em></h1>
-  <p class="lead">历史记录跨多条通知，接收端要按业务协议重组。这一课讲片头设计、重组超时、重复片处理，以及接收窗口/批次确认的流控。</p>
-  <div class="meta"><span>平台：Android/Kotlin</span><span>约 13 分钟</span><span>含交互演练</span><span>前置：B7</span></div>
+  <p class="lead">历史记录跨多条通知，接收端要按业务协议重组。这一课把片头设计、重组状态机、超时/去重/编号回绕、接收窗口与批次确认流控逐一讲清，并落到 Android 回调线程的工程实现。</p>
+  <div class="meta"><span>平台：Android/Kotlin</span><span>约 22 分钟</span><span>协议层 + 工程</span><span>含交互演练</span><span>前置：B7</span></div>
   <div class="journey">
-    <div class="j-step"><span class="n">1</span><span class="t">片头</span><span class="s">编号序号</span></div>
-    <div class="j-step"><span class="n">2</span><span class="t">重组</span><span class="s">超时</span></div>
-    <div class="j-step"><span class="n">3</span><span class="t">去重</span><span class="s">重复片</span></div>
+    <div class="j-step"><span class="n">1</span><span class="t">片头</span><span class="s">字段设计</span></div>
+    <div class="j-step"><span class="n">2</span><span class="t">重组</span><span class="s">状态机</span></div>
+    <div class="j-step"><span class="n">3</span><span class="t">三细节</span><span class="s">超时/去重/回绕</span></div>
     <div class="j-step"><span class="n">4</span><span class="t">流控</span><span class="s">窗口确认</span></div>
-    <div class="j-step"><span class="n">5</span><span class="t">动手</span><span class="s">拼记录</span></div>
+    <div class="j-step"><span class="n">5</span><span class="t">动手</span><span class="s">两场演练</span></div>
   </div>
 
   <section id="header">
-    <h2><span class="no">第 1 步</span>片头：消息编号+总数+序号+长度</h2>
-    
-      <pre>字节0 消息编号(0–255循环)
+    <h2><span class="no">第 1 步</span>片头：消息编号 + 总数 + 序号 + 长度</h2>
+    <pre>字节0 消息编号(0–255循环)
 字节1 分片总数
 字节2 分片序号(从0起)
 字节3 本片记录字节数
 字节4起 记录数据</pre>
-      <div class="recap"><b>本步收束：</b>靠编号归组、序号排序、长度校验。</div>
+    <table>
+      <tr><th>字段</th><th>作用</th><th>校验</th></tr>
+      <tr><td>消息编号</td><td>把片归到同一条消息</td><td>区分在途消息，回绕靠超时</td></tr>
+      <tr><td>分片总数</td><td>知道何时收齐</td><td>各片总数应一致</td></tr>
+      <tr><td>分片序号</td><td>排序、去重</td><td>0 ≤ 序号 &lt; 总数</td></tr>
+      <tr><td>本片长度</td><td>校验数据完整</td><td>实际字节数应匹配</td></tr>
+    </table>
+    <div class="recap"><b>本步收束：</b>编号归组、序号排序、总数判齐、长度校验。</div>
   </section>
 
   <section id="reasm">
-    <h2><span class="no">第 2 步</span>缺片要超时，重片要去重</h2>
-    
-      <ul><li><b>重组超时</b>：缺一片别永远等，过期丢弃记日志，防缓冲区拖死。</li>
-        <li><b>重复片</b>：重传同片到两次，按序号覆盖/丢弃，别追加。</li>
-        <li><b>编号回绕</b>：8 位只区分 256 条在途，靠超时清理隔新旧。</li></ul>
-      <div class="recap"><b>本步收束：</b>超时防缺片死等，去重防重复拼接。</div>
+    <h2><span class="no">第 2 步</span>重组是个状态机</h2>
+    <figure>
+      <svg viewBox="0 0 760 170" role="img" aria-label="重组状态机">
+        <rect x="20" y="60" width="140" height="50" rx="8" fill="#ECF1FB" stroke="#C9D8F2"/>
+        <text x="90" y="90" text-anchor="middle" font-size="12" font-weight="bold" fill="#2F58A8">IDLE</text>
+        <rect x="220" y="60" width="160" height="50" rx="8" fill="#FBF3E2" stroke="#EAD9AE"/>
+        <text x="300" y="82" text-anchor="middle" font-size="12" font-weight="bold" fill="#9A6B12">REASSEMBLING</text>
+        <text x="300" y="100" text-anchor="middle" font-size="10" fill="#B08A3E">按编号建缓冲+起超时</text>
+        <rect x="440" y="20" width="140" height="45" rx="8" fill="#E9F4F2" stroke="#BFE0DB"/>
+        <text x="510" y="47" text-anchor="middle" font-size="12" font-weight="bold" fill="#1E7268">COMPLETE</text>
+        <rect x="440" y="105" width="140" height="45" rx="8" fill="#FBEDE9" stroke="#F0CFC6"/>
+        <text x="510" y="132" text-anchor="middle" font-size="12" font-weight="bold" fill="#B04A35">TIMEOUT 丢弃</text>
+        <line x1="160" y1="85" x2="220" y2="85" stroke="#9DB4DC" stroke-width="2" marker-end="url(#m8)"/>
+        <line x1="380" y1="75" x2="440" y2="45" stroke="#7FB8AE" stroke-width="2" marker-end="url(#m8)"/>
+        <line x1="380" y1="95" x2="440" y2="125" stroke="#D89A8C" stroke-width="2" marker-end="url(#m8)"/>
+        <text x="410" y="55" font-size="10" fill="#4E8A80">收齐</text>
+        <text x="405" y="120" font-size="10" fill="#C08475">超时</text>
+        <defs><marker id="m8" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 z" fill="#9DB4DC"/></marker></defs>
+      </svg>
+      <figcaption>首片建缓冲并起超时定时器；收齐则交付，超时则丢弃记日志，回到 IDLE。</figcaption>
+    </figure>
+    <div class="recap"><b>本步收束：</b>首片建缓冲+起超时；收齐交付、超时丢弃；状态机驱动。</div>
+  </section>
+
+  <section id="detail">
+    <h2><span class="no">第 3 步</span>三个细节：超时、去重、编号回绕</h2>
+    <ul>
+      <li><b>重组超时：</b>缺一片别永远等，过期丢弃记日志，防缓冲区被拖死、内存泄漏。</li>
+      <li><b>重复片：</b>重传同片到两次，按序号<b>覆盖/丢弃</b>，别追加（否则记录翻倍）。</li>
+      <li><b>编号回绕：</b>8 位只区分 256 条在途，靠超时清理隔新旧，避免旧片混入新消息。</li>
+    </ul>
+    <div class="recap"><b>本步收束：</b>超时防死等、去重防翻倍、回绕靠超时清理。</div>
   </section>
 
   <section id="flow">
-    <h2><span class="no">第 3 步</span>接收窗口/批次确认</h2>
-    
-      <p>外设无脑连发、手机来不及处理，丢片发生在两端缓冲边界。约定<b>接收窗口或批次确认</b>，给手机处理与外设释放缓冲留时间。有副作用命令回执带编号，重试同编号去重（幂等）。</p>
-      <div class="recap"><b>本步收束：</b>流控防丢片；命令重试靠编号幂等。</div>
+    <h2><span class="no">第 4 步</span>流控：接收窗口 / 批次确认 / 幂等</h2>
+    <p>外设无脑连发、手机来不及处理，丢片发生在<b>两端缓冲边界</b>。约定接收窗口或批次确认，给手机处理与外设释放缓冲留时间。有副作用的命令回执带编号，重试同编号去重（<b>幂等</b>）。</p>
+    <div class="key"><span class="tag">工程落点</span>onCharacteristicChanged 在 Binder 线程，<b>立即 copyOf() 投入单线程 worker</b> 做重组；重组缓冲、超时定时器、去重表都在这一个线程里，避免并发竞态。别在回调线程直接拼包。</div>
+    <div class="recap"><b>本步收束：</b>窗口/批次确认防丢片；命令重试同编号幂等；重组放单线程 worker。</div>
   </section>
 
   <section id="lab">
-    <h2><span class="no">动手</span>发 3 片记录，模拟丢片/重片看重组</h2>
-    <p>点「发送 3 片」正常重组。勾「丢第 2 片」看超时清理；勾「第 1 片重发」看去重不追加。体会重组三细节。</p>
+    <h2><span class="no">动手</span>两场演练</h2>
+    <h3>演练一 · 发 3 片记录，模拟丢片/重片看重组</h3>
+    <p>点「发送 3 片」正常重组。勾「丢第 2 片」看超时清理；勾「第 1 片重发」看去重不追加。</p>
     <div class="lab">
       <div class="lab-head"><b>分包重组演练</b><span class="hint">37B 记录 = 16+16+5</span></div>
       <div class="controls"><div class="seg"><button id="drop8">丢第2片</button><button id="dup8">第1片重发</button></div><button class="btn teal" id="send8">发送 3 片</button></div>
       <div class="lab-body"><div><div class="chips" id="frag8"></div><div class="key" id="res8" style="margin-top:10px;"></div></div><div class="logcat"><div class="logcat-head"><span>重组日志</span><span>msg#42</span></div><div class="logcat-body" id="log8"><span class="c">// 点发送</span></div></div></div>
       <div class="lab-foot"><span class="hint">丢片→超时清理；重片→按序号覆盖不追加</span></div>
     </div>
-    <div class="key"><span class="tag">看懂这场演练</span>重组要超时（防缺片死等）、去重（防重片追加）、编号回绕清理。流控用窗口/批次确认防缓冲边界丢片。命令重试同编号幂等。</div>
+    <h3>演练二 · 片头字段解码</h3>
+    <p>给一片的头部字节，解出编号/总数/序号/长度。</p>
+    <div class="lab">
+      <div class="lab-head"><b>片头解码</b><span class="hint">字节0–3</span></div>
+      <div class="controls"><div class="seg" id="hdr8"><button data-h="a" class="on">2A 03 00 10</button><button data-h="b">2A 03 01 10</button><button data-h="c">2A 03 02 05</button></div></div>
+      <div class="lab-body single"><div id="hdrOut8" class="card" style="margin:0;"></div></div>
+    </div>
+    <div class="key"><span class="tag">看懂这两场演练</span>重组要超时、去重、回绕清理；流控用窗口/批次确认防缓冲丢片；命令重试同编号幂等；重组放单线程 worker。</div>
   </section>
 
   <section id="quiz">
-    <h2><span class="no">自测</span>三个问题</h2>
+    <h2><span class="no">自测</span>六个问题</h2>
     <div class="card" id="quiz-box"></div>
     <p id="quiz-done" style="display:none;font-weight:700;color:#1E7268;">全对。下一课讲线程、状态机与命令队列。</p>
   </section>
 
-  <section id="map">
-    <h2><span class="no">回顾</span>速查</h2>
-    <table><tr><th>细节</th><th>防什么</th></tr><tr><td>重组超时</td><td>缺片死等</td></tr><tr><td>重复片去重</td><td>重复拼接</td></tr><tr><td>编号回绕清理</td><td>新旧混淆</td></tr><tr><td>窗口/批次确认</td><td>缓冲丢片</td></tr></table>
-    <div class="note"><span class="tag">说明</span>本页为教学简化，工程细节以正文与官方规范为准；演练为模拟，非真实设备通信。</div>
-    <footer>青竹蓝牙学堂 · 蓝牙小课堂Android 第八课 · B8 · <a href="../index.html">回到学堂</a></footer>
+  <section id="cheatsheet">
+    <h2><span class="no">回顾</span>速查表</h2>
+    <table>
+      <tr><th>细节</th><th>防什么</th></tr>
+      <tr><td>重组超时</td><td>缺片死等 / 内存泄漏</td></tr>
+      <tr><td>重复片去重</td><td>重复拼接翻倍</td></tr>
+      <tr><td>编号回绕清理</td><td>新旧混淆</td></tr>
+      <tr><td>窗口/批次确认</td><td>缓冲边界丢片</td></tr>
+      <tr><td>命令同编号重试</td><td>副作用重复（幂等）</td></tr>
+    </table>
+    <div class="note"><span class="tag">说明</span>本页为教学协议设计示例，具体片头格式以你的设备协议为准；演练为模拟。</div>
+  </section>
+
+  <section id="refs">
+    <h2><span class="no">依据</span>参考链接</h2>
+    <div class="card refs">
+      <h3 style="margin-top:0;">平台与回调</h3>
+      <ul>
+        <li><a href="https://developer.android.com/reference/android/bluetooth/BluetoothGattCallback#onCharacteristicChanged(android.bluetooth.BluetoothGatt,%20android.bluetooth.BluetoothGattCharacteristic,%20byte[])" target="_blank" rel="noopener">onCharacteristicChanged</a> <span class="src">— 通知入口，复制字节投 worker</span></li>
+        <li><a href="https://developer.android.com/reference/android/bluetooth/BluetoothGatt" target="_blank" rel="noopener">BluetoothGatt</a> <span class="src">— 可靠写（长写）用于大块原子传输</span></li>
+      </ul>
+      <h3>规范与参考</h3>
+      <ul>
+        <li><a href="https://www.bluetooth.com/specifications/specs/" target="_blank" rel="noopener">Core Spec · ATT</a> <span class="src">— MTU 决定单片上限，分包是应用层协议</span></li>
+        <li><a href="https://punchthrough.com/android-ble-guide/" target="_blank" rel="noopener">Punch Through · Android BLE Guide</a> <span class="src">— 吞吐与流控实践</span></li>
+      </ul>
+    </div>
+    <div class="next-links">
+      <a href="07-mtu-phy-params.html">← B7 MTU/PHY/参数</a>
+      <a href="09-statemachine-queue.html">B9 状态机与队列 →</a>
+    </div>
+    <footer>青竹蓝牙学堂 · 蓝牙小课堂 Android 第八课 · B8 · <a href="../index.html">回到学堂</a></footer>
   </section>
 </main>
 <aside class="toc" id="toc">
   <div class="toc-title">本课目录</div>
-  <a href="#header">片头</a>
-  <a href="#reasm">重组超时去重</a>
-  <a href="#flow">流控</a>
-  <a href="#lab">动手演练</a>
+  <a href="#header">片头设计</a>
+  <a href="#reasm">重组状态机</a>
+  <a href="#detail">超时/去重/回绕</a>
+  <a href="#flow">流控与幂等</a>
+  <a href="#lab">两场演练</a>
   <a href="#quiz">本课自测</a>
-  <a href="#map">回顾与速查</a>
+  <a href="#cheatsheet">速查表</a>
+  <a href="#refs">参考链接</a>
 </aside>
 </div>
 <script>
-
+// 演练一：分包重组
 (function(){
-  var drop=false,dup=false;
-  document.getElementById('drop8').addEventListener('click',function(){drop=!drop;this.classList.toggle('on',drop);});
-  document.getElementById('dup8').addEventListener('click',function(){dup=!dup;this.classList.toggle('on',dup);});
+  var drop=false, dup=false, log=document.getElementById('log8'), frag=document.getElementById('frag8'), res=document.getElementById('res8');
+  function line(h){ var d=document.createElement('div'); d.innerHTML=h; log.appendChild(d); log.scrollTop=log.scrollHeight; }
+  document.getElementById('drop8').addEventListener('click',function(){ drop=!drop; this.classList.toggle('on',drop); });
+  document.getElementById('dup8').addEventListener('click',function(){ dup=!dup; this.classList.toggle('on',dup); });
   document.getElementById('send8').addEventListener('click',function(){
-    var got=[true,!drop,true]; var chips='';
-    [16,16,5].forEach(function(n,i){ chips+='<span class="chip '+(got[i]?'on':'bad')+'">片'+i+' '+n+'B'+(got[i]?'':'(丢)')+'</span>'; });
-    if(dup)chips+='<span class="chip on">片0 重发→覆盖</span>';
-    document.getElementById('frag8').innerHTML=chips;
-    var ok=got.every(Boolean);
-    document.getElementById('res8').innerHTML='<span class="tag">结果</span>'+(ok?'<b>重组成功 37B</b>，交业务。':'<b>缺片</b>：重组超时，丢弃 msg#42 记日志，不死等。');
-    var h='<div><span class="api">recv</span> 片0(16B) 片'+(drop?'1丢':'1(16B)')+' 片2(5B)</div>';
-    if(dup)h+='<div><span class="c">// 片0 重发：按序号覆盖，不追加</span></div>';
-    h+=ok?'<div><span class="ok">凑齐+长度校验 → 37B 交业务</span></div>':'<div><span class="warn">超时清理未完成消息</span></div>';
-    document.getElementById('log8').innerHTML=h;
+    log.innerHTML=''; frag.innerHTML=''; res.textContent='';
+    var got=[false,false,false], sizes=[16,16,5];
+    line('<span class="t">msg#42 首片到 → 建缓冲 + 起超时(2s)</span>');
+    function chip(i,ok){ var s=document.createElement('span'); s.className='chip'+(ok?' on':' bad'); s.textContent='片'+i; frag.appendChild(s); }
+    var seq=[0,1,2]; if(dup)seq=[0,0,1,2];
+    var t=0;
+    seq.forEach(function(i){ setTimeout(function(){
+      if(drop&&i===1){ line('<span class="warn">片1 丢失</span>'); chip(1,false); return; }
+      if(got[i]){ line('<span class="c">片'+i+' 重复 → 按序号丢弃，不追加</span>'); return; }
+      got[i]=true; chip(i,true); line('<span class="ok">收片'+i+'</span> ('+sizes[i]+'B)');
+      if(got[0]&&got[1]&&got[2]){ res.innerHTML='<span class="tag">重组成功</span> 37B 记录交付，清缓冲'; line('<span class="ok">收齐 → COMPLETE 交付 37B</span>'); }
+    }, t+=400); });
+    setTimeout(function(){ if(!(got[0]&&got[1]&&got[2])){ res.innerHTML='<span class="tag">超时</span> 缺片，丢弃缓冲记日志'; line('<span class="err">超时 → 丢弃，回 IDLE（防死等）</span>'); } }, t+1600);
   });
 })();
-
+// 演练二：片头解码
+(function(){
+  var H={a:[0x2A,3,0,16],b:[0x2A,3,1,16],c:[0x2A,3,2,5]};
+  function show(k){ var h=H[k]; document.getElementById('hdrOut8').innerHTML='<div class="chips"><span class="chip on">编号 '+h[0]+'</span><span class="chip on">总数 '+h[1]+'</span><span class="chip on">序号 '+h[2]+'</span><span class="chip on">长度 '+h[3]+'B</span></div><p style="margin:8px 0 0;color:var(--muted);font-size:14px;">第 '+(h[2]+1)+'/'+h[1]+' 片，'+(h[2]===h[1]-1?'最后一片，收齐即交付':'中间片，继续等')+'</p>'; }
+  document.querySelectorAll('#hdr8 button').forEach(function(b){b.addEventListener('click',function(){document.querySelectorAll('#hdr8 button').forEach(function(x){x.classList.remove('on');});b.classList.add('on');show(b.getAttribute('data-h'));});});
+  show('a');
+})();
+// 目录高亮
 const tocLinks=[...document.querySelectorAll('.toc a')];
 const secs=tocLinks.map(a=>document.getElementById(a.getAttribute('href').slice(1)));
 const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){tocLinks.forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+e.target.id));}});},{rootMargin:'-20% 0px -70% 0px'});
 secs.forEach(s=>s&&io.observe(s));
-const QUIZ=[{"q":"1. 重组超时防什么？","opts":[["缺片后无限等待、缓冲区耗尽",true,"对。"],["数据重复",false,"那是去重防的。"],["编号回绕",false,"靠超时清理。"]]},{"q":"2. 同一片到两次应？","opts":[["按序号覆盖/丢弃，不追加",true,"对。"],["追加",false,"会错乱。"],["忽略整条",false,"只需去重该片的。"]]},{"q":"3. 流控用什么防缓冲边界丢片？","opts":[["接收窗口/批次确认",true,"对。"],["无脑连发",false,"会丢片。"],["提高 MTU",false,"不解决处理速度。"]]}];
+// 自测
+const QUIZ=[
+ {"q":"1. 缺一片应该怎么处理？","opts":[["超时丢弃记日志",true,"对。防死等/泄漏。"],["永远等",false,"会拖死缓冲。"],["立即崩",false,"没必要。"]]},
+ {"q":"2. 同一片重传两次？","opts":[["按序号覆盖/丢弃，不追加",true,"对。去重。"],["追加",false,"记录翻倍。"],["报错",false,"正常去重。"]]},
+ {"q":"3. 8 位消息编号回绕靠什么隔新旧？","opts":[["超时清理",true,"对。"],["序号",false,"序号是片内。"],["总数",false,"无关。"]]},
+ {"q":"4. 流控防的是什么？","opts":[["两端缓冲边界丢片",true,"对。窗口/批次确认。"],["权限",false,"无关。"],["加密",false,"无关。"]]},
+ {"q":"5. 有副作用命令重试怎么防重复？","opts":[["同编号去重（幂等）",true,"对。"],["换编号",false,"会重复执行。"],["不重试",false,"要重试但幂等。"]]},
+ {"q":"6. 重组逻辑放哪？","opts":[["单线程 worker",true,"对。回调里复制字节投入。"],["Binder 回调线程",false,"别堵它。"],["主线程",false,"别堵 UI。"]]}
+];
 let solved=0; const box=document.getElementById('quiz-box');
 QUIZ.forEach((item,qi)=>{
   const h=document.createElement('div'); h.className='quiz-q'; h.textContent=item.q; box.appendChild(h);
@@ -319,7 +411,6 @@ QUIZ.forEach((item,qi)=>{
   });
   box.appendChild(ex);
 });
-
 </script>
 </body>
 </html>

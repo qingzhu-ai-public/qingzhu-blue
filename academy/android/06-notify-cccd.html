@@ -172,6 +172,10 @@
   .ctl-row label{display:inline-flex;align-items:center;gap:10px;}
   .ctl-row input[type=range]{accent-color:var(--coral);width:160px;}
   .ctl-row .chk input{accent-color:var(--coral);}
+  .api-lv{display:inline-block;font-family:ui-monospace,Consolas,monospace;font-size:11.5px;font-weight:800;color:#2F58A8;background:var(--blue-soft);border:1px solid var(--blue-line);border-radius:999px;padding:0 8px;white-space:nowrap;}
+  .refs{font-size:14px;}
+  .refs li{margin:7px 0;}
+  .refs .src{font-size:12px;color:var(--faint);}
 </style>
 </head>
 <body style="--coral:#E8590C;--coral-soft:#FBEADF;--coral-line:#F2C4A4">
@@ -203,104 +207,199 @@
 <main>
   <div class="crumb">蓝牙小课堂 / Android 第六课 · B6</div>
   <h1>订阅与通知：<em>两步</em>缺一不可</h1>
-  <p class="lead">setCharacteristicNotification 只是本地登记，还要向 CCCD 写开启值设备才发。这一课讲 Android 的两步订阅、onCharacteristicChanged 与回调线程。</p>
-  <div class="meta"><span>平台：Android/Kotlin</span><span>约 12 分钟</span><span>含交互演练</span><span>前置：B5</span></div>
+  <p class="lead">setCharacteristicNotification 只是本地登记，还要向 CCCD 写开启值设备才发。这一课把 Android 两步订阅、CCCD 取值、Notify 与 Indicate、回调线程与重连残留逐一讲清，并给出官方依据。</p>
+  <div class="meta"><span>平台：Android/Kotlin</span><span>约 22 分钟</span><span>API 18 → 33</span><span>含交互演练</span><span>前置：B5</span></div>
   <div class="journey">
-    <div class="j-step"><span class="n">1</span><span class="t">本地</span><span class="s">setNotify</span></div>
-    <div class="j-step"><span class="n">2</span><span class="t">远端</span><span class="s">写CCCD</span></div>
-    <div class="j-step"><span class="n">3</span><span class="t">回调</span><span class="s">onChanged</span></div>
-    <div class="j-step"><span class="n">4</span><span class="t">线程</span><span class="s">复制数据</span></div>
-    <div class="j-step"><span class="n">5</span><span class="t">动手</span><span class="s">两步</span></div>
+    <div class="j-step"><span class="n">1</span><span class="t">两步</span><span class="s">本地+CCCD</span></div>
+    <div class="j-step"><span class="n">2</span><span class="t">CCCD</span><span class="s">取值</span></div>
+    <div class="j-step"><span class="n">3</span><span class="t">回调</span><span class="s">线程</span></div>
+    <div class="j-step"><span class="n">4</span><span class="t">重连</span><span class="s">残留</span></div>
+    <div class="j-step"><span class="n">5</span><span class="t">动手</span><span class="s">两场演练</span></div>
   </div>
 
   <section id="two">
-    <h2><span class="no">第 1 步</span>本地登记 + 写 CCCD</h2>
-    
-      <pre>gatt.setCharacteristicNotification(ch, true)          // 本地
-val cccd = ch.getDescriptor(UUID.fromString("00002902-…"))
-cccd.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE  // 01 00
-gatt.writeDescriptor(cccd)                            // 远端，等 onDescriptorWrite</pre>
-      <div class="key"><span class="tag">重点</span>只做本地：设备不发；只写 CCCD：系统不交给 App。<b>两步齐备</b>再触发新读数验证。Indicate 用 ENABLE_INDICATION_VALUE（02 00）。</div>
-      <div class="recap"><b>本步收束：</b>setCharacteristicNotification + writeDescriptor(CCCD) 两步。</div>
+    <h2><span class="no">第 1 步</span>本地登记 + 写 CCCD，两步缺一不可</h2>
+    <figure>
+      <svg viewBox="0 0 760 150" role="img" aria-label="两步订阅">
+        <rect x="20" y="30" width="200" height="70" rx="8" fill="#ECF1FB" stroke="#C9D8F2"/>
+        <text x="120" y="58" text-anchor="middle" font-size="13" font-weight="bold" fill="#2F58A8">① 本地登记</text>
+        <text x="120" y="80" text-anchor="middle" font-size="10" fill="#5B7DB1">setCharacteristicNotification(true)</text>
+        <rect x="290" y="30" width="200" height="70" rx="8" fill="#E9F4F2" stroke="#BFE0DB"/>
+        <text x="390" y="58" text-anchor="middle" font-size="13" font-weight="bold" fill="#1E7268">② 远端开启</text>
+        <text x="390" y="80" text-anchor="middle" font-size="10" fill="#4E8A80">writeDescriptor(CCCD=01 00)</text>
+        <rect x="560" y="30" width="180" height="70" rx="8" fill="#FBF3E2" stroke="#EAD9AE"/>
+        <text x="650" y="58" text-anchor="middle" font-size="13" font-weight="bold" fill="#9A6B12">设备开始推送</text>
+        <text x="650" y="80" text-anchor="middle" font-size="10" fill="#B08A3E">onCharacteristicChanged</text>
+        <line x1="220" y1="65" x2="290" y2="65" stroke="#9DB4DC" stroke-width="2" marker-end="url(#m6)"/>
+        <line x1="490" y1="65" x2="560" y2="65" stroke="#9DB4DC" stroke-width="2" marker-end="url(#m6)"/>
+        <defs><marker id="m6" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 z" fill="#9DB4DC"/></marker></defs>
+        <text x="380" y="130" text-anchor="middle" font-size="12" fill="#7A7267">只本地：设备不发；只 CCCD：系统不交给 App。两步齐备才收得到。</text>
+      </svg>
+      <figcaption>Android 订阅必须两步：本地登记让系统接收，写 CCCD 让设备发送。</figcaption>
+    </figure>
+    <pre>gatt.setCharacteristicNotification(ch, true)          <span class="cm">// ① 本地</span>
+val cccd = ch.getDescriptor(UUID.fromString("00002902-0000-1000-8000-00805f9b34fb"))
+<span class="cm">// API 33+ 新签名直接传值</span>
+gatt.writeDescriptor(cccd, BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE)  <span class="cm">// ② 01 00</span>
+<span class="cm">// 等 onDescriptorWrite 成功，再触发新读数验证</span></pre>
+    <div class="recap"><b>本步收束：</b>setCharacteristicNotification + writeDescriptor(CCCD) 两步；等 onDescriptorWrite 再验证。</div>
+  </section>
+
+  <section id="cccd">
+    <h2><span class="no">第 2 步</span>CCCD 取值与 Notify / Indicate</h2>
+    <table>
+      <tr><th>CCCD 值</th><th>常量</th><th>含义</th></tr>
+      <tr><td>00 00</td><td>DISABLE_NOTIFICATION_VALUE</td><td>关闭</td></tr>
+      <tr><td>01 00</td><td>ENABLE_NOTIFICATION_VALUE</td><td>Notification（无确认）</td></tr>
+      <tr><td>02 00</td><td>ENABLE_INDICATION_VALUE</td><td>Indication（有确认）</td></tr>
+    </table>
+    <table>
+      <tr><th></th><th>Notification</th><th>Indication</th></tr>
+      <tr><td>确认</td><td>无，设备发完即走</td><td>有，客户端自动回 Confirmation</td></tr>
+      <tr><td>吞吐</td><td>高，可连续多条</td><td>低，一条一等</td></tr>
+      <tr><td>可靠</td><td>可能丢</td><td>不丢（链路层确认）</td></tr>
+      <tr><td>特征 property</td><td>PROPERTY_NOTIFY</td><td>PROPERTY_INDICATE</td></tr>
+    </table>
+    <div class="key"><span class="tag">重点</span>CCCD（0x2902）是<b>每个可通知特征各一个</b>的描述符。写错值（如该 Indicate 却写 01 00）设备可能不发。Android 对 Indication 的确认由协议栈自动回，App 仍走 onCharacteristicChanged。</div>
+    <div class="recap"><b>本步收束：</b>00 关 / 01 Notify / 02 Indicate；Notify 快可丢、Indicate 慢可靠。</div>
   </section>
 
   <section id="cb">
-    <h2><span class="no">第 2 步</span>onCharacteristicChanged 与线程</h2>
-    
-      <pre>override fun onCharacteristicChanged(g:BluetoothGatt, ch:BluetoothGattCharacteristic) {
-  val bytes = ch.value.copyOf()   // 立即复制，回调线程数据会被复用
-  worker.post { decode(bytes) }   // 解码放工作线程
+    <h2><span class="no">第 3 步</span>onCharacteristicChanged 与回调线程</h2>
+    <pre><span class="cm">// API 33+ 新签名：value 直接传入，避免竞态</span>
+override fun onCharacteristicChanged(g:BluetoothGatt, ch:BluetoothGattCharacteristic, value:ByteArray) {
+  val bytes = value.copyOf()   <span class="cm">// 立即复制</span>
+  worker.post { decode(bytes) } <span class="cm">// 解码放工作线程</span>
 }</pre>
-      <div class="note"><span class="tag">注意</span>回调在 Binder 线程，<b>立即复制字节</b>再投递；解码/IO 放工作线程，别堵回调。Android 26+ 可用 Handler 指定回调线程，37+ 用 Executor。</div>
-      <div class="recap"><b>本步收束：</b>回调里复制字节、工作线程解码。</div>
+    <ul>
+      <li>回调默认在 <b>Binder 线程</b>，不是主线程；别在里面做耗时解码/IO，也别直接更新 UI。</li>
+      <li>旧签名里 <code>ch.value</code> 会被后续操作复用，<b>立即 copyOf()</b> 再投递。</li>
+      <li>Android 26+ 可在 connectGatt 传 <code>Handler</code> 指定回调线程；更新版本可用 <code>Executor</code>。</li>
+    </ul>
+    <div class="recap"><b>本步收束：</b>回调里复制字节、工作线程解码；33+ 用带 value 新签名。</div>
   </section>
 
   <section id="rebind">
-    <h2><span class="no">第 3 步</span>绑定重连 CCCD 残留</h2>
-    
-      <p>绑定设备重连后服务端保留旧 CCCD 可能直接发，而本地 setCharacteristicNotification 还没重新登记→丢数据。重连务必重新两步订阅。</p>
-      <div class="recap"><b>本步收束：</b>重连重新登记本地+确认 CCCD。</div>
+    <h2><span class="no">第 4 步</span>绑定重连的 CCCD 残留</h2>
+    <p>绑定（bonded）设备重连后，服务端可能<b>保留旧 CCCD</b> 直接开始发；而本地 setCharacteristicNotification 还没重新登记 → 系统收到却不交给 App，表现为「丢数据」。重连务必<b>重新两步订阅</b>，不要假设上次的订阅还在。</p>
+    <div class="recap"><b>本步收束：</b>重连重新登记本地 + 确认 CCCD，别依赖残留。</div>
   </section>
 
   <section id="lab">
-    <h2><span class="no">动手</span>开关两步，看通知流不流</h2>
-    <p>两个开关代表 setCharacteristicNotification（本地）与 writeDescriptor(CCCD)（远端）。点「设备发通知」，只有两步都开 onCharacteristicChanged 才进 App。</p>
+    <h2><span class="no">动手</span>两场演练</h2>
+    <h3>演练一 · 开关两步，看通知流不流</h3>
+    <p>两个开关代表本地登记与 CCCD。点「设备发通知」，只有两步都开 onCharacteristicChanged 才进 App。</p>
     <div class="lab">
       <div class="lab-head"><b>Android 订阅演练</b><span class="hint">setNotify + writeDescriptor</span></div>
       <div class="controls"><div class="seg"><button id="l6">setNotify:false</button><button id="c6">CCCD:00 00</button></div><button class="btn teal" id="f6">设备发通知</button></div>
       <div class="lab-body"><div><div class="chips"><span class="chip" id="cl6">本地</span><span class="chip" id="cc6">CCCD</span><span class="chip" id="cf6">onChanged</span></div></div><div class="logcat"><div class="logcat-head"><span>logcat</span><span>verbose</span></div><div class="logcat-body" id="log6"><span class="c">// 开两步后点发通知</span></div></div></div>
       <div class="lab-foot"><span class="hint">只开 CCCD：设备发了但 onChanged 不进</span></div>
     </div>
-    <div class="key"><span class="tag">看懂这场演练</span>Android 订阅两步：setCharacteristicNotification 本地登记 + writeDescriptor 写 CCCD。缺一收不到。回调里立即复制字节、工作线程解码。</div>
+    <h3>演练二 · CCCD 值解码</h3>
+    <p>选 CCCD 值，看设备行为与适用场景。</p>
+    <div class="lab">
+      <div class="lab-head"><b>CCCD 解码</b><span class="hint">00 / 01 / 02</span></div>
+      <div class="controls"><div class="seg" id="cccd6"><button data-c="00" class="on">00 00</button><button data-c="01">01 00</button><button data-c="02">02 00</button></div></div>
+      <div class="lab-body single"><div id="cccdOut6" class="card" style="margin:0;"></div></div>
+    </div>
+    <div class="key"><span class="tag">看懂这两场演练</span>订阅两步缺一收不到；CCCD 01=Notify（快可丢）、02=Indicate（慢可靠）；回调里立即复制字节、工作线程解码。</div>
   </section>
 
   <section id="quiz">
-    <h2><span class="no">自测</span>三个问题</h2>
+    <h2><span class="no">自测</span>六个问题</h2>
     <div class="card" id="quiz-box"></div>
     <p id="quiz-done" style="display:none;font-weight:700;color:#1E7268;">全对。下一课讲 MTU、PHY 与连接参数。</p>
   </section>
 
-  <section id="map">
-    <h2><span class="no">回顾</span>速查</h2>
-    <table><tr><th>步</th><th>API</th></tr><tr><td>本地</td><td>setCharacteristicNotification(true)</td></tr><tr><td>远端</td><td>writeDescriptor(CCCD=01 00)</td></tr><tr><td>回调</td><td>onCharacteristicChanged（复制字节）</td></tr></table>
-    <div class="note"><span class="tag">说明</span>本页为教学简化，工程细节以正文与官方规范为准；演练为模拟，非真实设备通信。</div>
-    <footer>青竹蓝牙学堂 · 蓝牙小课堂Android 第六课 · B6 · <a href="../index.html">回到学堂</a></footer>
+  <section id="cheatsheet">
+    <h2><span class="no">回顾</span>速查表</h2>
+    <table>
+      <tr><th>步</th><th>API / 值</th></tr>
+      <tr><td>本地</td><td>setCharacteristicNotification(true)</td></tr>
+      <tr><td>远端</td><td>writeDescriptor(CCCD=01 00)</td></tr>
+      <tr><td>回调</td><td>onCharacteristicChanged（复制字节）</td></tr>
+      <tr><td>Indicate</td><td>CCCD=02 00，有确认</td></tr>
+      <tr><td>重连</td><td>重新两步订阅</td></tr>
+    </table>
+    <div class="note"><span class="tag">说明</span>本页为教学整理，API 以官方文档为准；演练为模拟，非真实设备通信。</div>
+  </section>
+
+  <section id="refs">
+    <h2><span class="no">依据</span>参考链接</h2>
+    <div class="card refs">
+      <h3 style="margin-top:0;">官方指南</h3>
+      <ul>
+        <li><a href="https://developer.android.com/develop/connectivity/bluetooth/ble/find-ble-devices" target="_blank" rel="noopener">Find BLE devices / GATT</a> <span class="src">— 订阅流程</span></li>
+      </ul>
+      <h3>API 参考</h3>
+      <ul>
+        <li><a href="https://developer.android.com/reference/android/bluetooth/BluetoothGatt#setCharacteristicNotification(android.bluetooth.BluetoothGattCharacteristic,%20boolean)" target="_blank" rel="noopener">setCharacteristicNotification</a> <span class="src">— 本地登记</span></li>
+        <li><a href="https://developer.android.com/reference/android/bluetooth/BluetoothGattDescriptor" target="_blank" rel="noopener">BluetoothGattDescriptor</a> <span class="src">— ENABLE_NOTIFICATION/INDICATION_VALUE 常量</span></li>
+        <li><a href="https://developer.android.com/reference/android/bluetooth/BluetoothGattCallback#onCharacteristicChanged(android.bluetooth.BluetoothGatt,%20android.bluetooth.BluetoothGattCharacteristic,%20byte[])" target="_blank" rel="noopener">onCharacteristicChanged</a> <span class="src">— 33 新签名</span></li>
+      </ul>
+      <h3>规范</h3>
+      <ul>
+        <li><a href="https://www.bluetooth.com/specifications/specs/" target="_blank" rel="noopener">Core Spec · ATT/GATT</a> <span class="src">— CCCD 0x2902、Notification/Indication</span></li>
+      </ul>
+    </div>
+    <div class="next-links">
+      <a href="05-discovery-readwrite.html">← B5 服务发现与读写</a>
+      <a href="07-mtu-phy-params.html">B7 MTU/PHY/参数 →</a>
+    </div>
+    <footer>青竹蓝牙学堂 · 蓝牙小课堂 Android 第六课 · B6 · <a href="../index.html">回到学堂</a></footer>
   </section>
 </main>
 <aside class="toc" id="toc">
   <div class="toc-title">本课目录</div>
   <a href="#two">两步订阅</a>
+  <a href="#cccd">CCCD 与 Notify/Indicate</a>
   <a href="#cb">通知回调</a>
   <a href="#rebind">重连残留</a>
-  <a href="#lab">动手演练</a>
+  <a href="#lab">两场演练</a>
   <a href="#quiz">本课自测</a>
-  <a href="#map">回顾与速查</a>
+  <a href="#cheatsheet">速查表</a>
+  <a href="#refs">参考链接</a>
 </aside>
 </div>
 <script>
-
+// 演练一：两步开关
 (function(){
-  var l=false,c=false;
-  function paint(){ document.getElementById('l6').textContent='setNotify:'+l; document.getElementById('l6').classList.toggle('on',l);
-    document.getElementById('c6').textContent='CCCD:'+(c?'01 00':'00 00'); document.getElementById('c6').classList.toggle('on',c);
-    document.getElementById('cl6').className='chip'+(l?' on':''); document.getElementById('cc6').className='chip'+(c?' on':'');
-    document.getElementById('cf6').className='chip'+(l&&c?' on':' bad'); }
-  document.getElementById('l6').addEventListener('click',function(){l=!l;paint();});
-  document.getElementById('c6').addEventListener('click',function(){c=!c;paint();});
+  var local=false, cccd=false;
+  var l=document.getElementById('l6'), c=document.getElementById('c6'), log=document.getElementById('log6');
+  function chips(){ document.getElementById('cl6').className='chip'+(local?' on':''); document.getElementById('cc6').className='chip'+(cccd?' on':''); }
+  function line(h){ var d=document.createElement('div'); d.innerHTML=h; log.appendChild(d); log.scrollTop=log.scrollHeight; }
+  l.addEventListener('click',function(){ local=!local; l.textContent='setNotify:'+local; chips(); line('<span class="api">setCharacteristicNotification('+local+')</span>'); });
+  c.addEventListener('click',function(){ cccd=!cccd; c.textContent='CCCD:'+(cccd?'01 00':'00 00'); chips(); line('<span class="api">writeDescriptor('+(cccd?'01 00':'00 00')+')</span> → onDescriptorWrite'); });
   document.getElementById('f6').addEventListener('click',function(){
-    var h='<div><span class="api">设备 Notification</span> 6A 09</div>';
-    h+=c?'<div><span class="ok">空口发出</span></div>':'<div><span class="err">CCCD=00 00 设备不发</span></div>';
-    h+=l?'<div><span class="ok">onCharacteristicChanged</span> <span class="c">// 复制字节→工作线程</span></div>':'<div><span class="err">本地没登记，系统不交付</span></div>';
-    document.getElementById('log6').innerHTML=h; paint();
+    if(cccd){ line('<span class="t">设备发出 Notification</span>'); }
+    else { line('<span class="c">CCCD 未开启，设备不发</span>'); return; }
+    if(local&&cccd){ line('<span class="ok">onCharacteristicChanged 进 App</span> → copyOf() → worker 解码'); document.getElementById('cf6').className='chip on'; }
+    else { line('<span class="warn">本地未登记，系统收到但不交给 App（丢数据）</span>'); document.getElementById('cf6').className='chip bad'; }
   });
-  paint();
 })();
-
+// 演练二：CCCD 解码
+(function(){
+  var C={'00':['关闭','设备不推送','退订/省电'],
+    '01':['Notification','无确认，可连续多条，可能丢','高频传感器、可丢数据'],
+    '02':['Indication','有确认，一条一等，不丢','关键状态、不能丢的指令回执']};
+  function show(k){ var c=C[k]; document.getElementById('cccdOut6').innerHTML='<p style="margin:0 0 6px;font-weight:700;">CCCD '+k+' 00 → '+c[0]+'</p><p style="margin:0 0 6px;">'+c[1]+'</p><div class="chips"><span class="chip on">'+c[2]+'</span></div>'; }
+  document.querySelectorAll('#cccd6 button').forEach(function(b){b.addEventListener('click',function(){document.querySelectorAll('#cccd6 button').forEach(function(x){x.classList.remove('on');});b.classList.add('on');show(b.getAttribute('data-c'));});});
+  show('00');
+})();
+// 目录高亮
 const tocLinks=[...document.querySelectorAll('.toc a')];
 const secs=tocLinks.map(a=>document.getElementById(a.getAttribute('href').slice(1)));
 const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){tocLinks.forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+e.target.id));}});},{rootMargin:'-20% 0px -70% 0px'});
 secs.forEach(s=>s&&io.observe(s));
-const QUIZ=[{"q":"1. Android 订阅两步是？","opts":[["setCharacteristicNotification + writeDescriptor(CCCD)",true,"对。"],["只 setNotify",false,"设备不发。"],["只 writeDescriptor",false,"系统不交付。"]]},{"q":"2. onCharacteristicChanged 里应先做什么？","opts":[["立即复制字节再投递工作线程",true,"对。回调数据会被复用。"],["直接解码大文件",false,"会堵回调。"],["Thread.sleep",false,"堵 Binder 线程。"]]},{"q":"3. Indicate 的 CCCD 值？","opts":[["02 00",true,"对。"],["01 00",false,"那是 Notify。"],["00 00",false,"那是关。"]]}];
+// 自测
+const QUIZ=[
+ {"q":"1. 只做 setCharacteristicNotification 会？","opts":[["设备不发，收不到",true,"对。还要写 CCCD。"],["能收到",false,"缺远端开启。"],["报错",false,"不报错只是不收。"]]},
+ {"q":"2. 开启 Notification 写 CCCD 什么值？","opts":[["01 00",true,"对。"],["02 00",false,"那是 Indicate。"],["00 00",false,"那是关闭。"]]},
+ {"q":"3. Indicate 与 Notify 区别？","opts":[["Indicate 有确认更可靠",true,"对。Notify 无确认可丢。"],["一样",false,"有区别。"],["Notify 更可靠",false,"反了。"]]},
+ {"q":"4. onCharacteristicChanged 在哪个线程？","opts":[["Binder 线程，非主线程",true,"对。别堵它。"],["主线程",false,"默认不是。"],["随机",false,"Binder。"]]},
+ {"q":"5. 回调里拿到字节先做什么？","opts":[["立即 copyOf() 再投递",true,"对。数据会被复用。"],["直接解码",false,"可能竞态。"],["存 ch.value",false,"会被覆盖。"]]},
+ {"q":"6. 绑定设备重连后订阅？","opts":[["重新两步订阅",true,"对。别依赖残留 CCCD。"],["沿用上次",false,"本地登记没了。"],["不用管",false,"会丢数据。"]]}
+];
 let solved=0; const box=document.getElementById('quiz-box');
 QUIZ.forEach((item,qi)=>{
   const h=document.createElement('div'); h.className='quiz-q'; h.textContent=item.q; box.appendChild(h);
@@ -320,7 +419,6 @@ QUIZ.forEach((item,qi)=>{
   });
   box.appendChild(ex);
 });
-
 </script>
 </body>
 </html>

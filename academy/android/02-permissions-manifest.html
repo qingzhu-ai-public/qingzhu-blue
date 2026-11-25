@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>蓝牙小课堂 · B2 权限开关清单 · 青竹蓝牙学堂</title>
+<title>蓝牙小课堂 · B2 权限与清单 · 青竹蓝牙学堂</title>
 <style>
   :root{
     --bg:#F7F6F2; --card:#FFFFFF; --ink:#2B2620; --muted:#7A7267; --faint:#A39B8E;
@@ -172,6 +172,10 @@
   .ctl-row label{display:inline-flex;align-items:center;gap:10px;}
   .ctl-row input[type=range]{accent-color:var(--coral);width:160px;}
   .ctl-row .chk input{accent-color:var(--coral);}
+  .api-lv{display:inline-block;font-family:ui-monospace,Consolas,monospace;font-size:11.5px;font-weight:800;color:#2F58A8;background:var(--blue-soft);border:1px solid var(--blue-line);border-radius:999px;padding:0 8px;white-space:nowrap;}
+  .refs{font-size:14px;}
+  .refs li{margin:7px 0;}
+  .refs .src{font-size:12px;color:var(--faint);}
 </style>
 </head>
 <body style="--coral:#E8590C;--coral-soft:#FBEADF;--coral-line:#F2C4A4">
@@ -202,110 +206,213 @@
 </aside>
 <main>
   <div class="crumb">蓝牙小课堂 / Android 第二课 · B2</div>
-  <h1>权限、开关与清单：<em>按动作</em>申请</h1>
-  <p class="lead">用户点「搜索」，先遇到权限窗口。Android 12 起扫描/连接/广播拆成三项运行时权限；旧系统则要位置权限。这一课讲清按动作申请、清单声明与版本差异。</p>
-  <div class="meta"><span>平台：Android/Kotlin</span><span>约 12 分钟</span><span>含交互演练</span><span>前置：B1</span></div>
+  <h1>权限、开关与清单：<em>按动作</em>申请、按版本适配</h1>
+  <p class="lead">用户点「搜索」，先遇到权限窗口。Android 12 起扫描/连接/广播拆成三项运行时权限；旧系统则要位置权限。这一课把权限拆分、版本演进、清单声明、运行时申请与位置开关逐一讲清，并给出官方依据。</p>
+  <div class="meta"><span>平台：Android/Kotlin</span><span>约 24 分钟</span><span>API 23 → 36</span><span>含交互演练</span><span>前置：B1</span></div>
   <div class="journey">
     <div class="j-step"><span class="n">1</span><span class="t">分权限</span><span class="s">按动作</span></div>
-    <div class="j-step"><span class="n">2</span><span class="t">版本</span><span class="s">31+ vs 旧</span></div>
+    <div class="j-step"><span class="n">2</span><span class="t">版本</span><span class="s">演进</span></div>
     <div class="j-step"><span class="n">3</span><span class="t">清单</span><span class="s">声明</span></div>
-    <div class="j-step"><span class="n">4</span><span class="t">运行时</span><span class="s">申请</span></div>
-    <div class="j-step"><span class="n">5</span><span class="t">动手</span><span class="s">算权限</span></div>
+    <div class="j-step"><span class="n">4</span><span class="t">运行时</span><span class="s">申请+复查</span></div>
+    <div class="j-step"><span class="n">5</span><span class="t">动手</span><span class="s">两场演练</span></div>
   </div>
 
   <section id="split">
     <h2><span class="no">第 1 步</span>搜索、连接、广播各要一项</h2>
-    
-      <table><tr><th>动作</th><th>API 31+（目标 31+）</th><th>API 23–30</th></tr>
-        <tr><td>扫描</td><td>BLUETOOTH_SCAN</td><td>BLUETOOTH/ADMIN + ACCESS_FINE_LOCATION + 位置开关</td></tr>
-        <tr><td>连接/GATT</td><td>BLUETOOTH_CONNECT</td><td>BLUETOOTH</td></tr>
-        <tr><td>发广播</td><td>BLUETOOTH_ADVERTISE</td><td>BLUETOOTH_ADMIN</td></tr></table>
-      <div class="key"><span class="tag">重点 · neverForLocation</span>声明 <code>BLUETOOTH_SCAN</code> 带 <code>neverForLocation</code> 表示不用扫描结果推导位置，系统可能<b>过滤部分 BLE 信标</b>。需要这些数据时按实际用途调整声明并复测。</div>
-      <div class="recap"><b>本步收束：</b>先看用户要做什么，再申请这一步真用得到的权限。</div>
+    <table>
+      <tr><th>动作</th><th>API 31+（目标 31+）</th><th>API 23–30</th><th>≤ API 22</th></tr>
+      <tr><td>扫描</td><td>BLUETOOTH_SCAN</td><td>BLUETOOTH/ADMIN + 位置权限 + 位置开关</td><td>BLUETOOTH/ADMIN（安装即授）</td></tr>
+      <tr><td>连接/GATT</td><td>BLUETOOTH_CONNECT</td><td>BLUETOOTH</td><td>BLUETOOTH</td></tr>
+      <tr><td>发广播</td><td>BLUETOOTH_ADVERTISE</td><td>BLUETOOTH_ADMIN</td><td>BLUETOOTH_ADMIN</td></tr>
+    </table>
+    <div class="key"><span class="tag">重点 · neverForLocation</span>声明 <code>BLUETOOTH_SCAN</code> 带 <code>android:usesPermissionFlags="neverForLocation"</code> 表示「绝不拿扫描结果推导位置」，可免位置权限；代价是系统可能<b>过滤部分 BLE 信标广播</b>。扫信标的项目要实测，必要时去掉该标志并申请位置权限。</div>
+    <div class="recap"><b>本步收束：</b>先看用户做什么，再申请这一步真用得到的权限；neverForLocation 有过滤代价。</div>
+  </section>
+
+  <section id="version">
+    <h2><span class="no">第 2 步</span>版本演进：为什么越来越复杂</h2>
+    <table>
+      <tr><th>版本</th><th>变化</th></tr>
+      <tr><td>≤ 5.1（22）</td><td>BLUETOOTH/ADMIN 为普通权限，安装即授</td></tr>
+      <tr><td>6.0（23）</td><td>运行时权限；BLE 扫描开始需要<b>位置权限</b>（粗即可）+ 位置开关</td></tr>
+      <tr><td>10（29）</td><td>扫描需要 <b>ACCESS_FINE_LOCATION</b>（粗不够）</td></tr>
+      <tr><td>11（30）</td><td>后台位置需单独 ACCESS_BACKGROUND_LOCATION（「始终允许」）</td></tr>
+      <tr><td>12（31）</td><td>拆分 BLUETOOTH_SCAN / CONNECT / ADVERTISE 三项运行时权限</td></tr>
+      <tr><td>13（33）</td><td>代码 enable()/disable() 废弃，引导系统设置</td></tr>
+    </table>
+    <div class="recap"><b>本步收束：</b>23 引入运行时+位置；29 要 FINE；31 拆三项；33 禁代码开关蓝牙。</div>
   </section>
 
   <section id="manifest">
-    <h2><span class="no">第 2 步</span>清单：新旧权限用 maxSdkVersion 分开</h2>
-    
-      <pre>&lt;uses-feature android:name="android.hardware.bluetooth_le" android:required="false"/&gt;
-&lt;uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30"/&gt;
-&lt;uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30"/&gt;
-&lt;uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" android:maxSdkVersion="30"/&gt;
-&lt;uses-permission android:name="android.permission.BLUETOOTH_SCAN" android:usesPermissionFlags="neverForLocation"/&gt;
-&lt;uses-permission android:name="android.permission.BLUETOOTH_CONNECT"/&gt;</pre>
-      <div class="recap"><b>本步收束：</b>旧权限 maxSdkVersion=30，新权限 31+ 生效；BLE 必需时 required=true。</div>
+    <h2><span class="no">第 3 步</span>清单：新旧权限用 maxSdkVersion 分开</h2>
+    <pre>&lt;uses-feature android:name=<span class="str">"android.hardware.bluetooth_le"</span> android:required=<span class="str">"false"</span>/&gt;
+
+<span class="cm">&lt;!-- 旧系统（≤30） --&gt;</span>
+&lt;uses-permission android:name=<span class="str">"android.permission.BLUETOOTH"</span> android:maxSdkVersion=<span class="str">"30"</span>/&gt;
+&lt;uses-permission android:name=<span class="str">"android.permission.BLUETOOTH_ADMIN"</span> android:maxSdkVersion=<span class="str">"30"</span>/&gt;
+&lt;uses-permission android:name=<span class="str">"android.permission.ACCESS_FINE_LOCATION"</span> android:maxSdkVersion=<span class="str">"30"</span>/&gt;
+
+<span class="cm">&lt;!-- 新系统（31+） --&gt;</span>
+&lt;uses-permission android:name=<span class="str">"android.permission.BLUETOOTH_SCAN"</span>
+    android:usesPermissionFlags=<span class="str">"neverForLocation"</span>/&gt;
+&lt;uses-permission android:name=<span class="str">"android.permission.BLUETOOTH_CONNECT"</span>/&gt;
+&lt;uses-permission android:name=<span class="str">"android.permission.BLUETOOTH_ADVERTISE"</span>/&gt;</pre>
+    <ul>
+      <li><code>uses-feature bluetooth_le required=false</code>：让无 BLE 的设备也能安装（运行时再判能力）；BLE 是核心功能则设 true。</li>
+      <li>旧权限加 <code>maxSdkVersion="30"</code>，避免在新系统上多申请。</li>
+      <li>需要后台扫描（B10）再补 ACCESS_BACKGROUND_LOCATION 与前台服务类型。</li>
+    </ul>
+    <div class="recap"><b>本步收束：</b>旧权限 maxSdkVersion=30；新权限 31+ 生效；按需声明 feature 与后台位置。</div>
   </section>
 
   <section id="runtime">
-    <h2><span class="no">第 3 步</span>按版本算应申请的权限</h2>
-    
-      <pre>val required = when {
-  Build.VERSION.SDK_INT &gt;= 31 -&gt; arrayOf(BLUETOOTH_SCAN, BLUETOOTH_CONNECT)
-  Build.VERSION.SDK_INT &gt;= 23 -&gt; arrayOf(ACCESS_FINE_LOCATION)
+    <h2><span class="no">第 4 步</span>运行时申请：算 missing → 申请 → 复查</h2>
+    <pre>val required = when {
+  Build.VERSION.SDK_INT &gt;= <span class="num">31</span> -&gt; arrayOf(BLUETOOTH_SCAN, BLUETOOTH_CONNECT)
+  Build.VERSION.SDK_INT &gt;= <span class="num">23</span> -&gt; arrayOf(ACCESS_FINE_LOCATION)
   else -&gt; emptyArray()
 }
-val missing = required.filter { checkSelfPermission(this,it) != GRANTED }
-if (missing.isEmpty()) startScanSession() else launcher.launch(missing.toTypedArray())</pre>
-      <div class="note"><span class="tag">注意</span>授权窗口关闭后<b>再检查每一项</b>；用户可中途撤回，调用仍可能抛 SecurityException。界面分别提示「请允许搜索」「请打开蓝牙」「扫描启动失败」。</div>
-      <div class="recap"><b>本步收束：</b>按版本算 missing，授权后复查，再查蓝牙开关。</div>
+val missing = required.filter { checkSelfPermission(this, it) != GRANTED }
+if (missing.isEmpty()) startScanSession()
+else launcher.launch(missing.toTypedArray())   <span class="cm">// RequestMultiplePermissions</span>
+
+<span class="cm">// 回调里：逐项复查，再查蓝牙开关</span>
+<span class="cm">// 用户可中途撤回，调用仍可能抛 SecurityException，要 try/catch</span></pre>
+    <div class="note"><span class="tag">注意</span>授权窗口关闭后<b>再检查每一项</b>（用户可能只给一部分）；蓝牙未开时用 <code>BluetoothAdapter.ACTION_REQUEST_ENABLE</code> 引导开启（33 起也建议跳系统设置）。界面分别提示「请允许搜索」「请打开蓝牙」「扫描启动失败」，别用一个笼统错误。</div>
+    <div class="recap"><b>本步收束：</b>按版本算 missing；授权后逐项复查；再查蓝牙开关；防 SecurityException。</div>
+  </section>
+
+  <section id="location">
+    <h2><span class="no">第 5 步</span>位置权限与位置开关的细节</h2>
+    <ul>
+      <li><b>权限 ≠ 开关：</b>23–30 扫描既要位置权限授予，也要系统<b>位置服务开关打开</b>，否则一条结果都没有（不报错）。</li>
+      <li><b>FINE vs COARSE：</b>29+ 扫描必须 FINE；只给 COARSE 会扫不到。</li>
+      <li><b>31+ 的豁免：</b>声明 neverForLocation 后扫描不再要位置权限，但可能滤掉信标。</li>
+      <li><b>连接不需要位置：</b>位置只卡扫描；connectGatt 只要 BLUETOOTH_CONNECT（31+）。</li>
+    </ul>
+    <div class="recap"><b>本步收束：</b>旧系统权限+开关都要；29+ 要 FINE；31+ neverForLocation 可免位置但有过滤代价。</div>
   </section>
 
   <section id="lab">
-    <h2><span class="no">动手</span>选版本与动作，算出要申请哪些权限</h2>
-    <p>选运行版本和目标动作，右侧列出这一步真正要申请的运行时权限。体会「扫描+连接」要两项、旧系统要位置权限。</p>
+    <h2><span class="no">动手</span>两场演练</h2>
+    <h3>演练一 · 选版本与动作，算应申请权限</h3>
     <div class="lab">
-      <div class="lab-head"><b>权限计算演练</b><span class="hint">31+ 与旧系统两组</span></div>
-      <div class="controls"><div class="seg" id="sdk2"><button data-s="31" class="on">API 31+</button><button data-s="23">API 23–30</button></div><div class="seg" id="act2"><button data-a="scan" class="on">扫描</button><button data-a="conn">扫描+连接</button><button data-a="adv">发广播</button></div></div>
+      <div class="lab-head"><b>权限计算演练</b><span class="hint">31+ / 23–30 / ≤22 三组</span></div>
+      <div class="controls"><div class="seg" id="sdk2"><button data-s="31" class="on">API 31+</button><button data-s="23">API 23–30</button><button data-s="22">≤ API 22</button></div><div class="seg" id="act2"><button data-a="scan" class="on">扫描</button><button data-a="conn">扫描+连接</button><button data-a="adv">发广播</button></div></div>
       <div class="lab-body"><div><div class="chips" id="perms2"></div></div><div class="logcat"><div class="logcat-head"><span>应申请权限</span><span>live</span></div><div class="logcat-body" id="log2"></div></div></div>
-      <div class="lab-foot"><span class="hint">API31+ 扫描+连接 = SCAN+CONNECT；旧系统 = FINE_LOCATION</span></div>
+      <div class="lab-foot"><span class="hint">31+ 扫描+连接 = SCAN+CONNECT；23–30 = FINE_LOCATION+开关；≤22 安装即授</span></div>
     </div>
-    <div class="key"><span class="tag">看懂这场演练</span>权限按动作拆分：扫描 SCAN、连接 CONNECT、广播 ADVERTISE；旧系统扫描要位置权限+位置开关。neverForLocation 会过滤部分信标，按需声明。</div>
+    <h3>演练二 · 授权流程逐步走</h3>
+    <p>点按钮推进一次「搜索」前的完整检查链，体会每一步失败的不同提示。</p>
+    <div class="lab">
+      <div class="lab-head"><b>授权流程</b><span class="hint">检查→申请→复查→蓝牙开关</span></div>
+      <div class="controls"><div class="seg" id="flow2"><button data-f="check">查权限</button><button data-f="grant">用户授予</button><button data-f="deny">用户拒绝</button><button data-f="recheck">复查</button><button data-f="bt">查蓝牙开关</button></div></div>
+      <div class="lab-body single"><div class="logcat"><div class="logcat-head"><span>流程日志</span><span>live</span></div><div class="logcat-body" id="flowlog2"><span class="c">// 点按钮走流程</span></div></div></div>
+    </div>
+    <div class="key"><span class="tag">看懂这两场演练</span>权限按动作拆分、按版本适配；授权后必须逐项复查；权限给了还要查蓝牙开关；拒绝/未开/启动失败要分别提示。</div>
   </section>
 
   <section id="quiz">
-    <h2><span class="no">自测</span>三个问题</h2>
+    <h2><span class="no">自测</span>六个问题</h2>
     <div class="card" id="quiz-box"></div>
     <p id="quiz-done" style="display:none;font-weight:700;color:#1E7268;">全对。下一课讲扫描与过滤。</p>
   </section>
 
-  <section id="map">
-    <h2><span class="no">回顾</span>速查</h2>
-    <table><tr><th>动作</th><th>31+</th><th>23–30</th></tr><tr><td>扫描</td><td>SCAN</td><td>FINE_LOCATION+开关</td></tr><tr><td>连接</td><td>CONNECT</td><td>BLUETOOTH</td></tr><tr><td>广播</td><td>ADVERTISE</td><td>ADMIN</td></tr></table>
-    <div class="note"><span class="tag">说明</span>本页为教学简化，工程细节以正文与官方规范为准；演练为模拟，非真实设备通信。</div>
-    <footer>青竹蓝牙学堂 · 蓝牙小课堂Android 第二课 · B2 · <a href="../index.html">回到学堂</a></footer>
+  <section id="cheatsheet">
+    <h2><span class="no">回顾</span>速查表</h2>
+    <table>
+      <tr><th>动作</th><th>31+</th><th>23–30</th><th>≤22</th></tr>
+      <tr><td>扫描</td><td>SCAN</td><td>FINE_LOCATION+开关</td><td>BLUETOOTH/ADMIN</td></tr>
+      <tr><td>连接</td><td>CONNECT</td><td>BLUETOOTH</td><td>BLUETOOTH</td></tr>
+      <tr><td>广播</td><td>ADVERTISE</td><td>ADMIN</td><td>ADMIN</td></tr>
+    </table>
+    <div class="note"><span class="tag">说明</span>本页为教学整理，权限行为以官方文档为准；演练为模拟。</div>
+  </section>
+
+  <section id="refs">
+    <h2><span class="no">依据</span>参考链接</h2>
+    <div class="card refs">
+      <h3 style="margin-top:0;">官方指南</h3>
+      <ul>
+        <li><a href="https://developer.android.com/develop/connectivity/bluetooth/bt-permissions" target="_blank" rel="noopener">Bluetooth permissions</a> <span class="src">— 三项权限、neverForLocation、版本差异（权威）</span></li>
+        <li><a href="https://developer.android.com/develop/connectivity/bluetooth/ble/find-ble-devices" target="_blank" rel="noopener">Find BLE devices</a> <span class="src">— 扫描的位置权限要求</span></li>
+      </ul>
+      <h3>API 参考</h3>
+      <ul>
+        <li><a href="https://developer.android.com/reference/android/Manifest.permission#BLUETOOTH_SCAN" target="_blank" rel="noopener">Manifest.permission · BLUETOOTH_SCAN/CONNECT/ADVERTISE</a> <span class="src">— 31 引入</span></li>
+        <li><a href="https://developer.android.com/reference/android/bluetooth/BluetoothAdapter#ACTION_REQUEST_ENABLE" target="_blank" rel="noopener">BluetoothAdapter.ACTION_REQUEST_ENABLE</a> <span class="src">— 引导开蓝牙</span></li>
+      </ul>
+      <h3>行为变更</h3>
+      <ul>
+        <li><a href="https://developer.android.com/about/versions/12/behavior-changes-12" target="_blank" rel="noopener">Android 12 行为变更</a> <span class="src">— 蓝牙权限拆分</span></li>
+        <li><a href="https://developer.android.com/about/versions/13/behavior-changes-13" target="_blank" rel="noopener">Android 13 行为变更</a> <span class="src">— enable/disable 废弃</span></li>
+      </ul>
+    </div>
+    <div class="next-links">
+      <a href="01-android-overview.html">← B1 蓝牙全景</a>
+      <a href="03-scan-filter.html">B3 扫描与过滤 →</a>
+    </div>
+    <footer>青竹蓝牙学堂 · 蓝牙小课堂 Android 第二课 · B2 · <a href="../index.html">回到学堂</a></footer>
   </section>
 </main>
 <aside class="toc" id="toc">
   <div class="toc-title">本课目录</div>
   <a href="#split">按动作分权限</a>
+  <a href="#version">版本演进</a>
   <a href="#manifest">清单声明</a>
   <a href="#runtime">运行时申请</a>
-  <a href="#lab">动手演练</a>
+  <a href="#location">位置细节</a>
+  <a href="#lab">两场演练</a>
   <a href="#quiz">本课自测</a>
-  <a href="#map">回顾与速查</a>
+  <a href="#cheatsheet">速查表</a>
+  <a href="#refs">参考链接</a>
 </aside>
 </div>
 <script>
-
+// 演练一：权限计算
 (function(){
   var sdk='31', act='scan';
   function calc(){
     var p=[];
     if(sdk==='31'){ if(act==='scan')p=['BLUETOOTH_SCAN']; if(act==='conn')p=['BLUETOOTH_SCAN','BLUETOOTH_CONNECT']; if(act==='adv')p=['BLUETOOTH_ADVERTISE']; }
-    else { if(act==='adv')p=['BLUETOOTH_ADMIN']; else p=['ACCESS_FINE_LOCATION','(位置开关)']; }
+    else if(sdk==='23'){ if(act==='adv')p=['BLUETOOTH_ADMIN']; else p=['ACCESS_FINE_LOCATION','(位置开关)']; }
+    else { if(act==='adv')p=['BLUETOOTH_ADMIN(安装即授)']; else p=['BLUETOOTH(安装即授)']; }
     document.getElementById('perms2').innerHTML=p.map(function(x){return '<span class="chip on">'+x+'</span>';}).join('');
-    document.getElementById('log2').innerHTML='<div>API '+sdk+' · 动作 '+act+'</div>'+p.map(function(x){return '<div><span class="ok">'+x+'</span></div>';}).join('')+(sdk==='31'?'<div><span class="c">// neverForLocation 可能过滤部分信标</span></div>':'<div><span class="c">// 旧系统扫描需位置权限+位置开关</span></div>');
+    var note = sdk==='31'?'// neverForLocation 可能过滤部分信标': sdk==='23'?'// 旧系统扫描需位置权限+位置开关':'// ≤22 普通权限安装即授';
+    document.getElementById('log2').innerHTML='<div>API '+sdk+' · 动作 '+act+'</div>'+p.map(function(x){return '<div><span class="ok">'+x+'</span></div>';}).join('')+'<div><span class="c">'+note+'</span></div>';
   }
   document.querySelectorAll('#sdk2 button').forEach(function(b){b.addEventListener('click',function(){document.querySelectorAll('#sdk2 button').forEach(function(x){x.classList.remove('on');});b.classList.add('on');sdk=b.getAttribute('data-s');calc();});});
   document.querySelectorAll('#act2 button').forEach(function(b){b.addEventListener('click',function(){document.querySelectorAll('#act2 button').forEach(function(x){x.classList.remove('on');});b.classList.add('on');act=b.getAttribute('data-a');calc();});});
   calc();
 })();
-
+// 演练二：授权流程
+(function(){
+  var granted=false, log=document.getElementById('flowlog2');
+  function line(h){ var d=document.createElement('div'); d.innerHTML=h; log.appendChild(d); log.scrollTop=log.scrollHeight; }
+  var M={check:'<div><span class="api">checkSelfPermission()</span> → 缺 BLUETOOTH_SCAN，launcher.launch(...)</div>',
+    grant:'<div><span class="ok">用户授予</span> <span class="c">// 别假设全给，下一步复查</span></div>',
+    deny:'<div><span class="err">用户拒绝</span> → 提示「请允许搜索」，提供去设置入口</div>',
+    recheck:'<div><span class="api">逐项复查</span> '+(granted?'<span class="ok">已授予</span>':'<span class="warn">仍缺 → 不启动扫描</span>')+'</div>',
+    bt:'<div><span class="api">adapter.isEnabled?</span> 未开 → ACTION_REQUEST_ENABLE 引导；已开 → startScanSession()</div>'};
+  document.querySelectorAll('#flow2 button').forEach(function(b){b.addEventListener('click',function(){
+    var k=b.getAttribute('data-f'); if(k==='grant')granted=true; if(k==='deny')granted=false;
+    line(M[k]);
+  });});
+})();
+// 目录高亮
 const tocLinks=[...document.querySelectorAll('.toc a')];
 const secs=tocLinks.map(a=>document.getElementById(a.getAttribute('href').slice(1)));
 const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){tocLinks.forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+e.target.id));}});},{rootMargin:'-20% 0px -70% 0px'});
 secs.forEach(s=>s&&io.observe(s));
-const QUIZ=[{"q":"1. API31+ 搜到设备后还要连它，涉及哪两项权限？","opts":[["BLUETOOTH_SCAN + BLUETOOTH_CONNECT",true,"对。"],["只要 SCAN",false,"连接还要 CONNECT。"],["FINE_LOCATION",false,"那是旧系统。"]]},{"q":"2. neverForLocation 为什么有些信标扫不到？","opts":[["声明不推导位置，系统可能过滤部分信标",true,"对。按需调整声明并复测。"],["权限没给",false,"是声明标志导致过滤。"],["蓝牙坏了",false,"无关。"]]},{"q":"3. 旧系统（23–30）扫描要什么？","opts":[["ACCESS_FINE_LOCATION + 位置开关",true,"对。"],["BLUETOOTH_SCAN",false,"那是 31+。"],["只要 BLUETOOTH",false,"还要运行时位置权限。"]]}];
+// 自测
+const QUIZ=[
+ {"q":"1. API31+ 搜到设备后还要连它，涉及哪两项权限？","opts":[["BLUETOOTH_SCAN + BLUETOOTH_CONNECT",true,"对。"],["只要 SCAN",false,"连接还要 CONNECT。"],["FINE_LOCATION",false,"那是旧系统。"]]},
+ {"q":"2. neverForLocation 为什么有些信标扫不到？","opts":[["声明不推导位置，系统可能过滤部分信标",true,"对。按需调整声明并复测。"],["权限没给",false,"是声明标志导致过滤。"],["蓝牙坏了",false,"无关。"]]},
+ {"q":"3. 旧系统（23–30）扫描要什么？","opts":[["位置权限 + 位置开关",true,"对。两者都要。"],["BLUETOOTH_SCAN",false,"那是 31+。"],["只要 BLUETOOTH",false,"还要运行时位置权限。"]]},
+ {"q":"4. API 29+ 扫描给 COARSE 够吗？","opts":[["不够，要 FINE",true,"对。29 起扫描要 FINE。"],["够",false,"粗定位扫不到。"],["无所谓",false,"有区别。"]]},
+ {"q":"5. 授权窗口关闭后应该？","opts":[["逐项复查再查蓝牙开关",true,"对。用户可能只给一部分。"],["直接扫描",false,"可能仍缺权限。"],["重启 App",false,"没必要。"]]},
+ {"q":"6. connectGatt 需要位置权限吗？","opts":[["不需要，位置只卡扫描",true,"对。连接要 CONNECT。"],["需要",false,"连接不卡位置。"],["看机型",false,"规则统一。"]]}
+];
 let solved=0; const box=document.getElementById('quiz-box');
 QUIZ.forEach((item,qi)=>{
   const h=document.createElement('div'); h.className='quiz-q'; h.textContent=item.q; box.appendChild(h);
@@ -325,7 +432,6 @@ QUIZ.forEach((item,qi)=>{
   });
   box.appendChild(ex);
 });
-
 </script>
 </body>
 </html>

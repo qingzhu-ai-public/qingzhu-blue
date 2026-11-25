@@ -172,6 +172,10 @@
   .ctl-row label{display:inline-flex;align-items:center;gap:10px;}
   .ctl-row input[type=range]{accent-color:var(--coral);width:160px;}
   .ctl-row .chk input{accent-color:var(--coral);}
+  .api-lv{display:inline-block;font-family:ui-monospace,Consolas,monospace;font-size:11.5px;font-weight:800;color:#2F58A8;background:var(--blue-soft);border:1px solid var(--blue-line);border-radius:999px;padding:0 8px;white-space:nowrap;}
+  .refs{font-size:14px;}
+  .refs li{margin:7px 0;}
+  .refs .src{font-size:12px;color:var(--faint);}
 </style>
 </head>
 <body style="--coral:#E8590C;--coral-soft:#FBEADF;--coral-line:#F2C4A4">
@@ -203,105 +207,177 @@
 <main>
   <div class="crumb">蓝牙小课堂 / Android 第七课 · B7</div>
   <h1>MTU、PHY 与连接参数：<em>请求</em>而非命令</h1>
-  <p class="lead">requestMtu、PHY、requestConnectionPriority 都是「请求」，最终值由系统和两端协商。这一课讲怎么提请求、有效值怎么定、吞吐怎么估。</p>
-  <div class="meta"><span>平台：Android/Kotlin</span><span>约 12 分钟</span><span>含交互演练</span><span>前置：B5</span></div>
+  <p class="lead">requestMtu、setPreferredPhy、requestConnectionPriority 都是「请求」，最终值由系统和两端协商。这一课把 MTU 与 DLE、PHY 切换、连接优先级与参数、吞吐估算逐一讲清，并给出官方依据。</p>
+  <div class="meta"><span>平台：Android/Kotlin</span><span>约 24 分钟</span><span>API 21 → 26</span><span>含交互演练</span><span>前置：B5</span></div>
   <div class="journey">
-    <div class="j-step"><span class="n">1</span><span class="t">MTU</span><span class="s">requestMtu</span></div>
+    <div class="j-step"><span class="n">1</span><span class="t">MTU</span><span class="s">requestMtu+DLE</span></div>
     <div class="j-step"><span class="n">2</span><span class="t">PHY</span><span class="s">2M/Coded</span></div>
-    <div class="j-step"><span class="n">3</span><span class="t">优先级</span><span class="s">priority</span></div>
+    <div class="j-step"><span class="n">3</span><span class="t">优先级</span><span class="s">interval</span></div>
     <div class="j-step"><span class="n">4</span><span class="t">估算</span><span class="s">吞吐</span></div>
-    <div class="j-step"><span class="n">5</span><span class="t">动手</span><span class="s">调请求</span></div>
+    <div class="j-step"><span class="n">5</span><span class="t">动手</span><span class="s">两场演练</span></div>
   </div>
 
   <section id="mtu">
-    <h2><span class="no">第 1 步</span>requestMtu 与有效值</h2>
-    
-      <pre>gatt.requestMtu(247)   // 等 onMtuChanged(gatt, mtu, status)
-// 有效 MTU = min(手机通告, 外设通告)</pre>
-      <div class="recap"><b>本步收束：</b>requestMtu 是请求，onMtuChanged 给有效值（取小者）。</div>
+    <h2><span class="no">第 1 步</span>requestMtu 与有效值、DLE</h2>
+    <pre>gatt.requestMtu(<span class="num">247</span>)   <span class="cm">// API 21，等 onMtuChanged(gatt, mtu, status)</span>
+<span class="cm">// 有效 MTU = min(手机通告, 外设通告)；默认 ATT_MTU=23，最大 517</span></pre>
+    <ul>
+      <li><b>ATT_MTU</b> 决定一条 ATT 包能装多少字节；通知值 ≈ MTU − 3（ATT 头）。</li>
+      <li><b>DLE（Data Length Extension）</b>是链路层能力，把空口单包从 27B 提到最大 251B。只提 MTU 不开 DLE，大包仍被拆成多个 27B 空口包，效率低。</li>
+      <li>requestMtu 每个连接只需一次；Android 部分机型连接后自动协商，<code>onMtuChanged</code> 给最终有效值。</li>
+    </ul>
+    <div class="recap"><b>本步收束：</b>requestMtu 是请求，onMtuChanged 给有效值（取小）；MTU 要与 DLE 配合才真提速。</div>
   </section>
 
   <section id="phy">
     <h2><span class="no">第 2 步</span>2M 提速、Coded 换距离</h2>
-    
-      <pre>gatt.setPreferredPhy(PHY_LE_2M_MASK, PHY_LE_2M_MASK, PHY_OPTION_NO_PREFERRED)
-// 等 onPhyUpdate；需两端+系统支持（Android 8.0+ 才有接口）</pre>
-      <table><tr><th>PHY</th><th>速率</th><th>取舍</th></tr>
-        <tr><td>1M</td><td>1 Mbit/s</td><td>默认</td></tr>
-        <tr><td>2M</td><td>2 Mbit/s</td><td>更快更省发射时间</td></tr>
-        <tr><td>Coded</td><td>500/125 kbit/s</td><td>换距离</td></tr></table>
-      <div class="recap"><b>本步收束：</b>PHY 要两端+系统三方支持；2M 提速、Coded 换距离。</div>
+    <pre>gatt.setPreferredPhy(PHY_LE_2M_MASK, PHY_LE_2M_MASK, PHY_OPTION_NO_PREFERRED)  <span class="cm">// API 26</span>
+<span class="cm">// 等 onPhyUpdate；readPhy → onPhyRead 查当前</span>
+<span class="cm">// 先查能力：adapter.isLe2MPhySupported / isLeCodedPhySupported（26）</span></pre>
+    <table>
+      <tr><th>PHY</th><th>mask 常量</th><th>速率</th><th>取舍</th></tr>
+      <tr><td>1M</td><td>PHY_LE_1M_MASK</td><td>1 Mbit/s</td><td>默认，必支持</td></tr>
+      <tr><td>2M</td><td>PHY_LE_2M_MASK</td><td>2 Mbit/s</td><td>更快、更省发射时间</td></tr>
+      <tr><td>Coded</td><td>PHY_LE_CODED_MASK</td><td>500/125 kbit/s</td><td>换距离（S2/S8 编码）</td></tr>
+    </table>
+    <p><b>PHY_OPTION：</b>NO_PREFERRED / S2（500k）/ S8（125k），仅对 Coded 有意义。PHY 要<b>手机 + 外设 + 系统</b>三方支持，Android 8.0（26）才有接口。</p>
+    <div class="recap"><b>本步收束：</b>PHY 三方支持；2M 提速、Coded 换距离；先查 isLe*PhySupported。</div>
   </section>
 
   <section id="prio">
-    <h2><span class="no">第 3 步</span>requestConnectionPriority</h2>
-    
-      <pre>gatt.requestConnectionPriority(CONNECTION_PRIORITY_HIGH)  // 短 interval
-// BALANCED / HIGH / LOW_POWER；最终值系统定</pre>
-      <div class="key"><span class="tag">重点 · 吞吐估算</span>应用吞吐 ≈ 每事件通知条数 × 每条值字节 ÷ interval。MTU247+DLE+2M+interval15ms 约几十 KB/s；只提 MTU 不开 DLE 仍被拆 27B 小包。<b>规格书速率≠应用吞吐，实测</b>。</div>
-      <div class="recap"><b>本步收束：</b>priority 是请求；吞吐要 MTU+DLE+PHY+interval 配合并实测。</div>
+    <h2><span class="no">第 3 步</span>requestConnectionPriority 与连接参数</h2>
+    <pre>gatt.requestConnectionPriority(CONNECTION_PRIORITY_HIGH)  <span class="cm">// API 21，短 interval</span>
+<span class="cm">// BALANCED / HIGH / LOW_POWER；最终值系统定，回调 onConnectionUpdated</span></pre>
+    <table>
+      <tr><th>优先级</th><th>常量</th><th>典型 interval（AOSP 映射）</th></tr>
+      <tr><td>HIGH</td><td>CONNECTION_PRIORITY_HIGH</td><td>≈ 11.25–15 ms</td></tr>
+      <tr><td>BALANCED</td><td>CONNECTION_PRIORITY_BALANCED</td><td>≈ 30–50 ms</td></tr>
+      <tr><td>LOW_POWER</td><td>CONNECTION_PRIORITY_LOW_POWER</td><td>≈ 100–125 ms</td></tr>
+    </table>
+    <p><b>三个连接参数：</b>interval（连接事件间隔）、latency（外设可跳过的事件数，省电）、supervision timeout（多久没通信判断开）。priority 只是请求，外设也可发起参数更新。</p>
+    <div class="recap"><b>本步收束：</b>priority 是请求；interval/latency/timeout 三参数；最终值协商定。</div>
+  </section>
+
+  <section id="throughput">
+    <h2><span class="no">第 4 步</span>吞吐估算：规格速率 ≠ 应用吞吐</h2>
+    <div class="key"><span class="tag">重点</span>应用吞吐 ≈ 每连接事件通知条数 × 每条值字节 ÷ interval。MTU247 + DLE + 2M + interval15ms 约几十 KB/s；只提 MTU 不开 DLE 仍被拆 27B 小包。<b>规格书速率 ≠ 应用吞吐，必须实测</b>。</div>
+    <div class="recap"><b>本步收束：</b>吞吐要 MTU+DLE+PHY+短 interval 配合，量级靠实测修正。</div>
   </section>
 
   <section id="lab">
-    <h2><span class="no">动手</span>调 MTU/PHY/优先级，估吞吐量级</h2>
-    <p>外设 MTU 185、支持 2M。拖手机 requestMtu、选 PHY 与优先级（映射 interval），估应用吞吐量级。注意只提 MTU 不开 DLE 的空口效率问题（此处 DLE 默认开）。</p>
+    <h2><span class="no">动手</span>两场演练</h2>
+    <h3>演练一 · 调 MTU/PHY/优先级，估吞吐量级</h3>
+    <p>外设 MTU 185、支持 2M。拖手机 requestMtu、选 PHY 与优先级（映射 interval），估应用吞吐量级（DLE 默认开）。</p>
     <div class="lab">
       <div class="lab-head"><b>吞吐估算演练</b><span class="hint">有效值取小者；DLE 默认开</span></div>
       <div class="controls"><div class="ctl"><label>requestMtu</label><input type="range" id="m7" min="23" max="517" value="23"><span class="val" id="m7v">23</span></div><div class="seg" id="phy7"><button data-p="1" class="on">1M</button><button data-p="2">2M</button></div><div class="seg" id="pr7"><button data-i="50" class="on">BALANCED</button><button data-i="15">HIGH</button><button data-i="100">LOW_POWER</button></div></div>
       <div class="lab-body"><div><div class="stats"><div class="stat-box"><b id="eff7">–</b><small>有效MTU</small></div><div class="stat-box"><b id="val7">–</b><small>通知值</small></div><div class="stat-box good"><b id="tp7">–</b><small>估算吞吐</small></div></div></div><div class="logcat"><div class="logcat-head"><span>估算</span><span>live</span></div><div class="logcat-body" id="log7"></div></div></div>
       <div class="lab-foot"><span class="hint">MTU247+2M+HIGH 对比 MTU23+1M+BALANCED，量级差几十倍</span></div>
     </div>
-    <div class="key"><span class="tag">看懂这场演练</span>requestMtu/PHY/priority 都是请求，有效值协商定。吞吐=每事件通知数×值字节÷interval，需 MTU+DLE+PHY+短 interval 配合；规格速率≠应用吞吐，实测修正。</div>
+    <h3>演练二 · 请求 ↔ 回调 ↔ 有效值</h3>
+    <div class="lab">
+      <div class="lab-head"><b>请求协商</b><span class="hint">都是请求，值协商定</span></div>
+      <div class="controls"><div class="seg" id="req7"><button data-r="mtu" class="on">requestMtu</button><button data-r="phy">setPreferredPhy</button><button data-r="prio">requestConnectionPriority</button></div></div>
+      <div class="lab-body single"><div id="reqOut7" class="card" style="margin:0;"></div></div>
+    </div>
+    <div class="key"><span class="tag">看懂这两场演练</span>三个 API 都是请求，有效值协商定；吞吐=每事件通知数×值字节÷interval，需 MTU+DLE+PHY+短 interval 配合，实测修正。</div>
   </section>
 
   <section id="quiz">
-    <h2><span class="no">自测</span>三个问题</h2>
+    <h2><span class="no">自测</span>六个问题</h2>
     <div class="card" id="quiz-box"></div>
     <p id="quiz-done" style="display:none;font-weight:700;color:#1E7268;">全对。下一课讲分包、重组与流控。</p>
   </section>
 
-  <section id="map">
-    <h2><span class="no">回顾</span>速查</h2>
-    <table><tr><th>请求</th><th>回调</th></tr><tr><td>requestMtu</td><td>onMtuChanged</td></tr><tr><td>setPreferredPhy</td><td>onPhyUpdate</td></tr><tr><td>requestConnectionPriority</td><td>onConnectionUpdated</td></tr></table>
-    <div class="note"><span class="tag">说明</span>本页为教学简化，工程细节以正文与官方规范为准；演练为模拟，非真实设备通信。</div>
-    <footer>青竹蓝牙学堂 · 蓝牙小课堂Android 第七课 · B7 · <a href="../index.html">回到学堂</a></footer>
+  <section id="cheatsheet">
+    <h2><span class="no">回顾</span>速查表</h2>
+    <table>
+      <tr><th>请求</th><th>回调</th><th>引入</th></tr>
+      <tr><td>requestMtu</td><td>onMtuChanged</td><td>21</td></tr>
+      <tr><td>setPreferredPhy / readPhy</td><td>onPhyUpdate / onPhyRead</td><td>26</td></tr>
+      <tr><td>requestConnectionPriority</td><td>onConnectionUpdated</td><td>21</td></tr>
+    </table>
+    <div class="note"><span class="tag">说明</span>本页为教学整理，interval 映射为 AOSP 参考值，实际以设备协商为准；演练为模拟。</div>
+  </section>
+
+  <section id="refs">
+    <h2><span class="no">依据</span>参考链接</h2>
+    <div class="card refs">
+      <h3 style="margin-top:0;">API 参考</h3>
+      <ul>
+        <li><a href="https://developer.android.com/reference/android/bluetooth/BluetoothGatt#requestMtu(int)" target="_blank" rel="noopener">requestMtu</a> / <a href="https://developer.android.com/reference/android/bluetooth/BluetoothGatt#setPreferredPhy(int,%20int,%20int)" target="_blank" rel="noopener">setPreferredPhy</a> / <a href="https://developer.android.com/reference/android/bluetooth/BluetoothGatt#requestConnectionPriority(int)" target="_blank" rel="noopener">requestConnectionPriority</a> <span class="src">— 三个请求 API</span></li>
+        <li><a href="https://developer.android.com/reference/android/bluetooth/BluetoothAdapter#isLe2MPhySupported()" target="_blank" rel="noopener">isLe2MPhySupported / isLeCodedPhySupported</a> <span class="src">— 26 能力查询</span></li>
+        <li><a href="https://developer.android.com/reference/android/bluetooth/BluetoothGattCallback" target="_blank" rel="noopener">BluetoothGattCallback</a> <span class="src">— onMtuChanged/onPhyUpdate/onConnectionUpdated</span></li>
+      </ul>
+      <h3>规范与实测</h3>
+      <ul>
+        <li><a href="https://www.bluetooth.com/specifications/specs/" target="_blank" rel="noopener">Core Spec · LL/ATT</a> <span class="src">— MTU、DLE、PHY、连接参数</span></li>
+        <li><a href="https://punchthrough.com/android-ble-guide/" target="_blank" rel="noopener">Punch Through · Android BLE Guide</a> <span class="src">— 吞吐与参数实测</span></li>
+      </ul>
+    </div>
+    <div class="next-links">
+      <a href="06-notify-cccd.html">← B6 订阅与通知</a>
+      <a href="08-fragmentation-flowcontrol.html">B8 分包与流控 →</a>
+    </div>
+    <footer>青竹蓝牙学堂 · 蓝牙小课堂 Android 第七课 · B7 · <a href="../index.html">回到学堂</a></footer>
   </section>
 </main>
 <aside class="toc" id="toc">
   <div class="toc-title">本课目录</div>
-  <a href="#mtu">MTU</a>
+  <a href="#mtu">MTU 与 DLE</a>
   <a href="#phy">PHY</a>
-  <a href="#prio">优先级</a>
-  <a href="#lab">动手演练</a>
+  <a href="#prio">优先级与参数</a>
+  <a href="#throughput">吞吐估算</a>
+  <a href="#lab">两场演练</a>
   <a href="#quiz">本课自测</a>
-  <a href="#map">回顾与速查</a>
+  <a href="#cheatsheet">速查表</a>
+  <a href="#refs">参考链接</a>
 </aside>
 </div>
 <script>
-
+// 演练一：吞吐估算
 (function(){
-  var DEV=185, phy=1, iv=50;
+  var mtu=23, phy=1, interval=50, PERI_MTU=185;
+  var m=document.getElementById('m7');
   function calc(){
-    var m=+document.getElementById('m7').value; document.getElementById('m7v').textContent=m;
-    var eff=Math.min(m,DEV), val=eff-3;
-    var perEvent= phy===2?4:2;             // 2M 每事件塞更多通知
-    var tp=Math.round(perEvent*val/ (iv/1000) /1024);
+    var eff=Math.min(mtu,PERI_MTU);
+    var val=eff-3;
+    var perEvent = phy===2?2:1;          // 2M 每事件约多一倍通知
+    var tp = perEvent*val/(interval/1000)/1024;  // KB/s
+    document.getElementById('m7v').textContent=mtu;
     document.getElementById('eff7').textContent=eff;
     document.getElementById('val7').textContent=val+'B';
-    document.getElementById('tp7').textContent='~'+tp+' KB/s';
-    document.getElementById('log7').innerHTML='<div>有效MTU=min('+m+','+DEV+')='+eff+'</div><div>每事件'+perEvent+'条 × '+val+'B ÷ '+iv+'ms</div><div><span class="ok">≈ '+tp+' KB/s（上限估算，实测修正）</span></div>';
+    document.getElementById('tp7').textContent=tp.toFixed(1)+' KB/s';
+    document.getElementById('log7').innerHTML='<div>有效MTU=min('+mtu+','+PERI_MTU+')='+eff+'</div><div>通知值='+val+'B · PHY '+phy+'M · interval '+interval+'ms</div><div><span class="c">// 每事件'+perEvent+'条 × '+val+'B ÷ '+interval+'ms（DLE 开）</span></div>';
   }
-  document.getElementById('m7').addEventListener('input',calc);
+  m.addEventListener('input',function(){ mtu=+m.value; calc(); });
   document.querySelectorAll('#phy7 button').forEach(function(b){b.addEventListener('click',function(){document.querySelectorAll('#phy7 button').forEach(function(x){x.classList.remove('on');});b.classList.add('on');phy=+b.getAttribute('data-p');calc();});});
-  document.querySelectorAll('#pr7 button').forEach(function(b){b.addEventListener('click',function(){document.querySelectorAll('#pr7 button').forEach(function(x){x.classList.remove('on');});b.classList.add('on');iv=+b.getAttribute('data-i');calc();});});
+  document.querySelectorAll('#pr7 button').forEach(function(b){b.addEventListener('click',function(){document.querySelectorAll('#pr7 button').forEach(function(x){x.classList.remove('on');});b.classList.add('on');interval=+b.getAttribute('data-i');calc();});});
   calc();
 })();
-
+// 演练二：请求协商
+(function(){
+  var R={mtu:['requestMtu(247)','onMtuChanged(gatt, mtu, status)','有效=min(两端)，默认23最大517'],
+    phy:['setPreferredPhy(tx,rx,option)','onPhyUpdate / onPhyRead','三方支持；2M提速/Coded换距离'],
+    prio:['requestConnectionPriority(HIGH)','onConnectionUpdated','interval≈11.25–15ms，系统定']};
+  function show(k){ var r=R[k]; document.getElementById('reqOut7').innerHTML='<p style="margin:0 0 6px;font-weight:700;">'+r[0]+' → '+r[1]+'</p><div class="chips"><span class="chip on">'+r[2]+'</span></div>'; }
+  document.querySelectorAll('#req7 button').forEach(function(b){b.addEventListener('click',function(){document.querySelectorAll('#req7 button').forEach(function(x){x.classList.remove('on');});b.classList.add('on');show(b.getAttribute('data-r'));});});
+  show('mtu');
+})();
+// 目录高亮
 const tocLinks=[...document.querySelectorAll('.toc a')];
 const secs=tocLinks.map(a=>document.getElementById(a.getAttribute('href').slice(1)));
 const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){tocLinks.forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+e.target.id));}});},{rootMargin:'-20% 0px -70% 0px'});
 secs.forEach(s=>s&&io.observe(s));
-const QUIZ=[{"q":"1. requestMtu(517) 外设 185，有效值？","opts":[["185",true,"对。取小者。"],["517",false,"取小者。"],["23",false,"交换后取小者。"]]},{"q":"2. 2M PHY 一定能用吗？","opts":[["要两端+系统都支持",true,"对。Android 8.0+ 才有接口。"],["一定",false,"可选特性。"],["看电池",false,"无关。"]]},{"q":"3. 应用吞吐等于 2M 的 2Mbit/s 吗？","opts":[["不等于，要扣协议头/调度/处理，实测",true,"对。"],["等于",false,"那是符号速率。"],["看 MTU 就行",false,"还要 DLE/PHY/interval。"]]}];
+// 自测
+const QUIZ=[
+ {"q":"1. requestMtu(247) 后有效 MTU 一定是 247 吗？","opts":[["不一定，取两端较小者",true,"对。onMtuChanged 给有效值。"],["一定",false,"外设可能更小。"],["手机定",false,"协商。"]]},
+ {"q":"2. 只提 MTU 不开 DLE 会？","opts":[["大包仍拆 27B 空口包，效率低",true,"对。MTU 要配 DLE。"],["自动提速",false,"DLE 是链路层能力。"],["没影响",false,"有影响。"]]},
+ {"q":"3. 2M PHY 要什么条件？","opts":[["手机+外设+系统三方支持",true,"对。26 才有接口。"],["只要手机",false,"要三方。"],["默认开",false,"默认 1M。"]]},
+ {"q":"4. CONNECTION_PRIORITY_HIGH 主要影响？","opts":[["缩短连接 interval",true,"对。更频繁通信。"],["提高发射功率",false,"无关。"],["增大 MTU",false,"那是 requestMtu。"]]},
+ {"q":"5. 应用吞吐等于规格书速率吗？","opts":[["不等于，要实测",true,"对。受 MTU/DLE/PHY/interval 影响。"],["等于",false,"差很多。"],["略低",false,"量级差异。"]]},
+ {"q":"6. Coded PHY 用来？","opts":[["换更远距离",true,"对。500/125k 低速换距离。"],["提速",false,"那是 2M。"],["省电",false,"主要换距离。"]]}
+];
 let solved=0; const box=document.getElementById('quiz-box');
 QUIZ.forEach((item,qi)=>{
   const h=document.createElement('div'); h.className='quiz-q'; h.textContent=item.q; box.appendChild(h);
@@ -321,7 +397,6 @@ QUIZ.forEach((item,qi)=>{
   });
   box.appendChild(ex);
 });
-
 </script>
 </body>
 </html>

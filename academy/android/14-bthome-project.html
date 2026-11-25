@@ -598,6 +598,40 @@ gatt.writeCharacteristic(ch, encode(listOf(Measurement(TEMPERATURE, 30f))), WRIT
       <div class="recap"><b>本步收束：</b>广播路线适合单向遥测；要配置、要历史、要可靠送达就走连接。</div>
   </section>
 
+  <section id="apimap">
+    <h2><span class="no">第 11 步</span>本项目用到的 Android API 与级别</h2>
+    <figure>
+      <svg viewBox="0 0 760 180" role="img" aria-label="BTHome 双机数据流">
+        <rect x="20" y="30" width="200" height="120" rx="10" fill="#E9F4F2" stroke="#BFE0DB"/>
+        <text x="120" y="55" text-anchor="middle" font-size="13" font-weight="bold" fill="#1E7268">从端手机</text>
+        <text x="120" y="80" text-anchor="middle" font-size="10" fill="#4E8A80">FakeSensorSource</text>
+        <text x="120" y="100" text-anchor="middle" font-size="10" fill="#4E8A80">BthomeEncoder（protocol）</text>
+        <text x="120" y="120" text-anchor="middle" font-size="10" fill="#4E8A80">BluetoothLeAdvertiser</text>
+        <rect x="540" y="30" width="200" height="120" rx="10" fill="#ECF1FB" stroke="#C9D8F2"/>
+        <text x="640" y="55" text-anchor="middle" font-size="13" font-weight="bold" fill="#2F58A8">主端手机</text>
+        <text x="640" y="80" text-anchor="middle" font-size="10" fill="#5B7DB1">BluetoothLeScanner</text>
+        <text x="640" y="100" text-anchor="middle" font-size="10" fill="#5B7DB1">BthomeParser（protocol）</text>
+        <text x="640" y="120" text-anchor="middle" font-size="10" fill="#5B7DB1">Repository → UI</text>
+        <line x1="220" y1="90" x2="540" y2="90" stroke="#9DB4DC" stroke-width="2" marker-end="url(#m14)"/>
+        <text x="380" y="80" text-anchor="middle" font-size="11" fill="#7A7267">BLE 广播 · Service Data 0xFCD2</text>
+        <text x="380" y="115" text-anchor="middle" font-size="10" fill="#A39B8E">不连接、不配对，扫到即解析</text>
+        <defs><marker id="m14" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 z" fill="#9DB4DC"/></marker></defs>
+      </svg>
+      <figcaption>广播路线：从端编码 → 广播 → 主端扫描解析。两端共用纯 Kotlin protocol 包，可单测。</figcaption>
+    </figure>
+    <table>
+      <tr><th>环节</th><th>API</th><th>引入</th></tr>
+      <tr><td>主端扫描</td><td>BluetoothLeScanner.startScan / ScanFilter.setServiceUuid</td><td><span class="api-lv">21</span></td></tr>
+      <tr><td>从端广播</td><td>BluetoothLeAdvertiser.startAdvertising</td><td><span class="api-lv">21</span></td></tr>
+      <tr><td>广播热更新</td><td>startAdvertisingSet / setAdvertisingData</td><td><span class="api-lv">26</span></td></tr>
+      <tr><td>连接路线</td><td>BluetoothDevice.connectGatt / discoverServices</td><td><span class="api-lv">18</span></td></tr>
+      <tr><td>订阅</td><td>setCharacteristicNotification + writeDescriptor(CCCD)</td><td><span class="api-lv">18</span></td></tr>
+      <tr><td>从端服务</td><td>BluetoothGattServer</td><td><span class="api-lv">18</span></td></tr>
+      <tr><td>后台常驻</td><td>connectedDevice 前台服务</td><td><span class="api-lv">34</span> 类型权限</td></tr>
+    </table>
+    <div class="recap"><b>本步收束：</b>广播路线用 21/26 的 Scanner/Advertiser；连接路线用 18 的 Gatt/GattServer；后台用 34 FGS。</div>
+  </section>
+
   <section id="lab">
     <h2><span class="no">动手</span>从端编码器：拖滑杆，看广播字节</h2>
     <p>你就是从端。拖温度和湿度，右边实时显示要广播的 BTHome 服务数据。勾「加入电量」看字节变长。下面按「名字也塞进主包」算 31 字节预算，切到「名字太长」看它爆掉；下方再用主端解析器把同一串字节解回来，应该和你拖的值一致。</p>
@@ -622,6 +656,28 @@ gatt.writeCharacteristic(ch, encode(listOf(Measurement(TEMPERATURE, 30f))), WRIT
     <div class="note"><span class="tag">说明</span>本页为教学简化，工程细节以正文与官方规范为准；演练为模拟，非真实设备通信。</div>
     <footer>青竹蓝牙学堂 · 蓝牙小课堂Android 第十四课 · B14 · <a href="../index.html">回到学堂</a></footer>
   </section>
+
+  <section id="refs">
+    <h2><span class="no">依据</span>参考链接</h2>
+    <div class="card refs">
+      <h3 style="margin-top:0;">BTHome 规范</h3>
+      <ul>
+        <li><a href="https://bthome.io/format/" target="_blank" rel="noopener">bthome.io/format</a> <span class="src">— 广播结构、设备信息字节、对象 ID 表（权威）</span></li>
+        <li><a href="https://bthome.io/encryption/" target="_blank" rel="noopener">bthome.io/encryption</a> <span class="src">— AES-CCM、nonce、防重放</span></li>
+        <li><a href="https://github.com/Bluetooth-Devices/bthome-ble" target="_blank" rel="noopener">bthome-ble 参考解析器</a> <span class="src">— 含各类型测试样例</span></li>
+      </ul>
+      <h3>Android API 参考</h3>
+      <ul>
+        <li><a href="https://developer.android.com/reference/android/bluetooth/le/BluetoothLeAdvertiser" target="_blank" rel="noopener">BluetoothLeAdvertiser</a> / <a href="https://developer.android.com/reference/android/bluetooth/le/AdvertisingSet" target="_blank" rel="noopener">AdvertisingSet</a> <span class="src">— 广播与热更新</span></li>
+        <li><a href="https://developer.android.com/reference/android/bluetooth/le/BluetoothLeScanner" target="_blank" rel="noopener">BluetoothLeScanner</a> / <a href="https://developer.android.com/reference/android/bluetooth/le/ScanFilter" target="_blank" rel="noopener">ScanFilter</a> <span class="src">— 主端扫描</span></li>
+        <li><a href="https://developer.android.com/reference/android/bluetooth/BluetoothGatt" target="_blank" rel="noopener">BluetoothGatt</a> / <a href="https://developer.android.com/reference/android/bluetooth/BluetoothGattServer" target="_blank" rel="noopener">BluetoothGattServer</a> <span class="src">— 连接路线</span></li>
+      </ul>
+      <h3>配套源码</h3>
+      <ul>
+        <li><a href="https://github.com/qingzhu-ai-public/qingzhu-ble-android/tree/main/samples/bthome-thermometer" target="_blank" rel="noopener">qingzhu-ble-android / samples / bthome-thermometer</a> <span class="src">— 可直接编译的双角色 APK</span></li>
+      </ul>
+    </div>
+  </section>
 </main>
 <aside class="toc" id="toc">
   <div class="toc-title">本课目录</div>
@@ -635,9 +691,11 @@ gatt.writeCharacteristic(ch, encode(listOf(Measurement(TEMPERATURE, 30f))), WRIT
   <a href="#connect">连接路线</a>
   <a href="#accept">双机验收</a>
   <a href="#more">进阶</a>
+  <a href="#apimap">API 地图</a>
   <a href="#lab">动手演练</a>
   <a href="#quiz">本课自测</a>
   <a href="#map">回顾与速查</a>
+  <a href="#refs">参考链接</a>
 </aside>
 </div>
 <script>

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>蓝牙小课堂 · B10 后台前台服务伴生 · 青竹蓝牙学堂</title>
+<title>蓝牙小课堂 · B10 后台前台服务伴生设备 · 青竹蓝牙学堂</title>
 <style>
   :root{
     --bg:#F7F6F2; --card:#FFFFFF; --ink:#2B2620; --muted:#7A7267; --faint:#A39B8E;
@@ -172,6 +172,10 @@
   .ctl-row label{display:inline-flex;align-items:center;gap:10px;}
   .ctl-row input[type=range]{accent-color:var(--coral);width:160px;}
   .ctl-row .chk input{accent-color:var(--coral);}
+  .api-lv{display:inline-block;font-family:ui-monospace,Consolas,monospace;font-size:11.5px;font-weight:800;color:#2F58A8;background:var(--blue-soft);border:1px solid var(--blue-line);border-radius:999px;padding:0 8px;white-space:nowrap;}
+  .refs{font-size:14px;}
+  .refs li{margin:7px 0;}
+  .refs .src{font-size:12px;color:var(--faint);}
 </style>
 </head>
 <body style="--coral:#E8590C;--coral-soft:#FBEADF;--coral-line:#F2C4A4">
@@ -203,92 +207,171 @@
 <main>
   <div class="crumb">蓝牙小课堂 / Android 第十课 · B10</div>
   <h1>后台、前台服务与伴生设备：<em>谁来触发、谁来维持</em></h1>
-  <p class="lead">退到后台传输还在走吗？设备回到附近能唤起吗？进程被杀凭什么续传？这一课按「谁触发、谁维持、凭什么恢复」选机制：FGS、CDM、PendingIntent、WorkManager。</p>
-  <div class="meta"><span>平台：Android/Kotlin</span><span>约 13 分钟</span><span>含交互演练</span><span>前置：B9</span></div>
+  <p class="lead">退到后台传输还在走吗？设备回到附近能唤起吗？进程被杀凭什么续传？这一课按「谁触发、谁维持、凭什么恢复」选机制：connectedDevice FGS、CDM、PendingIntent 扫描、WorkManager，并给出官方依据。</p>
+  <div class="meta"><span>平台：Android/Kotlin</span><span>约 24 分钟</span><span>API 26 → 35</span><span>含交互演练</span><span>前置：B9</span></div>
   <div class="journey">
-    <div class="j-step"><span class="n">1</span><span class="t">FGS</span><span class="s">用户发起</span></div>
-    <div class="j-step"><span class="n">2</span><span class="t">CDM</span><span class="s">到附近唤起</span></div>
-    <div class="j-step"><span class="n">3</span><span class="t">PendingIntent</span><span class="s">离线匹配</span></div>
+    <div class="j-step"><span class="n">1</span><span class="t">FGS</span><span class="s">connectedDevice</span></div>
+    <div class="j-step"><span class="n">2</span><span class="t">CDM</span><span class="s">关联+唤起</span></div>
+    <div class="j-step"><span class="n">3</span><span class="t">离线</span><span class="s">PendingIntent</span></div>
     <div class="j-step"><span class="n">4</span><span class="t">恢复</span><span class="s">持久化</span></div>
-    <div class="j-step"><span class="n">5</span><span class="t">动手</span><span class="s">选机制</span></div>
+    <div class="j-step"><span class="n">5</span><span class="t">动手</span><span class="s">两场演练</span></div>
   </div>
 
   <section id="fgs">
     <h2><span class="no">第 1 步</span>用户发起的持续传输用 connectedDevice FGS</h2>
-    
-      <pre>&lt;service android:foregroundServiceType="connectedDevice"/&gt;
-// 目标34+ 声明 FOREGROUND_SERVICE + FOREGROUND_SERVICE_CONNECTED_DEVICE
-startForegroundService(intent)  // 期限内发通知进前台</pre>
-      <div class="note"><span class="tag">注意</span>Android 12 起后台启动 FGS 受限，核对豁免；用户停止业务时结束连接+通知+服务。</div>
-      <div class="recap"><b>本步收束：</b>用户主动发起的持续传输用 connectedDevice 前台服务。</div>
+    <pre>&lt;service android:name=".BleService" android:foregroundServiceType="connectedDevice"/&gt;
+<span class="cm">&lt;!-- 目标 34+ 必须声明类型权限 --&gt;</span>
+&lt;uses-permission android:name="android.permission.FOREGROUND_SERVICE"/&gt;
+&lt;uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE"/&gt;
+startForegroundService(intent)
+<span class="cm">// 期限内 startForeground(id, notif, FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE)</span></pre>
+    <table>
+      <tr><th>版本</th><th>要求</th></tr>
+      <tr><td>34（14）</td><td>必须声明 foregroundServiceType + 对应 FOREGROUND_SERVICE_* 权限；运行前置需 BLUETOOTH_CONNECT/SCAN/ADVERTISE 之一</td></tr>
+      <tr><td>31（12）</td><td>后台启动 FGS 受限，需豁免（用户可见、CDM 等）</td></tr>
+      <tr><td>35（15）</td><td>部分类型有超时；dataSync 不能从 BOOT_COMPLETED 启动</td></tr>
+    </table>
+    <div class="note"><span class="tag">注意</span>官方建议：持续数据传输优先考虑 CDM；纯扫描用 Bluetooth scan API。用户停止业务时结束连接 + 通知 + 服务，别留僵尸前台服务。</div>
+    <div class="recap"><b>本步收束：</b>用户主动发起的持续传输用 connectedDevice FGS；34+ 声明类型权限。</div>
   </section>
 
   <section id="cdm">
     <h2><span class="no">第 2 步</span>CDM：让系统记得这台配件</h2>
-    
-      <pre>CompanionDeviceManager.associate(request, executor, cb)  // API33+
-// BluetoothLeDeviceFilter 关联扫描过滤；onAssociationCreated 存关联ID
-// startObservingDevicePresence → CompanionDeviceService 感知出现/离开</pre>
-      <div class="key"><span class="tag">重点</span>关联≠连接。CDM 记录 App 与配件关系、到附近唤起；要读写仍要建实际 GATT 连接并发现服务。</div>
-      <div class="recap"><b>本步收束：</b>CDM 管「记得+唤起」，实际读写另建 GATT。</div>
+    <pre>CompanionDeviceManager.associate(request, executor, cb)  <span class="cm">// API 33+（26 起有 associate）</span>
+<span class="cm">// BluetoothLeDeviceFilter 关联扫描过滤；onAssociationCreated 存关联 ID</span>
+cdm.startObservingDevicePresence(assocId)   <span class="cm">// API 33（31 起按地址）</span>
+<span class="cm">// CompanionDeviceService（31）onDeviceAppeared / onDeviceDisappeared 感知出现/离开</span></pre>
+    <table>
+      <tr><th>能力</th><th>引入</th></tr>
+      <tr><td>CompanionDeviceManager.associate</td><td><span class="api-lv">26</span></td></tr>
+      <tr><td>associate(request, executor, cb)</td><td><span class="api-lv">33</span></td></tr>
+      <tr><td>CompanionDeviceService / startObservingDevicePresence</td><td><span class="api-lv">31</span></td></tr>
+    </table>
+    <div class="key"><span class="tag">重点</span>关联 ≠ 连接。CDM 记录 App 与配件关系、到附近唤起进程；要读写仍要建实际 GATT 连接并发现服务。CDM 关联可让 App 在配件在范围内时保持运行（presence API）。</div>
+    <div class="recap"><b>本步收束：</b>CDM 管「记得 + 唤起」（26/31/33）；实际读写另建 GATT。</div>
+  </section>
+
+  <section id="offline">
+    <h2><span class="no">第 3 步</span>PendingIntent 离线匹配</h2>
+    <p>进程未运行也要收匹配：<code>startScan(filters, settings, PendingIntent)</code>（API 26）。系统硬件 offload 过滤，匹配到才唤起你的 PendingIntent。<b>必须带过滤</b>，无过滤熄屏会停（B3）。stopScan(pi) 勿用 FLAG_CANCEL_CURRENT。</p>
+    <div class="recap"><b>本步收束：</b>离线匹配用 PendingIntent 扫描（26），必须带过滤。</div>
   </section>
 
   <section id="recover">
-    <h2><span class="no">第 3 步</span>PendingIntent 离线匹配，进程恢复靠持久化</h2>
-    
-      <p>进程未运行收匹配：<code>startScan(filters,settings,PendingIntent)</code>。可延后任务用 WorkManager。进程被杀后凭<b>持久化的用户意图+事务标识+已确认进度</b>恢复，重核设备与权限再重建会话。旋转/回收/强停/重启各测一次。</p>
-      <div class="recap"><b>本步收束：</b>离线匹配 PendingIntent；恢复靠持久化进度。</div>
+    <h2><span class="no">第 4 步</span>进程恢复靠持久化，可延后任务用 WorkManager</h2>
+    <p>进程被杀后凭<b>持久化的用户意图 + 事务标识 + 已确认进度</b>恢复：重核设备与权限，再重建会话续传。旋转 / 回收 / 强停 / 重启各测一次。可延后的批量任务用 WorkManager（约束 + 重试），别拿 FGS 硬扛。</p>
+    <div class="recap"><b>本步收束：</b>恢复靠持久化进度；可延后任务 WorkManager。</div>
   </section>
 
   <section id="lab">
-    <h2><span class="no">动手</span>选场景，匹配正确机制</h2>
-    <p>选一个后台场景，右侧给出应使用的机制与要实测的点。体会四种机制各司其职。</p>
+    <h2><span class="no">动手</span>两场演练</h2>
+    <h3>演练一 · 选场景，匹配正确机制</h3>
     <div class="lab">
       <div class="lab-head"><b>后台机制选型</b><span class="hint">谁触发/谁维持/凭什么恢复</span></div>
       <div class="controls"><div class="seg" id="sc10"><button data-s="fgs">用户发起换图</button><button data-s="cdm">到附近唤起</button><button data-s="pi">进程未运行收匹配</button><button data-s="rec">进程被杀续传</button></div></div>
       <div class="lab-body"><div class="timeline"><div class="tl-title"><span>机制</span></div><div id="mech10" style="font-size:14px;"></div></div><div class="logcat"><div class="logcat-head"><span>要实测</span><span>live</span></div><div class="logcat-body" id="log10"></div></div></div>
       <div class="lab-foot"><span class="hint">用户发起→FGS；到附近→CDM；离线→PendingIntent；续传→持久化</span></div>
     </div>
-    <div class="key"><span class="tag">看懂这场演练</span>先说清谁触发、谁维持、凭什么恢复：用户发起持续传输用 connectedDevice FGS；到附近唤起用 CDM；离线匹配用 PendingIntent；进程恢复靠持久化进度。关联≠连接。</div>
+    <h3>演练二 · FGS 权限清单计算</h3>
+    <p>选目标 SDK，看 connectedDevice FGS 要声明哪些权限。</p>
+    <div class="lab">
+      <div class="lab-head"><b>FGS 权限</b><span class="hint">34+ 要类型权限</span></div>
+      <div class="controls"><div class="seg" id="fgs10"><button data-t="34" class="on">target 34+</button><button data-t="31">target 31–33</button><button data-t="28">target ≤30</button></div></div>
+      <div class="lab-body single"><div class="chips" id="fgsOut10"></div></div>
+    </div>
+    <div class="key"><span class="tag">看懂这两场演练</span>先说清谁触发、谁维持、凭什么恢复：用户发起→connectedDevice FGS；到附近→CDM；离线→PendingIntent；续传→持久化。关联≠连接。</div>
   </section>
 
   <section id="quiz">
-    <h2><span class="no">自测</span>三个问题</h2>
+    <h2><span class="no">自测</span>六个问题</h2>
     <div class="card" id="quiz-box"></div>
     <p id="quiz-done" style="display:none;font-weight:700;color:#1E7268;">全对。下一课讲配对与 LE 安全。</p>
   </section>
 
-  <section id="map">
-    <h2><span class="no">回顾</span>速查</h2>
-    <table><tr><th>场景</th><th>机制</th></tr><tr><td>用户发起传输</td><td>FGS connectedDevice</td></tr><tr><td>到附近唤起</td><td>CDM</td></tr><tr><td>离线匹配</td><td>PendingIntent scan</td></tr><tr><td>可延后任务</td><td>WorkManager</td></tr><tr><td>进程恢复</td><td>持久化进度</td></tr></table>
-    <div class="note"><span class="tag">说明</span>本页为教学简化，工程细节以正文与官方规范为准；演练为模拟，非真实设备通信。</div>
-    <footer>青竹蓝牙学堂 · 蓝牙小课堂Android 第十课 · B10 · <a href="../index.html">回到学堂</a></footer>
+  <section id="cheatsheet">
+    <h2><span class="no">回顾</span>速查表</h2>
+    <table>
+      <tr><th>场景</th><th>机制</th></tr>
+      <tr><td>用户发起传输</td><td>FGS connectedDevice</td></tr>
+      <tr><td>到附近唤起</td><td>CDM presence</td></tr>
+      <tr><td>离线匹配</td><td>PendingIntent scan（带过滤）</td></tr>
+      <tr><td>可延后任务</td><td>WorkManager</td></tr>
+      <tr><td>进程恢复</td><td>持久化进度</td></tr>
+    </table>
+    <div class="note"><span class="tag">说明</span>本页为教学整理，FGS/CDM 行为以官方文档为准；演练为模拟。</div>
+  </section>
+
+  <section id="refs">
+    <h2><span class="no">依据</span>参考链接</h2>
+    <div class="card refs">
+      <h3 style="margin-top:0;">官方指南</h3>
+      <ul>
+        <li><a href="https://developer.android.com/develop/background-work/services/fgs/service-types" target="_blank" rel="noopener">Foreground service types · Connected device</a> <span class="src">— 34 类型权限、运行前置（权威）</span></li>
+        <li><a href="https://developer.android.com/develop/connectivity/companion-device-pairing" target="_blank" rel="noopener">Companion device pairing</a> <span class="src">— CDM 关联流程</span></li>
+        <li><a href="https://developer.android.com/develop/background-work/services/fgs/restrictions" target="_blank" rel="noopener">FGS 后台启动限制</a> <span class="src">— 31 限制与豁免</span></li>
+      </ul>
+      <h3>API 参考</h3>
+      <ul>
+        <li><a href="https://developer.android.com/reference/android/companion/CompanionDeviceManager" target="_blank" rel="noopener">CompanionDeviceManager</a> <span class="src">— associate / startObservingDevicePresence</span></li>
+        <li><a href="https://developer.android.com/reference/android/companion/CompanionDeviceService" target="_blank" rel="noopener">CompanionDeviceService</a> <span class="src">— onDeviceAppeared/Disappeared</span></li>
+        <li><a href="https://developer.android.com/reference/android/bluetooth/le/BluetoothLeScanner#startScan(java.util.List,%20android.bluetooth.le.ScanSettings,%20android.app.PendingIntent)" target="_blank" rel="noopener">startScan(PendingIntent)</a> <span class="src">— 26 离线匹配</span></li>
+      </ul>
+    </div>
+    <div class="next-links">
+      <a href="09-statemachine-queue.html">← B9 状态机与队列</a>
+      <a href="11-pairing-le-security.html">B11 配对与 LE 安全 →</a>
+    </div>
+    <footer>青竹蓝牙学堂 · 蓝牙小课堂 Android 第十课 · B10 · <a href="../index.html">回到学堂</a></footer>
   </section>
 </main>
 <aside class="toc" id="toc">
   <div class="toc-title">本课目录</div>
   <a href="#fgs">前台服务</a>
   <a href="#cdm">伴生设备</a>
-  <a href="#recover">离线与恢复</a>
-  <a href="#lab">动手演练</a>
+  <a href="#offline">离线匹配</a>
+  <a href="#recover">恢复与 WorkManager</a>
+  <a href="#lab">两场演练</a>
   <a href="#quiz">本课自测</a>
-  <a href="#map">回顾与速查</a>
+  <a href="#cheatsheet">速查表</a>
+  <a href="#refs">参考链接</a>
 </aside>
 </div>
 <script>
-
+// 演练一：机制选型
 (function(){
-  var D={fgs:['前台服务 connectedDevice','启动限制/通知/取消/断开路径'],cdm:['CompanionDeviceManager + CompanionDeviceService','关联类型/存在事件/地址轮换'],pi:['startScan(...,PendingIntent)','过滤命中/匹配投递/后续启动'],rec:['持久化意图+事务ID+已确认进度','旋转/回收/强停/重启各测一次']};
-  function show(k){ document.getElementById('mech10').innerHTML='<p><b>'+D[k][0]+'</b></p>'; document.getElementById('log10').innerHTML='<div><span class="ok">'+D[k][0]+'</span></div><div><span class="c">// 实测：'+D[k][1]+'</span></div>'+(k==='cdm'?'<div><span class="warn">关联≠连接，读写另建 GATT</span></div>':''); }
+  var D={fgs:['connectedDevice 前台服务','用户主动发起、需持续传输；34+ 声明类型权限','后台启动限制/豁免、停业务即停服务'],
+    cdm:['CompanionDeviceManager + presence','系统记得配件、到附近唤起进程','关联≠连接，读写另建 GATT；presence 保活'],
+    pi:['startScan(filters,settings,PendingIntent)','进程未运行，硬件 offload 匹配唤起','必须带过滤；stopScan(pi) 勿用 CANCEL_CURRENT'],
+    rec:['持久化进度 + 重建会话','进程被杀凭意图/事务/进度续传','旋转/回收/强停/重启各测；可延后用 WorkManager']};
+  function show(k){ var d=D[k]; document.getElementById('mech10').innerHTML='<p style="font-weight:700;margin:0 0 6px;">'+d[0]+'</p><p style="margin:0;color:var(--muted);font-size:14px;">'+d[1]+'</p>';
+    document.getElementById('log10').innerHTML='<div><span class="c">// 要实测</span></div><div>'+d[2]+'</div>'; }
   document.querySelectorAll('#sc10 button').forEach(function(b){b.addEventListener('click',function(){document.querySelectorAll('#sc10 button').forEach(function(x){x.classList.remove('on');});b.classList.add('on');show(b.getAttribute('data-s'));});});
   show('fgs');
 })();
-
+// 演练二：FGS 权限
+(function(){
+  function calc(t){ var p=['FOREGROUND_SERVICE'];
+    if(t==='34')p.push('FOREGROUND_SERVICE_CONNECTED_DEVICE','BLUETOOTH_CONNECT(运行时)');
+    else if(t==='31')p.push('(31–33 无类型权限要求)','BLUETOOTH_CONNECT(运行时)');
+    else p.push('BLUETOOTH(旧)','ACCESS_FINE_LOCATION(扫描)');
+    document.getElementById('fgsOut10').innerHTML=p.map(function(x){return '<span class="chip on">'+x+'</span>';}).join(''); }
+  document.querySelectorAll('#fgs10 button').forEach(function(b){b.addEventListener('click',function(){document.querySelectorAll('#fgs10 button').forEach(function(x){x.classList.remove('on');});b.classList.add('on');calc(b.getAttribute('data-t'));});});
+  calc('34');
+})();
+// 目录高亮
 const tocLinks=[...document.querySelectorAll('.toc a')];
 const secs=tocLinks.map(a=>document.getElementById(a.getAttribute('href').slice(1)));
 const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){tocLinks.forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+e.target.id));}});},{rootMargin:'-20% 0px -70% 0px'});
 secs.forEach(s=>s&&io.observe(s));
-const QUIZ=[{"q":"1. 目标34+ 用户发起持续 BLE 传输用？","opts":[["connectedDevice 前台服务",true,"对。声明对应权限+及时进前台。"],["WorkManager",false,"那是可延后任务。"],["CDM",false,"那是到附近唤起。"]]},{"q":"2. CDM 关联成功后能马上写 GATT 吗？","opts":[["不能，还要建实际 GATT 连接并发现服务",true,"对。"],["能",false,"关联≠连接。"],["自动连",false,"需自建。"]]},{"q":"3. 进程被杀后凭什么续传？","opts":[["持久化的意图+事务标识+已确认进度",true,"对。"],["内存队列",false,"进程结束就没了。"],["GATT 对象",false,"随进程结束。"]]}];
+// 自测
+const QUIZ=[
+ {"q":"1. 用户发起的持续换图传输用？","opts":[["connectedDevice 前台服务",true,"对。"],["普通 Service",false,"后台会被杀。"],["AlarmManager",false,"不适合持续。"]]},
+ {"q":"2. target 34 的 FGS 必须？","opts":[["声明类型 + FOREGROUND_SERVICE_CONNECTED_DEVICE",true,"对。"],["只 FOREGROUND_SERVICE",false,"还要类型权限。"],["不用权限",false,"要。"]]},
+ {"q":"3. CDM 关联等于连接吗？","opts":[["不等于，读写另建 GATT",true,"对。"],["等于",false,"关联只是记得+唤起。"],["自动连",false,"要自己连。"]]},
+ {"q":"4. 进程未运行收扫描匹配用？","opts":[["startScan(PendingIntent)",true,"对。26，带过滤。"],["FGS",false,"进程都没了。"],["WorkManager 轮询",false,"用 PendingIntent。"]]},
+ {"q":"5. 进程被杀续传凭什么？","opts":[["持久化的意图/事务/进度",true,"对。"],["内存变量",false,"进程没了。"],["运气",false,"要持久化。"]]},
+ {"q":"6. 可延后的批量任务用？","opts":[["WorkManager",true,"对。约束+重试。"],["FGS 硬扛",false,"没必要。"],["Timer",false,"不可靠。"]]}
+];
 let solved=0; const box=document.getElementById('quiz-box');
 QUIZ.forEach((item,qi)=>{
   const h=document.createElement('div'); h.className='quiz-q'; h.textContent=item.q; box.appendChild(h);
@@ -308,7 +391,6 @@ QUIZ.forEach((item,qi)=>{
   });
   box.appendChild(ex);
 });
-
 </script>
 </body>
 </html>

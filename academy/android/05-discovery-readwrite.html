@@ -172,6 +172,10 @@
   .ctl-row label{display:inline-flex;align-items:center;gap:10px;}
   .ctl-row input[type=range]{accent-color:var(--coral);width:160px;}
   .ctl-row .chk input{accent-color:var(--coral);}
+  .api-lv{display:inline-block;font-family:ui-monospace,Consolas,monospace;font-size:11.5px;font-weight:800;color:#2F58A8;background:var(--blue-soft);border:1px solid var(--blue-line);border-radius:999px;padding:0 8px;white-space:nowrap;}
+  .refs{font-size:14px;}
+  .refs li{margin:7px 0;}
+  .refs .src{font-size:12px;color:var(--faint);}
 </style>
 </head>
 <body style="--coral:#E8590C;--coral-soft:#FBEADF;--coral-line:#F2C4A4">
@@ -203,101 +207,213 @@
 <main>
   <div class="crumb">蓝牙小课堂 / Android 第五课 · B5</div>
   <h1>服务发现与读写：<em>一次一操作</em>的排队</h1>
-  <p class="lead">连上后 discoverServices 拿到属性表，再读写特征。Android 同一时刻只允许一个未完成的 GATT 操作，必须排队。这一课讲发现、读写与 writeType。</p>
-  <div class="meta"><span>平台：Android/Kotlin</span><span>约 12 分钟</span><span>含交互演练</span><span>前置：B4</span></div>
+  <p class="lead">连上后 discoverServices 拿到属性表，再读写特征。Android 同一时刻只允许一个未完成的 GATT 操作，必须排队。这一课把属性表模型、发现、读写、writeType、描述符与可靠写逐一讲清，并给出官方依据。</p>
+  <div class="meta"><span>平台：Android/Kotlin</span><span>约 24 分钟</span><span>API 18 → 33</span><span>含交互演练</span><span>前置：B4</span></div>
   <div class="journey">
-    <div class="j-step"><span class="n">1</span><span class="t">发现</span><span class="s">discoverServices</span></div>
-    <div class="j-step"><span class="n">2</span><span class="t">取对象</span><span class="s">getService</span></div>
+    <div class="j-step"><span class="n">1</span><span class="t">模型</span><span class="s">属性表</span></div>
+    <div class="j-step"><span class="n">2</span><span class="t">发现</span><span class="s">discoverServices</span></div>
     <div class="j-step"><span class="n">3</span><span class="t">读写</span><span class="s">排队</span></div>
     <div class="j-step"><span class="n">4</span><span class="t">writeType</span><span class="s">有/无响应</span></div>
-    <div class="j-step"><span class="n">5</span><span class="t">动手</span><span class="s">排队</span></div>
+    <div class="j-step"><span class="n">5</span><span class="t">动手</span><span class="s">两场演练</span></div>
   </div>
 
+  <section id="model">
+    <h2><span class="no">第 1 步</span>属性表模型：服务 → 特征 → 描述符</h2>
+    <figure>
+      <svg viewBox="0 0 760 200" role="img" aria-label="GATT 属性表层级">
+        <rect x="20" y="20" width="200" height="60" rx="8" fill="#ECF1FB" stroke="#C9D8F2"/>
+        <text x="120" y="45" text-anchor="middle" font-size="13" font-weight="bold" fill="#2F58A8">BluetoothGattService</text>
+        <text x="120" y="65" text-anchor="middle" font-size="10" fill="#5B7DB1">UUID · type(PRIMARY/SECONDARY)</text>
+        <rect x="280" y="20" width="220" height="60" rx="8" fill="#E9F4F2" stroke="#BFE0DB"/>
+        <text x="390" y="45" text-anchor="middle" font-size="13" font-weight="bold" fill="#1E7268">BluetoothGattCharacteristic</text>
+        <text x="390" y="65" text-anchor="middle" font-size="10" fill="#4E8A80">UUID · properties · value</text>
+        <rect x="560" y="20" width="180" height="60" rx="8" fill="#FBF3E2" stroke="#EAD9AE"/>
+        <text x="650" y="45" text-anchor="middle" font-size="13" font-weight="bold" fill="#9A6B12">BluetoothGattDescriptor</text>
+        <text x="650" y="65" text-anchor="middle" font-size="10" fill="#B08A3E">UUID · value（如 CCCD 0x2902）</text>
+        <line x1="220" y1="50" x2="280" y2="50" stroke="#9DB4DC" stroke-width="2" marker-end="url(#m5)"/>
+        <line x1="500" y1="50" x2="560" y2="50" stroke="#9DB4DC" stroke-width="2" marker-end="url(#m5)"/>
+        <defs><marker id="m5" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 z" fill="#9DB4DC"/></marker></defs>
+        <text x="380" y="130" text-anchor="middle" font-size="12" fill="#7A7267">一个服务含多个特征，一个特征含多个描述符；每个属性有 handle（句柄）与 UUID</text>
+        <text x="380" y="160" text-anchor="middle" font-size="12" fill="#7A7267">properties 决定能 read / write / notify / indicate；permissions 决定要不要加密</text>
+      </svg>
+      <figcaption>属性表三层。UUID 16 位是蓝牙标准短码（如 0x2A6E），自定义用 128 位。</figcaption>
+    </figure>
+    <table>
+      <tr><th>类</th><th>关键方法</th><th>引入</th></tr>
+      <tr><td><code>BluetoothGattService</code></td><td>getUuid / getType / getCharacteristics / getCharacteristic(uuid)</td><td><span class="api-lv">18</span></td></tr>
+      <tr><td><code>BluetoothGattCharacteristic</code></td><td>getUuid / getProperties / getDescriptors / getDescriptor(uuid)</td><td><span class="api-lv">18</span></td></tr>
+      <tr><td><code>BluetoothGattDescriptor</code></td><td>getUuid / getValue</td><td><span class="api-lv">18</span></td></tr>
+    </table>
+    <p><b>properties 常量：</b>PROPERTY_READ / PROPERTY_WRITE / PROPERTY_WRITE_NO_RESPONSE / PROPERTY_NOTIFY / PROPERTY_INDICATE 等，决定该特征允许哪些操作。</p>
+    <div class="recap"><b>本步收束：</b>服务→特征→描述符三层；properties 定操作、permissions 定加密；16 位标准 UUID / 128 位自定义。</div>
+  </section>
+
   <section id="disc">
-    <h2><span class="no">第 1 步</span>discoverServices 是异步的</h2>
-    
-      <pre>gatt.discoverServices()
+    <h2><span class="no">第 2 步</span>discoverServices 是异步的</h2>
+    <pre>gatt.discoverServices()
 override fun onServicesDiscovered(g:BluetoothGatt, status:Int) {
-  val svc = g.getService(UUID.fromString("00001809-…"))
-  val ch = svc.getCharacteristic(UUID.fromString("00002A6E-…"))
+  <span class="cm">// status==GATT_SUCCESS 才取对象</span>
+  val svc = g.getService(UUID.fromString("00001809-0000-1000-8000-00805f9b34fb"))
+  val ch  = svc?.getCharacteristic(UUID.fromString("00002a6e-…"))
 }</pre>
-      <div class="key"><span class="tag">重点</span>发现完成前 getService 返回 null。固件升级改服务表时平台缓存可能陈旧，发现结果与预期对不上要触发缓存刷新（反射 refresh 或重连），别急着怪固件。</div>
-      <div class="recap"><b>本步收束：</b>等 onServicesDiscovered 再取对象；缓存陈旧要刷新。</div>
+    <ul>
+      <li>发现完成前 <code>getService</code> 返回 null；必须等 <code>onServicesDiscovered</code>。</li>
+      <li>系统会<b>缓存</b>服务表。固件升级改了服务表后缓存可能陈旧，发现结果与预期对不上：可反射调 <code>refresh()</code> 或断开重连触发重新发现。</li>
+      <li>标准服务变化时设备可发 Service Changed 指示，Android 31+ 有 <code>onServiceChanged</code> 回调。</li>
+    </ul>
+    <div class="recap"><b>本步收束：</b>等 onServicesDiscovered 再取对象；缓存陈旧要刷新；留意 Service Changed。</div>
   </section>
 
   <section id="rw">
-    <h2><span class="no">第 2 步</span>一次只提交一条属性操作</h2>
-    
-      <pre>ch.value = bytes; gatt.writeCharacteristic(ch)   // 等 onCharacteristicWrite
-gatt.readCharacteristic(ch)                      // 等 onCharacteristicRead</pre>
-      <p>上一个操作没回调就发下一个，会被丢弃或返回 false。必须<b>排队串行</b>：每项等匹配回调（GATT 实例+操作类型+特征 UUID）再发下一条。B9 的状态机就是干这个。</p>
-      <div class="recap"><b>本步收束：</b>一次一操作，等匹配回调再发下一条。</div>
+    <h2><span class="no">第 3 步</span>一次只提交一条属性操作</h2>
+    <pre><span class="cm">// 旧签名（33 起废弃，但仍可用）</span>
+ch.value = bytes; gatt.writeCharacteristic(ch)   <span class="cm">// 等 onCharacteristicWrite</span>
+gatt.readCharacteristic(ch)                      <span class="cm">// 等 onCharacteristicRead</span>
+<span class="cm">// API 33+ 推荐新签名：值直接传入，避免 ch.value 被并发覆盖</span>
+gatt.writeCharacteristic(ch, bytes, WRITE_TYPE_DEFAULT)</pre>
+    <p>上一个操作没回调就发下一个，会被丢弃或返回 false。必须<b>排队串行</b>，每项等匹配回调再发下一条。匹配三要素：<b>GATT 实例 + 操作类型 + 特征 UUID</b>。B9 的状态机就是干这个。</p>
+    <table>
+      <tr><th>操作</th><th>方法</th><th>回调</th><th>引入</th></tr>
+      <tr><td>读特征</td><td>readCharacteristic(ch)</td><td>onCharacteristicRead</td><td><span class="api-lv">18</span></td></tr>
+      <tr><td>写特征</td><td>writeCharacteristic(ch[,value,type])</td><td>onCharacteristicWrite</td><td><span class="api-lv">18</span>（新签名 33）</td></tr>
+      <tr><td>读描述符</td><td>readDescriptor(desc)</td><td>onDescriptorRead</td><td><span class="api-lv">18</span></td></tr>
+      <tr><td>写描述符</td><td>writeDescriptor(desc[,value])</td><td>onDescriptorWrite</td><td><span class="api-lv">18</span>（新签名 33）</td></tr>
+    </table>
+    <div class="key"><span class="tag">重点</span>API 33 起 read/changed/descriptorRead 新增<b>直接带 value 参数</b>的重载，旧 getValue() 方式废弃——新写法避免回调里读 ch.value 被后续操作覆盖的竞态。</div>
+    <div class="recap"><b>本步收束：</b>一次一操作，等匹配回调（实例+类型+UUID）再发下一条；33+ 用带 value 新签名。</div>
   </section>
 
   <section id="wtype">
-    <h2><span class="no">第 3 步</span>WRITE_TYPE_DEFAULT 与 NO_RESPONSE</h2>
-    
-      <table><tr><th>writeType</th><th>对应 ATT</th><th>确认</th></tr>
-        <tr><td>DEFAULT</td><td>Write Request</td><td>有 onCharacteristicWrite</td></tr>
-        <tr><td>NO_RESPONSE</td><td>Write Command</td><td>无逐条确认，高频可丢</td></tr></table>
-      <div class="recap"><b>本步收束：</b>关键命令用 DEFAULT；高频可丢数据才用 NO_RESPONSE。</div>
+    <h2><span class="no">第 4 步</span>writeType：有响应 / 无响应 / 可靠写</h2>
+    <table>
+      <tr><th>writeType</th><th>对应 ATT</th><th>确认</th><th>适用</th></tr>
+      <tr><td>WRITE_TYPE_DEFAULT</td><td>Write Request</td><td>有 onCharacteristicWrite</td><td>关键命令</td></tr>
+      <tr><td>WRITE_TYPE_NO_RESPONSE</td><td>Write Command</td><td>无逐条确认，高频可丢</td><td>高频可丢数据</td></tr>
+    </table>
+    <p><b>可靠写（长写）：</b>需要把多段数据作为原子事务写入时用 <code>beginReliableWrite()</code> → 多次 writeCharacteristic → <code>executeReliableWrite()</code>（或 <code>abortReliableWrite()</code> 放弃），回调 <code>onReliableWriteCompleted</code>。适合超过 MTU 的大块固件/配置。</p>
+    <div class="recap"><b>本步收束：</b>关键命令 DEFAULT；高频可丢 NO_RESPONSE；原子大块用可靠写。</div>
   </section>
 
   <section id="lab">
-    <h2><span class="no">动手</span>连发三个操作，看串行排队</h2>
-    <p>点「读温度/写间隔/读电量」加入队列。模拟器一次只执行一条，等回调完成才取下一条。观察若不等回调就发会怎样（被丢弃）。</p>
+    <h2><span class="no">动手</span>两场演练</h2>
+    <h3>演练一 · 连发三个操作，看串行排队</h3>
+    <p>点「读温度/写间隔/读电量」加入队列。模拟器一次只执行一条，等回调完成才取下一条。点「不等回调连发」看错误示范。</p>
     <div class="lab">
       <div class="lab-head"><b>GATT 排队演练</b><span class="hint">一次一操作，等回调再发下一条</span></div>
       <div class="controls"><div class="seg" id="q5"><button data-o="readT">读温度</button><button data-o="writeI">写间隔</button><button data-o="readB">读电量</button></div><button class="btn ghost" id="bad5">不等回调连发(错误示范)</button></div>
       <div class="lab-body"><div><div class="chips" id="queue5"></div></div><div class="logcat"><div class="logcat-head"><span>logcat · 队列</span><span>serial</span></div><div class="logcat-body" id="log5"><span class="c">// 加操作进队列</span></div></div></div>
       <div class="lab-foot"><span class="hint">正确：排队串行；错误：连发只有第一条生效</span></div>
     </div>
-    <div class="key"><span class="tag">看懂这场演练</span>Android GATT 一次只允许一个未完成操作。排队串行每步等匹配回调；不等回调连发，后续操作被丢弃。这就是「写了没反应」的常见根因。</div>
+    <h3>演练二 · 操作 ↔ 回调匹配</h3>
+    <p>选一个操作，看它该等哪个回调、匹配要素是什么。</p>
+    <div class="lab">
+      <div class="lab-head"><b>操作↔回调</b><span class="hint">实例+类型+UUID</span></div>
+      <div class="controls"><div class="seg" id="match5"><button data-m="read" class="on">读特征</button><button data-m="write">写特征</button><button data-m="desc">写描述符</button><button data-m="notify">通知</button></div></div>
+      <div class="lab-body single"><div id="matchOut5" class="card" style="margin:0;"></div></div>
+    </div>
+    <div class="key"><span class="tag">看懂这两场演练</span>Android GATT 一次只允许一个未完成操作；排队串行每步等匹配回调。通知是设备主动推送，不占你的操作槽，但回调里要立即复制字节。</div>
   </section>
 
   <section id="quiz">
-    <h2><span class="no">自测</span>三个问题</h2>
+    <h2><span class="no">自测</span>六个问题</h2>
     <div class="card" id="quiz-box"></div>
     <p id="quiz-done" style="display:none;font-weight:700;color:#1E7268;">全对。下一课讲订阅与通知。</p>
   </section>
 
-  <section id="map">
-    <h2><span class="no">回顾</span>速查</h2>
-    <table><tr><th>API</th><th>回调</th></tr><tr><td>discoverServices</td><td>onServicesDiscovered</td></tr><tr><td>readCharacteristic</td><td>onCharacteristicRead</td></tr><tr><td>writeCharacteristic</td><td>onCharacteristicWrite</td></tr><tr><td>writeType</td><td>DEFAULT 有 / NO_RESPONSE 无</td></tr></table>
-    <div class="note"><span class="tag">说明</span>本页为教学简化，工程细节以正文与官方规范为准；演练为模拟，非真实设备通信。</div>
-    <footer>青竹蓝牙学堂 · 蓝牙小课堂Android 第五课 · B5 · <a href="../index.html">回到学堂</a></footer>
+  <section id="cheatsheet">
+    <h2><span class="no">回顾</span>速查表</h2>
+    <table>
+      <tr><th>API</th><th>回调</th></tr>
+      <tr><td>discoverServices</td><td>onServicesDiscovered</td></tr>
+      <tr><td>readCharacteristic</td><td>onCharacteristicRead</td></tr>
+      <tr><td>writeCharacteristic</td><td>onCharacteristicWrite</td></tr>
+      <tr><td>writeDescriptor</td><td>onDescriptorWrite</td></tr>
+      <tr><td>writeType</td><td>DEFAULT 有 / NO_RESPONSE 无</td></tr>
+      <tr><td>可靠写</td><td>begin→execute→onReliableWriteCompleted</td></tr>
+    </table>
+    <div class="note"><span class="tag">说明</span>本页为教学整理，API 以官方文档为准；演练为模拟，非真实设备通信。</div>
+  </section>
+
+  <section id="refs">
+    <h2><span class="no">依据</span>参考链接</h2>
+    <div class="card refs">
+      <h3 style="margin-top:0;">官方指南</h3>
+      <ul>
+        <li><a href="https://developer.android.com/develop/connectivity/bluetooth/ble/find-ble-devices" target="_blank" rel="noopener">Find BLE devices / GATT 操作</a> <span class="src">— 发现与读写流程</span></li>
+      </ul>
+      <h3>API 参考</h3>
+      <ul>
+        <li><a href="https://developer.android.com/reference/android/bluetooth/BluetoothGatt" target="_blank" rel="noopener">BluetoothGatt</a> <span class="src">— read/write/discover/reliableWrite</span></li>
+        <li><a href="https://developer.android.com/reference/android/bluetooth/BluetoothGattCharacteristic" target="_blank" rel="noopener">BluetoothGattCharacteristic</a> <span class="src">— properties / writeType 常量</span></li>
+        <li><a href="https://developer.android.com/reference/android/bluetooth/BluetoothGattCallback" target="_blank" rel="noopener">BluetoothGattCallback</a> <span class="src">— 各操作回调</span></li>
+      </ul>
+      <h3>规范</h3>
+      <ul>
+        <li><a href="https://www.bluetooth.com/specifications/specs/" target="_blank" rel="noopener">Core Spec · ATT/GATT</a> <span class="src">— Write Request/Command、属性表</span></li>
+      </ul>
+    </div>
+    <div class="next-links">
+      <a href="04-connection-lifecycle.html">← B4 连接生命周期</a>
+      <a href="06-notify-cccd.html">B6 订阅与通知 →</a>
+    </div>
+    <footer>青竹蓝牙学堂 · 蓝牙小课堂 Android 第五课 · B5 · <a href="../index.html">回到学堂</a></footer>
   </section>
 </main>
 <aside class="toc" id="toc">
   <div class="toc-title">本课目录</div>
+  <a href="#model">属性表模型</a>
   <a href="#disc">服务发现</a>
   <a href="#rw">读写排队</a>
   <a href="#wtype">writeType</a>
-  <a href="#lab">动手演练</a>
+  <a href="#lab">两场演练</a>
   <a href="#quiz">本课自测</a>
-  <a href="#map">回顾与速查</a>
+  <a href="#cheatsheet">速查表</a>
+  <a href="#refs">参考链接</a>
 </aside>
 </div>
 <script>
-
+// 演练一：排队
 (function(){
-  var queue=[], busy=false, log=document.getElementById('log5');
-  function paint(){ document.getElementById('queue5').innerHTML=queue.length?queue.map(function(q){return '<span class="chip on">'+q+'</span>';}).join(''):'<span class="chip">队列空</span>'; }
-  function next(){
-    if(busy||!queue.length)return; busy=true; var op=queue.shift(); paint();
-    log.innerHTML+='<div><span class="api">start</span> '+op+' <span class="c">// 等回调</span></div>';
-    setTimeout(function(){ log.innerHTML+='<div><span class="ok">done</span> '+op+'</div>'; log.scrollTop=log.scrollHeight; busy=false; next(); },700);
+  var q=[], busy=false, log=document.getElementById('log5'), chips=document.getElementById('queue5');
+  var NAME={readT:'读温度',writeI:'写间隔',readB:'读电量'};
+  var CB={readT:'onCharacteristicRead',writeI:'onCharacteristicWrite',readB:'onCharacteristicRead'};
+  function render(){ chips.innerHTML=q.map(function(x){return '<span class="chip'+(x.running?' on':'')+'">'+NAME[x.k]+'</span>';}).join('')||'<span class="c">队列空</span>'; }
+  function line(h){ var d=document.createElement('div'); d.innerHTML=h; log.appendChild(d); log.scrollTop=log.scrollHeight; }
+  function pump(){
+    if(busy||!q.length)return; busy=true; var item=q[0]; item.running=true; render();
+    line('<span class="api">提交 '+NAME[item.k]+'</span> <span class="c">// 等 '+CB[item.k]+'</span>');
+    setTimeout(function(){ line('<span class="ok">'+CB[item.k]+'</span> 完成 → 取下一条'); q.shift(); busy=false; render(); pump(); },900);
   }
-  document.querySelectorAll('#q5 button').forEach(function(b){b.addEventListener('click',function(){queue.push(b.getAttribute('data-o'));paint();next();});});
-  document.getElementById('bad5').addEventListener('click',function(){ log.innerHTML+='<div><span class="err">连发 read+write：write 返回 false 被丢弃</span></div><div><span class="c">// 上一操作未完成，不能发下一条</span></div>'; });
-  paint();
+  document.querySelectorAll('#q5 button').forEach(function(b){b.addEventListener('click',function(){ q.push({k:b.getAttribute('data-o')}); render(); pump(); });});
+  document.getElementById('bad5').addEventListener('click',function(){
+    line('<span class="err">不等回调连发 3 条</span> → 只有第 1 条提交，后 2 条返回 false 被丢弃');
+    line('<span class="c">// 这就是「写了没反应」的常见根因</span>');
+  });
 })();
-
+// 演练二：操作↔回调
+(function(){
+  var M={read:['readCharacteristic','onCharacteristicRead','实例+读+特征UUID'],
+    write:['writeCharacteristic','onCharacteristicWrite','实例+写+特征UUID'],
+    desc:['writeDescriptor(CCCD)','onDescriptorWrite','实例+描述符写+描述符UUID'],
+    notify:['（设备主动推送）','onCharacteristicChanged','不占操作槽；立即复制字节']};
+  function show(k){ var m=M[k]; document.getElementById('matchOut5').innerHTML='<p style="margin:0 0 6px;font-weight:700;">'+m[0]+' → '+m[1]+'</p><div class="chips"><span class="chip on">'+m[2]+'</span></div>'; }
+  document.querySelectorAll('#match5 button').forEach(function(b){b.addEventListener('click',function(){document.querySelectorAll('#match5 button').forEach(function(x){x.classList.remove('on');});b.classList.add('on');show(b.getAttribute('data-m'));});});
+  show('read');
+})();
+// 目录高亮
 const tocLinks=[...document.querySelectorAll('.toc a')];
 const secs=tocLinks.map(a=>document.getElementById(a.getAttribute('href').slice(1)));
 const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){tocLinks.forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+e.target.id));}});},{rootMargin:'-20% 0px -70% 0px'});
 secs.forEach(s=>s&&io.observe(s));
-const QUIZ=[{"q":"1. 发现完成前 getService 返回？","opts":[["null",true,"对。等 onServicesDiscovered。"],["空列表",false,"是 null。"],["抛异常",false,"返回 null。"]]},{"q":"2. 上一写操作没回调就发下一写？","opts":[["被丢弃/返回 false",true,"对。必须排队。"],["并行执行",false,"GATT 一次一操作。"],["自动排队",false,"系统不替你排。"]]},{"q":"3. 关键配置命令用哪种 writeType？","opts":[["DEFAULT（有响应）",true,"对。"],["NO_RESPONSE",false,"无确认不适合关键命令。"],["随便",false,"取舍不同。"]]}];
+// 自测
+const QUIZ=[
+ {"q":"1. getService 什么时候才非 null？","opts":[["onServicesDiscovered 之后",true,"对。发现是异步的。"],["connectGatt 后立刻",false,"还没发现。"],["随时",false,"发现前为 null。"]]},
+ {"q":"2. 连发两个 write 不等回调会？","opts":[["第二个被丢弃/返回 false",true,"对。一次一操作。"],["都成功",false,"GATT 串行。"],["自动排队",false,"平台不帮你排。"]]},
+ {"q":"3. 关键命令用哪种 writeType？","opts":[["WRITE_TYPE_DEFAULT",true,"对。有确认。"],["NO_RESPONSE",false,"无确认可丢。"],["随便",false,"要按语义选。"]]},
+ {"q":"4. 匹配回调要看哪三要素？","opts":[["GATT 实例+操作类型+特征 UUID",true,"对。"],["只看 UUID",false,"还要实例和类型。"],["只看类型",false,"不够。"]]},
+ {"q":"5. 固件升级后服务表对不上，可能？","opts":[["系统缓存陈旧，需刷新/重连",true,"对。"],["固件坏了",false,"先查缓存。"],["权限问题",false,"无关。"]]},
+ {"q":"6. API 33+ 写特征推荐？","opts":[["带 value 参数的新签名",true,"对。避免 ch.value 竞态。"],["旧 setValue",false,"已废弃。"],["不写",false,"要写。"]]}
+];
 let solved=0; const box=document.getElementById('quiz-box');
 QUIZ.forEach((item,qi)=>{
   const h=document.createElement('div'); h.className='quiz-q'; h.textContent=item.q; box.appendChild(h);
@@ -317,7 +433,6 @@ QUIZ.forEach((item,qi)=>{
   });
   box.appendChild(ex);
 });
-
 </script>
 </body>
 </html>

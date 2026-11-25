@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>蓝牙小课堂 · B9 线程状态机命令队列 · 青竹蓝牙学堂</title>
+<title>蓝牙小课堂 · B9 状态机与命令队列 · 青竹蓝牙学堂</title>
 <style>
   :root{
     --bg:#F7F6F2; --card:#FFFFFF; --ink:#2B2620; --muted:#7A7267; --faint:#A39B8E;
@@ -172,6 +172,10 @@
   .ctl-row label{display:inline-flex;align-items:center;gap:10px;}
   .ctl-row input[type=range]{accent-color:var(--coral);width:160px;}
   .ctl-row .chk input{accent-color:var(--coral);}
+  .api-lv{display:inline-block;font-family:ui-monospace,Consolas,monospace;font-size:11.5px;font-weight:800;color:#2F58A8;background:var(--blue-soft);border:1px solid var(--blue-line);border-radius:999px;padding:0 8px;white-space:nowrap;}
+  .refs{font-size:14px;}
+  .refs li{margin:7px 0;}
+  .refs .src{font-size:12px;color:var(--faint);}
 </style>
 </head>
 <body style="--coral:#E8590C;--coral-soft:#FBEADF;--coral-line:#F2C4A4">
@@ -203,104 +207,170 @@
 <main>
   <div class="crumb">蓝牙小课堂 / Android 第九课 · B9</div>
   <h1>线程、状态机与命令队列：<em>每命令只结一次账</em></h1>
-  <p class="lead">取消、断开、超时三个入口同时到，各自清理就会先「已取消」又「失败」。这一课讲把一条连接交给一个串行环境，按钮/回调/超时只投递事件，每命令只完成一次。</p>
-  <div class="meta"><span>平台：Android/Kotlin</span><span>约 14 分钟</span><span>含交互演练</span><span>前置：B5</span></div>
+  <p class="lead">取消、断开、超时三个入口同时到，各自清理就会先「已取消」又「失败」。这一课把串行环境、状态机转移、代次隔离、四选一结一次、命令队列与背压逐一讲清，落到可复用的会话架构。</p>
+  <div class="meta"><span>平台：Android/Kotlin</span><span>约 24 分钟</span><span>架构课</span><span>含交互演练</span><span>前置：B5</span></div>
   <div class="journey">
     <div class="j-step"><span class="n">1</span><span class="t">串行</span><span class="s">一个环境</span></div>
-    <div class="j-step"><span class="n">2</span><span class="t">状态机</span><span class="s">允许转移</span></div>
+    <div class="j-step"><span class="n">2</span><span class="t">状态机</span><span class="s">转移表</span></div>
     <div class="j-step"><span class="n">3</span><span class="t">代次</span><span class="s">丢旧回调</span></div>
     <div class="j-step"><span class="n">4</span><span class="t">结一次</span><span class="s">四选一</span></div>
-    <div class="j-step"><span class="n">5</span><span class="t">动手</span><span class="s">走事件</span></div>
+    <div class="j-step"><span class="n">5</span><span class="t">动手</span><span class="s">两场演练</span></div>
   </div>
 
   <section id="serial">
     <h2><span class="no">第 1 步</span>所有入口只投递，不直接改状态</h2>
-    
-      <pre>private val worker = Handler(HandlerThread("ble-session").apply{start()}.looper)
+    <pre>private val worker = Handler(HandlerThread("ble-session").apply{start()}.looper)
 fun onUserCancel() { worker.post { handle(Event.Cancel) } }
 fun onWriteTimeout(id:Long) { worker.post { handle(Event.Timeout(id)) } }
 override fun onCharacteristicWrite(g,c,status) { worker.post { handle(Event.WriteDone(g,c.uuid,status)) } }</pre>
-      <div class="recap"><b>本步收束：</b>按钮/定时器/回调都 post 进同一队列，串行处理。</div>
+    <p>按钮（主线程）、定时器、Binder 回调三个入口都 <code>post</code> 进<b>同一个串行队列</b>，状态只在这一个线程里改。可选实现：HandlerThread、单线程 Executor、Kotlin 协程 <code>newSingleThreadContext</code> / Channel。核心是<b>单一所有权</b>。</p>
+    <div class="recap"><b>本步收束：</b>按钮/定时器/回调都 post 进同一队列，串行处理，状态单线程拥有。</div>
   </section>
 
   <section id="sm">
-    <h2><span class="no">第 2 步</span>CONNECTING→DISCOVERING→CONFIGURING→READY</h2>
-    
-      <pre>CONNECTING → DISCOVERING → CONFIGURING → READY
-任一状态遇超时/断开/取消 → CLOSING → CLOSED</pre>
-      <p>进 CLOSING 后再来的事件只走清理，不推进状态。发 API 前记录在等什么+设期限。</p>
-      <div class="recap"><b>本步收束：</b>状态机列出在哪步、允许去哪步；关闭后只清理。</div>
+    <h2><span class="no">第 2 步</span>状态机：列出在哪步、允许去哪步</h2>
+    <table>
+      <tr><th>状态</th><th>含义</th><th>允许转移</th></tr>
+      <tr><td>CONNECTING</td><td>connectGatt 已发</td><td>→ DISCOVERING / CLOSING</td></tr>
+      <tr><td>DISCOVERING</td><td>discoverServices 已发</td><td>→ CONFIGURING / CLOSING</td></tr>
+      <tr><td>CONFIGURING</td><td>订阅/MTU/PHY 配置中</td><td>→ READY / CLOSING</td></tr>
+      <tr><td>READY</td><td>可收发命令</td><td>→ CLOSING</td></tr>
+      <tr><td>CLOSING</td><td>清理中</td><td>→ CLOSED（只清理，不推进）</td></tr>
+    </table>
+    <p>任一状态遇超时/断开/取消 → CLOSING → CLOSED。发 API 前记录「在等什么 + 期限」，进 CLOSING 后再来的事件只走清理。</p>
+    <div class="recap"><b>本步收束：</b>状态机列允许转移；关闭后只清理不推进。</div>
   </section>
 
   <section id="once">
-    <h2><span class="no">第 3 步</span>验代次丢旧回调，每命令完成恰好一次</h2>
-    
-      <div class="key"><span class="tag">重点 · 实现清单</span>① 验代次：旧 GATT 迟到事件丢弃；② CLOSING 只清理；③ WriteDone 匹配 GATT 实例+操作类型+特征 UUID 才算终态；④ 成功/同步拒绝/超时/取消<b>四选一</b>完成一次；⑤ 完成取下一条，队列满返回忙。operationId 是 App 标识，平台回调没有，靠三要素匹配。</div>
-      <div class="recap"><b>本步收束：</b>代次隔离旧会话；每命令只结一次账。</div>
+    <h2><span class="no">第 3 步</span>代次隔离 + 每命令完成恰好一次</h2>
+    <div class="key"><span class="tag">重点 · 实现清单</span>① <b>验代次</b>：每次新建会话 gen+1，旧 GATT 迟到事件按 gen 丢弃；② CLOSING 只清理；③ WriteDone 匹配 <b>GATT 实例 + 操作类型 + 特征 UUID</b> 才算终态；④ 成功 / 同步拒绝 / 超时 / 取消 <b>四选一</b>完成一次；⑤ 完成取下一条，队列满返回忙。operationId 是 App 标识，平台回调没有，靠三要素匹配。</div>
+    <div class="recap"><b>本步收束：</b>代次隔离旧会话；每命令只结一次账（四选一）。</div>
+  </section>
+
+  <section id="queue">
+    <h2><span class="no">第 4 步</span>命令队列与背压</h2>
+    <ul>
+      <li><b>串行队列：</b>一次只 inflight 一条，完成回调取下一条（呼应 B5 一次一操作）。</li>
+      <li><b>背压：</b>队列设上限，满了返回「忙」让上层退避，别无限堆积撑爆内存。</li>
+      <li><b>优先级：</b>关键命令（如停止）可插队，但要保证仍只结一次。</li>
+      <li><b>多设备：</b>每台一个会话/队列（任务池），互不阻塞——这正是 SDK 插件化任务池的思路。</li>
+    </ul>
+    <div class="recap"><b>本步收束：</b>串行+背压+优先级；多设备各一会话，互不阻塞。</div>
   </section>
 
   <section id="lab">
-    <h2><span class="no">动手</span>提交命令后注入取消/超时/断开，看只结一次</h2>
-    <p>点「提交写命令」进入 inflight。再点取消/超时/断开/成功之一，观察命令只完成一次；之后到的旧回调被代次丢弃。</p>
+    <h2><span class="no">动手</span>两场演练</h2>
+    <h3>演练一 · 提交命令后注入取消/超时/断开，看只结一次</h3>
+    <p>点「提交写」进入 inflight。再点取消/超时/断开/成功之一，命令只完成一次；之后到的旧回调被代次丢弃。</p>
     <div class="lab">
       <div class="lab-head"><b>状态机演练</b><span class="hint">gen 代次隔离旧回调</span></div>
       <div class="controls"><div class="seg" id="e9"><button data-e="submit">提交写</button><button data-e="ok">成功回调</button><button data-e="cancel">取消</button><button data-e="to">超时</button><button data-e="disc">断开</button><button data-e="late">旧代次迟到回调</button></div></div>
       <div class="lab-body"><div><div class="chips" id="st9"></div></div><div class="logcat"><div class="logcat-head"><span>session</span><span id="gen9">gen=1</span></div><div class="logcat-body" id="log9"><span class="c">// 提交写命令</span></div></div></div>
       <div class="lab-foot"><span class="hint">完成后再点成功/取消→忽略（已结一次）；旧代次→丢弃</span></div>
     </div>
-    <div class="key"><span class="tag">看懂这场演练</span>一条连接一个串行环境；事件只投递。验代次丢旧回调，CLOSING 只清理，每命令成功/拒绝/超时/取消四选一完成一次。这是「先取消又失败」的根治。</div>
+    <h3>演练二 · 状态转移合法性</h3>
+    <p>选当前状态与目标，看转移是否允许。</p>
+    <div class="lab">
+      <div class="lab-head"><b>转移检查</b><span class="hint">CLOSING 只清理</span></div>
+      <div class="controls"><div class="seg" id="from9"><button data-s="CONNECTING" class="on">CONNECTING</button><button data-s="READY">READY</button><button data-s="CLOSING">CLOSING</button></div><div class="seg" id="to9"><button data-s="DISCOVERING">→DISCOVERING</button><button data-s="READY">→READY</button><button data-s="CLOSING">→CLOSING</button></div></div>
+      <div class="lab-body single"><div id="transOut9" class="card" style="margin:0;"></div></div>
+    </div>
+    <div class="key"><span class="tag">看懂这两场演练</span>一条连接一个串行环境；事件只投递。验代次丢旧回调，CLOSING 只清理，每命令四选一完成一次。这是「先取消又失败」的根治。</div>
   </section>
 
   <section id="quiz">
-    <h2><span class="no">自测</span>三个问题</h2>
+    <h2><span class="no">自测</span>六个问题</h2>
     <div class="card" id="quiz-box"></div>
     <p id="quiz-done" style="display:none;font-weight:700;color:#1E7268;">全对。下一课讲后台、前台服务与伴生设备。</p>
   </section>
 
-  <section id="map">
-    <h2><span class="no">回顾</span>速查</h2>
-    <table><tr><th>规则</th><th>作用</th></tr><tr><td>只投递</td><td>串行不竞态</td></tr><tr><td>验代次</td><td>丢旧回调</td></tr><tr><td>CLOSING 只清理</td><td>不推进</td></tr><tr><td>四选一结一次</td><td>不重复通知</td></tr></table>
-    <div class="note"><span class="tag">说明</span>本页为教学简化，工程细节以正文与官方规范为准；演练为模拟，非真实设备通信。</div>
-    <footer>青竹蓝牙学堂 · 蓝牙小课堂Android 第九课 · B9 · <a href="../index.html">回到学堂</a></footer>
+  <section id="cheatsheet">
+    <h2><span class="no">回顾</span>速查表</h2>
+    <table>
+      <tr><th>规则</th><th>作用</th></tr>
+      <tr><td>只投递</td><td>串行不竞态</td></tr>
+      <tr><td>验代次</td><td>丢旧回调</td></tr>
+      <tr><td>CLOSING 只清理</td><td>不推进</td></tr>
+      <tr><td>四选一结一次</td><td>不重复通知</td></tr>
+      <tr><td>队列背压</td><td>不撑爆内存</td></tr>
+    </table>
+    <div class="note"><span class="tag">说明</span>本页为教学架构整理，具体实现以你的工程为准；演练为模拟。</div>
+  </section>
+
+  <section id="refs">
+    <h2><span class="no">依据</span>参考链接</h2>
+    <div class="card refs">
+      <h3 style="margin-top:0;">并发与回调</h3>
+      <ul>
+        <li><a href="https://developer.android.com/reference/android/os/HandlerThread" target="_blank" rel="noopener">HandlerThread</a> <span class="src">— 串行会话线程</span></li>
+        <li><a href="https://developer.android.com/reference/android/bluetooth/BluetoothGattCallback" target="_blank" rel="noopener">BluetoothGattCallback</a> <span class="src">— 回调入口，post 进 worker</span></li>
+        <li><a href="https://kotlinlang.org/docs/coroutines-overview.html" target="_blank" rel="noopener">Kotlin Coroutines</a> <span class="src">— 单线程上下文/Channel 替代方案</span></li>
+      </ul>
+      <h3>平台约束</h3>
+      <ul>
+        <li><a href="https://developer.android.com/reference/android/bluetooth/BluetoothGatt" target="_blank" rel="noopener">BluetoothGatt</a> <span class="src">— 一次一操作，队列串行的根因</span></li>
+      </ul>
+    </div>
+    <div class="next-links">
+      <a href="08-fragmentation-flowcontrol.html">← B8 分包与流控</a>
+      <a href="10-background-fgs-cdm.html">B10 后台与前台服务 →</a>
+    </div>
+    <footer>青竹蓝牙学堂 · 蓝牙小课堂 Android 第九课 · B9 · <a href="../index.html">回到学堂</a></footer>
   </section>
 </main>
 <aside class="toc" id="toc">
   <div class="toc-title">本课目录</div>
   <a href="#serial">串行环境</a>
-  <a href="#sm">状态机</a>
+  <a href="#sm">状态机转移</a>
   <a href="#once">代次与结一次</a>
-  <a href="#lab">动手演练</a>
+  <a href="#queue">队列与背压</a>
+  <a href="#lab">两场演练</a>
   <a href="#quiz">本课自测</a>
-  <a href="#map">回顾与速查</a>
+  <a href="#cheatsheet">速查表</a>
+  <a href="#refs">参考链接</a>
 </aside>
 </div>
 <script>
-
+// 演练一：状态机
 (function(){
-  var gen=1, inflight=false, done=false, state='READY';
-  function paint(){ document.getElementById('gen9').textContent='gen='+gen;
-    document.getElementById('st9').innerHTML='<span class="chip on">'+state+'</span><span class="chip '+(inflight?'on':'')+'">'+(inflight?'inflight':'无在途')+'</span><span class="chip '+(done?'on':'')+'">'+(done?'已结一次':'未结')+'</span>'; }
-  function log(h){document.getElementById('log9').innerHTML=h;}
+  var gen=1, inflight=false, done=false, log=document.getElementById('log9'), st=document.getElementById('st9');
+  function line(h){ var d=document.createElement('div'); d.innerHTML=h; log.appendChild(d); log.scrollTop=log.scrollHeight; }
+  function chips(s){ st.innerHTML='<span class="chip on">'+s+'</span>'; document.getElementById('gen9').textContent='gen='+gen; }
+  function finish(kind){ if(done)return; done=true; inflight=false; line('<span class="ok">命令完成（'+kind+'）· 只结一次</span>'); chips('READY'); }
   document.querySelectorAll('#e9 button').forEach(function(b){b.addEventListener('click',function(){
     var e=b.getAttribute('data-e');
-    if(e==='submit'){ if(inflight){log('<div><span class="warn">队列忙/已有在途</span></div>');return;} inflight=true;done=false;state='READY';log('<div><span class="api">submit</span> write gen='+gen+' 等回调</div>');paint();return; }
-    if(e==='late'){ gen++; inflight=false;done=false;state='CONNECTING';log('<div><span class="warn">新代次 gen='+gen+'</span> 旧回调到达→<span class="c">丢弃</span></div>');paint();return; }
-    if(!inflight){ log('<div><span class="c">// 无在途，忽略</span></div>');return; }
-    if(done){ log('<div><span class="c">// 已结一次，'+e+' 忽略</span></div>');return; }
-    done=true; inflight=false;
-    var msg={ok:'成功回调',cancel:'取消',to:'超时',disc:'断开'}[e];
-    state=(e==='disc')?'CLOSING':'READY';
-    log('<div><span class="ok">complete once</span> via '+msg+'</div><div><span class="c">// 其余入口再来只忽略/清理</span></div>');
-    paint();
+    if(e==='submit'){ gen++; inflight=true; done=false; line('<span class="api">提交写 op#'+gen+'</span> → inflight，设超时'); chips('INFLIGHT'); return; }
+    if(e==='late'){ line('<span class="warn">旧代次迟到回调 → 按 gen 丢弃</span>'); return; }
+    if(!inflight){ line('<span class="c">无 inflight，忽略</span>'); return; }
+    if(done){ line('<span class="c">已结一次 → 忽略 '+e+'</span>'); return; }
+    if(e==='ok')finish('成功'); else if(e==='cancel')finish('取消'); else if(e==='to')finish('超时'); else if(e==='disc'){ finish('断开'); gen++; line('<span class="c">会话代次+1，旧回调全丢</span>'); }
   });});
-  paint();
+  chips('IDLE');
 })();
-
+// 演练二：转移合法性
+(function(){
+  var OK={CONNECTING:['DISCOVERING','CLOSING'],DISCOVERING:['CONFIGURING','CLOSING'],CONFIGURING:['READY','CLOSING'],READY:['CLOSING'],CLOSING:['CLOSED']};
+  var from='CONNECTING', to='DISCOVERING';
+  function calc(){ var ok=(OK[from]||[]).indexOf(to)>=0; var el=document.getElementById('transOut9');
+    el.innerHTML = from==='CLOSING' ? '<span class="chip bad">CLOSING 只清理</span><p style="margin:8px 0 0;">不推进业务状态，仅允许 → CLOSED</p>' : '<span class="chip '+(ok?'on':'bad')+'">'+from+' → '+to+(ok?' 允许':' 非法')+'</span><p style="margin:8px 0 0;color:var(--muted);font-size:14px;">'+(ok?'合法转移':'不在允许转移表内，应拒绝/记日志')+'</p>'; }
+  document.querySelectorAll('#from9 button').forEach(function(b){b.addEventListener('click',function(){document.querySelectorAll('#from9 button').forEach(function(x){x.classList.remove('on');});b.classList.add('on');from=b.getAttribute('data-s');calc();});});
+  document.querySelectorAll('#to9 button').forEach(function(b){b.addEventListener('click',function(){document.querySelectorAll('#to9 button').forEach(function(x){x.classList.remove('on');});b.classList.add('on');to=b.getAttribute('data-s');calc();});});
+  calc();
+})();
+// 目录高亮
 const tocLinks=[...document.querySelectorAll('.toc a')];
 const secs=tocLinks.map(a=>document.getElementById(a.getAttribute('href').slice(1)));
 const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){tocLinks.forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+e.target.id));}});},{rootMargin:'-20% 0px -70% 0px'});
 secs.forEach(s=>s&&io.observe(s));
-const QUIZ=[{"q":"1. 发送时取消能马上让位给下一条吗？","opts":[["不能，已提交请求可能还在进行，等终态或结束旧会话",true,"对。"],["能",false,"平台请求撤不回。"],["直接发",false,"会乱。"]]},{"q":"2. operationId 为什么配不上写回调？","opts":[["是 App 标识，平台回调没有，靠 GATT+类型+UUID 匹配",true,"对。"],["平台会返回",false,"没有该字段。"],["用 UUID 就够",false,"同 UUID 两写分不清。"]]},{"q":"3. 每命令完成几次？","opts":[["恰好一次（成功/拒绝/超时/取消四选一）",true,"对。"],["可能多次",false,"会先取消又失败。"],["零次",false,"必须结一次。"]]}];
+// 自测
+const QUIZ=[
+ {"q":"1. 按钮/回调/超时三个入口怎么改状态？","opts":[["都 post 进同一串行队列",true,"对。单线程拥有状态。"],["各自直接改",false,"会竞态。"],["加锁随便改",false,"不如串行清晰。"]]},
+ {"q":"2. 旧 GATT 迟到回调怎么处理？","opts":[["按代次 gen 丢弃",true,"对。"],["照常处理",false,"会污染新会话。"],["重启",false,"没必要。"]]},
+ {"q":"3. 一条命令完成几次？","opts":[["恰好一次（四选一）",true,"对。成功/拒绝/超时/取消。"],["可能两次",false,"会重复通知。"],["看情况",false,"必须一次。"]]},
+ {"q":"4. WriteDone 匹配靠什么？","opts":[["GATT 实例+操作类型+特征 UUID",true,"对。平台无 operationId。"],["operationId",false,"平台回调没有。"],["只看 UUID",false,"不够。"]]},
+ {"q":"5. 进 CLOSING 后事件？","opts":[["只清理不推进",true,"对。"],["继续推进",false,"会乱。"],["丢弃全部",false,"要清理。"]]},
+ {"q":"6. 队列满了怎么办？","opts":[["返回忙让上层退避",true,"对。背压。"],["无限堆积",false,"撑爆内存。"],["丢弃新命令",false,"应返回忙。"]]}
+];
 let solved=0; const box=document.getElementById('quiz-box');
 QUIZ.forEach((item,qi)=>{
   const h=document.createElement('div'); h.className='quiz-q'; h.textContent=item.q; box.appendChild(h);
@@ -320,7 +390,6 @@ QUIZ.forEach((item,qi)=>{
   });
   box.appendChild(ex);
 });
-
 </script>
 </body>
 </html>

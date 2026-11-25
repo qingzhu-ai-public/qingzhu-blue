@@ -172,6 +172,10 @@
   .ctl-row label{display:inline-flex;align-items:center;gap:10px;}
   .ctl-row input[type=range]{accent-color:var(--coral);width:160px;}
   .ctl-row .chk input{accent-color:var(--coral);}
+  .api-lv{display:inline-block;font-family:ui-monospace,Consolas,monospace;font-size:11.5px;font-weight:800;color:#2F58A8;background:var(--blue-soft);border:1px solid var(--blue-line);border-radius:999px;padding:0 8px;white-space:nowrap;}
+  .refs{font-size:14px;}
+  .refs li{margin:7px 0;}
+  .refs .src{font-size:12px;color:var(--faint);}
 </style>
 </head>
 <body style="--coral:#E8590C;--coral-soft:#FBEADF;--coral-line:#F2C4A4">
@@ -202,114 +206,309 @@
 </aside>
 <main>
   <div class="crumb">蓝牙小课堂 / Android 第四课 · B4</div>
-  <h1>连接生命周期：<em>connectGatt</em>、重连与关闭</h1>
-  <p class="lead">connectGatt 拿到句柄不等于连上。这一课讲 autoConnect 的取舍、回调状态码怎么读、disconnect 与 close 的区别，以及重连要当新会话。</p>
-  <div class="meta"><span>平台：Android/Kotlin</span><span>约 13 分钟</span><span>含交互演练</span><span>前置：B3</span></div>
+  <h1>连接生命周期：<em>connectGatt</em>、状态码与关闭</h1>
+  <p class="lead">connectGatt 拿到句柄不等于连上。这一课把建连的四个重载、BluetoothGattCallback 的全部回调、两套容易混淆的 status 命名空间、disconnect 与 close 的本质区别、连接参数调节，以及「重连必须当新会话」逐一讲清，并给出官方依据。</p>
+  <div class="meta"><span>平台：Android/Kotlin</span><span>约 28 分钟</span><span>API 18 → 36</span><span>含交互演练</span><span>前置：B3</span></div>
   <div class="journey">
-    <div class="j-step"><span class="n">1</span><span class="t">建连</span><span class="s">connectGatt</span></div>
-    <div class="j-step"><span class="n">2</span><span class="t">autoConnect</span><span class="s">取舍</span></div>
-    <div class="j-step"><span class="n">3</span><span class="t">状态码</span><span class="s">8/19/22/62/133</span></div>
-    <div class="j-step"><span class="n">4</span><span class="t">关闭</span><span class="s">disconnect vs close</span></div>
-    <div class="j-step"><span class="n">5</span><span class="t">动手</span><span class="s">走状态</span></div>
+    <div class="j-step"><span class="n">1</span><span class="t">全景</span><span class="s">状态机</span></div>
+    <div class="j-step"><span class="n">2</span><span class="t">建连</span><span class="s">connectGatt 族</span></div>
+    <div class="j-step"><span class="n">3</span><span class="t">回调</span><span class="s">GattCallback</span></div>
+    <div class="j-step"><span class="n">4</span><span class="t">状态码</span><span class="s">两套 namespace</span></div>
+    <div class="j-step"><span class="n">5</span><span class="t">关闭</span><span class="s">disconnect/close</span></div>
+    <div class="j-step"><span class="n">6</span><span class="t">动手</span><span class="s">两场演练</span></div>
   </div>
 
+  <section id="map">
+    <h2><span class="no">第 1 步</span>连接全景：状态机与两套 status</h2>
+    <p>一个 GATT 客户端从创建到释放，走这样一条状态链。注意：<b>拿到 BluetoothGatt 对象 ≠ 已连接</b>，真正连上要以 <code>onConnectionStateChange</code> 的 <code>newState=STATE_CONNECTED</code> 为准。</p>
+    <figure>
+      <svg viewBox="0 0 760 210" role="img" aria-label="GATT 连接状态机">
+        <defs><marker id="ar4" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#A39B8E"/></marker></defs>
+        <rect x="10" y="70" width="110" height="56" rx="10" fill="#F4F2EC" stroke="#E8E4DC"/>
+        <text x="65" y="95" text-anchor="middle" font-size="13" font-weight="bold" fill="#7A7267">IDLE</text>
+        <text x="65" y="113" text-anchor="middle" font-size="10" fill="#A39B8E">connectGatt 前</text>
+        <rect x="160" y="70" width="120" height="56" rx="10" fill="#ECF1FB" stroke="#C9D8F2"/>
+        <text x="220" y="95" text-anchor="middle" font-size="13" font-weight="bold" fill="#2F58A8">CONNECTING</text>
+        <text x="220" y="113" text-anchor="middle" font-size="10" fill="#5F7FB5">直连≈30s 超时</text>
+        <rect x="320" y="70" width="120" height="56" rx="10" fill="#E9F4F2" stroke="#BFE0DB"/>
+        <text x="380" y="95" text-anchor="middle" font-size="13" font-weight="bold" fill="#1E7268">CONNECTED</text>
+        <text x="380" y="113" text-anchor="middle" font-size="10" fill="#4E8A80">发现/读写/订阅</text>
+        <rect x="480" y="70" width="130" height="56" rx="10" fill="#FBEDE9" stroke="#F0CFC6"/>
+        <text x="545" y="95" text-anchor="middle" font-size="13" font-weight="bold" fill="#B04A35">DISCONNECTED</text>
+        <text x="545" y="113" text-anchor="middle" font-size="10" fill="#C08475">对象仍在，可重连</text>
+        <rect x="650" y="70" width="100" height="56" rx="10" fill="#26221C"/>
+        <text x="700" y="95" text-anchor="middle" font-size="13" font-weight="bold" fill="#EDE7DC">CLOSED</text>
+        <text x="700" y="113" text-anchor="middle" font-size="10" fill="#8D8577">close 释放槽</text>
+        <line x1="120" y1="98" x2="158" y2="98" stroke="#A39B8E" stroke-width="2" marker-end="url(#ar4)"/>
+        <line x1="280" y1="98" x2="318" y2="98" stroke="#A39B8E" stroke-width="2" marker-end="url(#ar4)"/>
+        <line x1="440" y1="98" x2="478" y2="98" stroke="#A39B8E" stroke-width="2" marker-end="url(#ar4)"/>
+        <line x1="610" y1="98" x2="648" y2="98" stroke="#A39B8E" stroke-width="2" marker-end="url(#ar4)"/>
+        <path d="M545,126 L545,170 L220,170 L220,128" fill="none" stroke="#2A9D8F" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#ar4)"/>
+        <text x="380" y="163" text-anchor="middle" font-size="11" fill="#1E7268">重连：建议新建会话（新代次），而非复用旧对象</text>
+        <text x="380" y="35" text-anchor="middle" font-size="12" fill="#A39B8E">connect() / autoConnect 触发建连 · disconnect() 断链路 · close() 终结</text>
+      </svg>
+      <figcaption>状态由 onConnectionStateChange 驱动；close 之后不再有任何回调。</figcaption>
+    </figure>
+    <div class="key"><span class="tag">先记住一件事</span>Android 里有<b>两套 status</b>：连接态回调 <code>onConnectionStateChange</code> 的 status 是 <b>HCI 链路码</b>（8/19/22/62/133…）；而读写 / 发现 / MTU 等操作回调的 status 是 <b>GATT 操作码</b>（GATT_SUCCESS=0、GATT_INSUFFICIENT_AUTHENTICATION=5、GATT_FAILURE=257…）。两者数值含义不同，别混着读。第 4 步分开讲。</div>
+    <div class="recap"><b>本步收束：</b>句柄≠连上；状态机由回调驱动；连接态用 HCI 码、操作用 GATT 码，两套分开。</div>
+  </section>
+
   <section id="connect">
-    <h2><span class="no">第 1 步</span>connectGatt 与 autoConnect</h2>
-    
-      <pre>val gatt = device.connectGatt(ctx, false, callback)  // autoConnect=false 直连
-// autoConnect=true 后台机会式重连，慢但省电</pre>
-      <table><tr><th>autoConnect</th><th>行为</th><th>适用</th></tr>
-        <tr><td>false</td><td>立即直连，超时快</td><td>用户主动操作</td></tr>
-        <tr><td>true</td><td>后台机会式，设备出现才连</td><td>长期伴随设备</td></tr></table>
-      <div class="recap"><b>本步收束：</b>直连用 false，长期伴随用 true；拿到句柄≠连上。</div>
+    <h2><span class="no">第 2 步</span>connectGatt 家族：四个重载逐一讲</h2>
+    <table>
+      <tr><th>重载</th><th>多出的参数</th><th>引入</th></tr>
+      <tr><td><code>connectGatt(ctx, autoConnect, cb)</code></td><td>基础版</td><td><span class="api-lv">18</span></td></tr>
+      <tr><td><code>connectGatt(ctx, autoConnect, cb, transport)</code></td><td>transport：TRANSPORT_AUTO / LE / BR_EDR</td><td><span class="api-lv">23</span></td></tr>
+      <tr><td><code>connectGatt(ctx, autoConnect, cb, transport, phy)</code></td><td>phy：PHY_LE_1M_MASK 等掩码</td><td><span class="api-lv">26</span></td></tr>
+      <tr><td><code>connectGatt(ctx, autoConnect, cb, transport, phy, handler)</code></td><td>handler：指定回调线程</td><td><span class="api-lv">26</span></td></tr>
+    </table>
+    <pre><span class="cm">// 推荐：显式 LE transport，回调放到自己的 Handler 线程</span>
+val gatt = device.connectGatt(ctx, <span class="num">false</span>, callback,
+    BluetoothDevice.TRANSPORT_LE, BluetoothDevice.PHY_LE_1M_MASK, handler)</pre>
+    <h3>2.1 autoConnect：直连 vs 机会连</h3>
+    <table>
+      <tr><th>autoConnect</th><th>行为</th><th>适用</th></tr>
+      <tr><td>false</td><td>立即直连，约 30 秒超时（AOSP 链路超时），失败快</td><td>用户主动「连接」按钮</td></tr>
+      <tr><td>true</td><td>后台机会式：设备进入范围才连，<b>无固定超时</b>，首连慢、省电</td><td>长期伴随设备（手环 / 价签网关）</td></tr>
+    </table>
+    <h3>2.2 transport 与 phy</h3>
+    <p>双模设备务必显式 <code>TRANSPORT_LE</code>，否则 AUTO 可能走经典蓝牙导致奇怪失败。phy 掩码决定在哪些物理层发起连接（1M / 2M / Coded），与 B7 的 PHY 协商配合。</p>
+    <div class="key"><span class="tag">已知坑</span>带 handler 的六参重载在 <b>API 26（Android 8.0）上有 bug</b>，回调可能丢失，27 才修复。兼容做法：26 上退回五参重载，27+ 再用 handler 版（Nordic BLE Library 即如此处理）。</div>
+    <h3>2.3 权限</h3>
+    <p>Android 12+（31+）建连需要 <b>BLUETOOTH_CONNECT</b>（运行时权限）；11 及以下用 BLUETOOTH。注意：<b>连接不需要位置权限</b>，位置只卡扫描（B3）。</p>
+    <div class="recap"><b>本步收束：</b>直连 false、伴随 true；显式 TRANSPORT_LE；handler 版避开 API 26；12+ 要 BLUETOOTH_CONNECT。</div>
+  </section>
+
+  <section id="callback">
+    <h2><span class="no">第 3 步</span>BluetoothGattCallback：全部回调逐一讲</h2>
+    <table>
+      <tr><th>回调</th><th>触发</th><th>引入</th></tr>
+      <tr><td><code>onConnectionStateChange(gatt, status, newState)</code></td><td>连上 / 断开，status 为 HCI 码</td><td><span class="api-lv">18</span></td></tr>
+      <tr><td><code>onServicesDiscovered(gatt, status)</code></td><td>discoverServices 完成</td><td><span class="api-lv">18</span></td></tr>
+      <tr><td><code>onCharacteristicRead / Write / Changed</code></td><td>读 / 写 / 通知到达</td><td><span class="api-lv">18</span></td></tr>
+      <tr><td><code>onDescriptorRead / Write</code></td><td>描述符读 / 写（含 CCCD）</td><td><span class="api-lv">18</span></td></tr>
+      <tr><td><code>onReadRemoteRssi(gatt, rssi, status)</code></td><td>readRemoteRssi 结果</td><td><span class="api-lv">18</span></td></tr>
+      <tr><td><code>onReliableWriteCompleted(gatt, status)</code></td><td>可靠写事务结束</td><td><span class="api-lv">18</span></td></tr>
+      <tr><td><code>onMtuChanged(gatt, mtu, status)</code></td><td>requestMtu 结果或连接事件</td><td><span class="api-lv">21</span></td></tr>
+      <tr><td><code>onPhyUpdate / onPhyRead(gatt, txPhy, rxPhy, status)</code></td><td>PHY 更新 / 读取</td><td><span class="api-lv">26</span></td></tr>
+      <tr><td><code>onServiceChanged(gatt)</code></td><td>对端 GATT 库变了，<b>须重新 discoverServices</b></td><td><span class="api-lv">31</span></td></tr>
+      <tr><td><code>onConnectionUpdated(gatt, interval, latency, timeout, status)</code></td><td>连接参数更新</td><td>较新</td></tr>
+      <tr><td><code>onSubrateChange(gatt, subrateMode, status)</code></td><td>LE subrating 参数变化</td><td><span class="api-lv">36.1</span></td></tr>
+    </table>
+    <div class="key"><span class="tag">API 33 签名变更</span>Android 13 起，<code>onCharacteristicRead</code> / <code>onCharacteristicChanged</code> / <code>onDescriptorRead</code> 新增<b>直接带 byte[] value</b> 的重载，旧签名（自己去 characteristic.getValue()）被标记废弃。新代码用带 value 的重载，避免读到被后续操作覆盖的旧值。</div>
+    <div class="recap"><b>本步收束：</b>回调按操作分配；onServiceChanged 要重发现；33 起用带 value 的新签名。</div>
   </section>
 
   <section id="status">
-    <h2><span class="no">第 2 步</span>onConnectionStateChange 的 status 怎么读</h2>
-    
-      <table><tr><th>status</th><th>含义</th><th>第一步</th></tr>
-        <tr><td>8 (0x08)</td><td>HCI 连接超时</td><td>距离/干扰/参数/设备是否还在</td></tr>
-        <tr><td>19 (0x13)</td><td>对端主动断</td><td>查设备为什么断</td></tr>
-        <tr><td>22 (0x16)</td><td>本机主动断</td><td>查自己 disconnect/系统回收</td></tr>
-        <tr><td>62 (0x3E)</td><td>建立失败</td><td>句柄新鲜度/可连接性</td></tr>
-        <tr><td>133 (0x85)</td><td>通用内部错误</td><td>先定位阶段再找紧邻系统事件</td></tr></table>
-      <div class="key"><span class="tag">重点</span>日志写全来源：<code>op=connect gen=3 cb=onConnectionStateChange status=8 newState=DISCONNECTED elapsed=30012ms</code>。133 不能直接怪固件，要阶段+HCI+对照定位。</div>
-      <div class="recap"><b>本步收束：</b>status 要和回调/阶段一起读；133 是通用错误需定位。</div>
+    <h2><span class="no">第 4 步</span>两套 status：HCI 链路码 vs GATT 操作码</h2>
+    <h3>4.1 连接态：onConnectionStateChange 的 HCI 码</h3>
+    <table>
+      <tr><th>status</th><th>含义</th><th>第一步排查</th></tr>
+      <tr><td>0 (0x00)</td><td>GATT_SUCCESS，操作成功</td><td>看 newState 是连上还是断开</td></tr>
+      <tr><td>8 (0x08)</td><td>HCI 连接超时</td><td>距离 / 干扰 / 连接参数 / 设备是否还在广播</td></tr>
+      <tr><td>19 (0x13)</td><td>对端主动断开</td><td>查设备为什么断（固件 / 电量 / 策略）</td></tr>
+      <tr><td>22 (0x16)</td><td>本机主动断开</td><td>查自己 disconnect / 系统回收</td></tr>
+      <tr><td>62 (0x3E)</td><td>连接建立失败</td><td>句柄新鲜度 / 可连接性 / 是否刚扫到就连</td></tr>
+      <tr><td>133 (0x85)</td><td>通用内部错误（GATT_ERROR）</td><td><b>不能直接怪固件</b>，先定位阶段再找紧邻系统事件</td></tr>
+    </table>
+    <h3>4.2 操作态：读写 / 发现 / MTU 的 GATT 码</h3>
+    <table>
+      <tr><th>常量</th><th>值</th><th>含义</th></tr>
+      <tr><td>GATT_SUCCESS</td><td>0</td><td>成功</td></tr>
+      <tr><td>GATT_INSUFFICIENT_AUTHENTICATION</td><td>5 (0x05)</td><td>需要配对 / 认证</td></tr>
+      <tr><td>GATT_INSUFFICIENT_ENCRYPTION</td><td>15 (0x0F)</td><td>需要加密链路</td></tr>
+      <tr><td>GATT_INVALID_ATTRIBUTE_LENGTH</td><td>13 (0x0D)</td><td>写入长度非法（超 MTU-3 等）</td></tr>
+      <tr><td>GATT_CONNECTION_CONGESTED</td><td>143 (0x8F)</td><td>链路拥塞</td></tr>
+      <tr><td>GATT_FAILURE</td><td>257 (0x101)</td><td>通用失败</td></tr>
+    </table>
+    <div class="key"><span class="tag">133 定位法</span>133 是「筐」错误，覆盖建连 / 发现 / 服务变更各阶段。日志要写全来源：<code>op=connect gen=3 cb=onConnectionStateChange status=133 newState=DISCONNECTED elapsed=…</code>，再结合 <b>阶段 + HCI 抓包（B12）+ 紧邻系统事件</b> 三件套定位，而不是甩锅固件。</div>
+    <div class="recap"><b>本步收束：</b>连接态读 HCI 码、操作读 GATT 码；133 需阶段+HCI+对照定位。</div>
   </section>
 
   <section id="close">
-    <h2><span class="no">第 3 步</span>disconnect ≠ close，重连当新会话</h2>
-    
-      <p><code>disconnect()</code> 断链路但保留 GATT 对象可重连；<code>close()</code> 释放客户端资源，<b>不用了必须 close</b>，否则泄漏连接槽（系统上限约 6–7 个）。重连要丢弃旧代次迟到回调，重新发现/订阅。</p>
-      <div class="recap"><b>本步收束：</b>临时断用 disconnect，彻底释放用 close；重连新代次。</div>
+    <h2><span class="no">第 5 步</span>disconnect ≠ close，重连当新会话</h2>
+    <table>
+      <tr><th>方法</th><th>做什么</th><th>之后</th></tr>
+      <tr><td><code>disconnect()</code></td><td>断链路，触发 onConnectionStateChange→DISCONNECTED，<b>GATT 客户端仍注册</b></td><td>对象保留，理论上可 connect() 重连</td></tr>
+      <tr><td><code>close()</code></td><td>注销客户端，<b>释放连接槽</b></td><td>不再有任何回调；对象作废</td></tr>
+    </table>
+    <div class="key"><span class="tag">重点 · 泄漏</span>系统对 GATT 客户端注册数有上限（<b>常见约 6–7 个</b>）。只 disconnect 不 close，槽位不释放，攒满后新连接直接 133 / 62。<b>不用了必须 close</b>；重连推荐 close 旧的、connectGatt 新的。</div>
+    <h3>5.1 重连 = 新代次（generation）</h3>
+    <p>把每次连接编一个代次号。重连时<b>丢弃旧代次的迟到回调</b>（旧连接可能在后台慢悠悠连上又回调，污染新状态），并在新会话里重新走完整流程：</p>
+    <ul>
+      <li>重新 <code>discoverServices()</code>（服务句柄可能变）；</li>
+      <li>重新订阅 CCCD（通知不会自动恢复，见 B6）；</li>
+      <li>重新 <code>requestMtu()</code>（MTU 不跨连接保留，见 B7）；</li>
+      <li>所有回调先校验代次，过期直接忽略。</li>
+    </ul>
+    <div class="recap"><b>本步收束：</b>临时断用 disconnect，彻底释放用 close；重连新代次、丢旧回调、重发现重订阅重 MTU。</div>
+  </section>
+
+  <section id="params">
+    <h2><span class="no">第 6 步</span>连接参数：priority、MTU、PHY</h2>
+    <h3>6.1 requestConnectionPriority（API 21）</h3>
+    <table>
+      <tr><th>档位</th><th>典型连接间隔（AOSP 映射，厂商可调）</th><th>适用</th></tr>
+      <tr><td>CONNECTION_PRIORITY_HIGH</td><td>≈ 11.25 – 15 ms</td><td>高速传输 / OTA，短时用，费电</td></tr>
+      <tr><td>CONNECTION_PRIORITY_BALANCED</td><td>≈ 30 – 50 ms</td><td>默认，日常交互</td></tr>
+      <tr><td>CONNECTION_PRIORITY_LOW_POWER</td><td>≈ 100 – 125 ms</td><td>低频伴随，省电</td></tr>
+    </table>
+    <p>它只是<b>请求</b>，最终由对端与控制器协商；结果可经 <code>onConnectionUpdated</code> 观察。传完大数据记得降回 BALANCED / LOW_POWER。</p>
+    <h3>6.2 MTU 与 PHY（详见 B7）</h3>
+    <p><code>requestMtu(n)</code>（21）协商 ATT MTU，结果走 onMtuChanged，默认 23；<code>setPreferredPhy / readPhy</code>（26）协商 1M/2M/Coded，结果走 onPhyUpdate / onPhyRead。两者都<b>不跨连接保留</b>，重连要重来。</p>
+    <div class="recap"><b>本步收束：</b>priority 三档按场景切；MTU/PHY 重连要重协商；参数最终由协商决定。</div>
   </section>
 
   <section id="lab">
-    <h2><span class="no">动手</span>走连接状态，看 status 与 disconnect/close</h2>
-    <p>点按钮推进：直连/机会连→成功或超时→断开→close。右侧解释每个 status 与 disconnect/close 的区别。</p>
+    <h2><span class="no">动手</span>两场演练</h2>
+    <h3>演练一 · 走连接状态，看 disconnect / close</h3>
     <div class="lab">
       <div class="lab-head"><b>连接状态演练</b><span class="hint">autoConnect 与关闭方式</span></div>
       <div class="controls"><div class="seg" id="c4"><button data-c="direct">直连</button><button data-c="auto">autoConnect</button><button data-c="ok">连接成功</button><button data-c="to">超时(8)</button><button data-c="disc">disconnect</button><button data-c="close">close</button></div></div>
-      <div class="lab-body"><div><div class="chips" id="st4"></div></div><div class="logcat"><div class="logcat-head"><span>logcat · GATT</span><span>gen=3</span></div><div class="logcat-body" id="log4"><span class="c">// 点按钮走状态</span></div></div></div>
-      <div class="lab-foot"><span class="hint">超时后再 close 释放槽位；不 close 会泄漏连接</span></div>
+      <div class="lab-body"><div><div class="chips" id="st4"></div><div class="stats"><div class="stat-box"><b id="slot4">0</b><small>已占用连接槽</small></div><div class="stat-box bad"><b id="leak4">0</b><small>泄漏(未close)</small></div></div></div><div class="logcat"><div class="logcat-head"><span>logcat · GATT</span><span>gen=3</span></div><div class="logcat-body" id="log4"><span class="c">// 点按钮走状态</span></div></div></div>
+      <div class="lab-foot"><span class="hint">直连/机会连会占一个槽；只 disconnect 不 close，槽不释放→泄漏；close 才归还</span></div>
     </div>
-    <div class="key"><span class="tag">看懂这场演练</span>disconnect 保留对象可重连，close 释放资源。连接槽有限（约 6–7），用完不 close 会泄漏导致后续 133/62。重连要新代次、丢弃旧回调。</div>
+    <h3>演练二 · status 解码器</h3>
+    <p>选一个 status，看它属于哪套命名空间、什么意思、第一步查什么。</p>
+    <div class="lab">
+      <div class="lab-head"><b>status 解码器</b><span class="hint">先分清 HCI 链路码 / GATT 操作码</span></div>
+      <div class="controls"><div class="seg" id="dec4"><button data-s="8">8</button><button data-s="19">19</button><button data-s="22">22</button><button data-s="62">62</button><button data-s="133">133</button><button data-s="5">5</button><button data-s="15">15</button><button data-s="257">257</button></div></div>
+      <div class="lab-body single"><div id="decOut" class="card" style="margin:0;"><span class="hint">点上方任一 status</span></div></div>
+    </div>
+    <div class="key"><span class="tag">看懂这两场演练</span>演练一：disconnect 保留对象可重连，close 释放槽位；槽有限，不 close 会泄漏导致后续 133/62。演练二：8/19/22/62/133 是连接态 HCI 码，5/15/257 是操作 GATT 码，数值相同含义也不同。</div>
   </section>
 
   <section id="quiz">
-    <h2><span class="no">自测</span>三个问题</h2>
+    <h2><span class="no">自测</span>六个问题</h2>
     <div class="card" id="quiz-box"></div>
     <p id="quiz-done" style="display:none;font-weight:700;color:#1E7268;">全对。下一课讲服务发现与读写。</p>
   </section>
 
-  <section id="map">
-    <h2><span class="no">回顾</span>速查</h2>
-    <table><tr><th>项</th><th>记住</th></tr><tr><td>connectGatt</td><td>false 直连 / true 机会</td></tr><tr><td>8/62</td><td>超时 / 没建立</td></tr><tr><td>133</td><td>通用错误需定位</td></tr><tr><td>disconnect/close</td><td>断链路 / 释放槽</td></tr></table>
-    <div class="note"><span class="tag">说明</span>本页为教学简化，工程细节以正文与官方规范为准；演练为模拟，非真实设备通信。</div>
-    <footer>青竹蓝牙学堂 · 蓝牙小课堂Android 第四课 · B4 · <a href="../index.html">回到学堂</a></footer>
+  <section id="cheatsheet">
+    <h2><span class="no">回顾</span>速查表</h2>
+    <table>
+      <tr><th>场景</th><th>用什么</th></tr>
+      <tr><td>用户主动连</td><td>connectGatt(autoConnect=false, TRANSPORT_LE)，限时</td></tr>
+      <tr><td>长期伴随</td><td>autoConnect=true 机会连</td></tr>
+      <tr><td>判断真连上</td><td>onConnectionStateChange newState=CONNECTED，别看句柄</td></tr>
+      <tr><td>连接断开排查</td><td>HCI 码 8/19/22/62/133 对表 + 阶段 + HCI 抓包</td></tr>
+      <tr><td>读写失败排查</td><td>GATT 码 5/15/13/143/257 对表</td></tr>
+      <tr><td>临时断 / 彻底释放</td><td>disconnect / close；不用必须 close</td></tr>
+      <tr><td>重连</td><td>新代次，丢旧回调，重发现 + 重订阅 + 重 MTU</td></tr>
+      <tr><td>提速 / 省电</td><td>requestConnectionPriority HIGH / LOW_POWER，用完降档</td></tr>
+    </table>
+    <div class="note"><span class="tag">说明</span>本页为教学整理，API 级别与行为以官方文档和 AOSP 源码为准；连接间隔、超时、槽位上限随机型变化；演练为模拟，非真实设备通信。</div>
+  </section>
+
+  <section id="refs">
+    <h2><span class="no">依据</span>参考链接</h2>
+    <div class="card refs">
+      <h3 style="margin-top:0;">官方指南</h3>
+      <ul>
+        <li><a href="https://developer.android.com/develop/connectivity/bluetooth/ble/find-ble-devices" target="_blank" rel="noopener">Find BLE devices（官方指南）</a> <span class="src">— 扫描到连接的入口；连接细节见下方 BluetoothGatt 参考</span></li>
+        <li><a href="https://developer.android.com/develop/connectivity/bluetooth/bt-permissions" target="_blank" rel="noopener">Bluetooth permissions</a> <span class="src">— BLUETOOTH_CONNECT</span></li>
+      </ul>
+      <h3>API 参考</h3>
+      <ul>
+        <li><a href="https://developer.android.com/reference/android/bluetooth/BluetoothDevice" target="_blank" rel="noopener">BluetoothDevice</a> <span class="src">— connectGatt 四个重载、TRANSPORT_*、PHY_*_MASK</span></li>
+        <li><a href="https://developer.android.com/reference/android/bluetooth/BluetoothGatt" target="_blank" rel="noopener">BluetoothGatt</a> <span class="src">— connect/disconnect/close、requestMtu、requestConnectionPriority、GATT_* 常量</span></li>
+        <li><a href="https://developer.android.com/reference/android/bluetooth/BluetoothGattCallback" target="_blank" rel="noopener">BluetoothGattCallback</a> <span class="src">— 全部回调与级别、33 新签名</span></li>
+      </ul>
+      <h3>AOSP 源码（超时 / 间隔 / 槽位的实现）</h3>
+      <ul>
+        <li><a href="https://cs.android.com/android/platform/superproject/main/+/main:packages/modules/Bluetooth/system/stack/include/gatt_api.h" target="_blank" rel="noopener">gatt_api.h</a> <span class="src">— GATT 操作码、HCI 状态码定义</span></li>
+        <li><a href="https://cs.android.com/android/platform/superproject/main/+/main:packages/modules/Bluetooth/system/stack/gatt/gatt_conn.cc" target="_blank" rel="noopener">gatt_conn.cc</a> <span class="src">— 连接超时、connection priority 间隔映射</span></li>
+      </ul>
+      <h3>实测与深入</h3>
+      <ul>
+        <li><a href="https://github.com/NordicSemiconductor/Android-BLE-Library/issues/54" target="_blank" rel="noopener">Nordic BLE Library · issue #54</a> <span class="src">— API 26 handler 重载 bug 与兼容写法</span></li>
+        <li><a href="https://punchthrough.com/android-ble-guide/" target="_blank" rel="noopener">Punch Through · Android BLE Ultimate Guide</a> <span class="src">— 133 排查、close 防泄漏、重连实践</span></li>
+      </ul>
+    </div>
+    <div class="next-links">
+      <a href="03-scan-filter.html">← B3 扫描与过滤</a>
+      <a href="05-discovery-readwrite.html">B5 发现与读写 →</a>
+    </div>
+    <footer>青竹蓝牙学堂 · 蓝牙小课堂 Android 第四课 · B4 · <a href="../index.html">回到学堂</a></footer>
   </section>
 </main>
 <aside class="toc" id="toc">
   <div class="toc-title">本课目录</div>
-  <a href="#connect">建连</a>
-  <a href="#status">状态码</a>
+  <a href="#map">连接全景</a>
+  <a href="#connect">connectGatt 族</a>
+  <a href="#callback">全部回调</a>
+  <a href="#status">两套 status</a>
   <a href="#close">关闭与重连</a>
-  <a href="#lab">动手演练</a>
+  <a href="#params">连接参数</a>
+  <a href="#lab">两场演练</a>
   <a href="#quiz">本课自测</a>
-  <a href="#map">回顾与速查</a>
+  <a href="#cheatsheet">速查表</a>
+  <a href="#refs">参考链接</a>
 </aside>
 </div>
 <script>
-
+// 演练一：连接状态 + 槽位泄漏
 (function(){
-  var st='IDLE', closed=false;
+  var st='IDLE', closed=false, slots=0, leak=0, held=false;
   function paint(extra){
     document.getElementById('st4').innerHTML='<span class="chip '+(st==='READY'?'on':'')+'">'+st+'</span><span class="chip '+(closed?'bad':'')+'">'+(closed?'已close':'未close')+'</span>';
-    if(extra)document.getElementById('log4').innerHTML=extra;
+    document.getElementById('slot4').textContent=slots;
+    document.getElementById('leak4').textContent=leak;
+    if(extra){ var l=document.getElementById('log4'); l.innerHTML+=extra; l.scrollTop=l.scrollHeight; }
   }
-  var M={direct:'<div><span class="api">connectGatt(autoConnect=false)</span> 直连</div>',
-    auto:'<div><span class="api">connectGatt(autoConnect=true)</span> 机会式，设备出现才连</div>',
+  var M={direct:'<div><span class="api">connectGatt(autoConnect=false)</span> 直连，占 1 槽</div>',
+    auto:'<div><span class="api">connectGatt(autoConnect=true)</span> 机会式，占 1 槽</div>',
     ok:'<div><span class="ok">onConnectionStateChange status=0 CONNECTED</span></div>',
-    to:'<div><span class="err">status=8(0x08) DISCONNECTED elapsed=30012ms</span> <span class="c">// HCI 超时，查距离/干扰</span></div>',
-    disc:'<div><span class="api">disconnect()</span> 断链路，GATT 对象保留可重连</div>',
-    close:'<div><span class="ok">close()</span> 释放客户端槽位 <span class="c">// 不用必须 close</span></div>'};
+    to:'<div><span class="err">status=8(0x08) DISCONNECTED elapsed=30012ms</span> <span class="c">// HCI 超时</span></div>',
+    disc:'<div><span class="api">disconnect()</span> 断链路，<span class="warn">槽仍占用</span>，对象保留</div>',
+    close:'<div><span class="ok">close()</span> 释放槽位 <span class="c">// 不用必须 close</span></div>'};
   document.querySelectorAll('#c4 button').forEach(function(b){b.addEventListener('click',function(){
     var k=b.getAttribute('data-c');
-    if(k==='direct'||k==='auto'){st='CONNECTING';closed=false;}
+    if(k==='direct'||k==='auto'){ if(!held){slots++;held=true;} st='CONNECTING';closed=false; }
     if(k==='ok')st='READY';
     if(k==='to')st='DISCONNECTED';
-    if(k==='disc')st='DISCONNECTED';
-    if(k==='close'){closed=true;st='CLOSED';}
+    if(k==='disc'){ st='DISCONNECTED'; if(held){leak++;} }
+    if(k==='close'){ if(held){slots--;held=false;} closed=true;st='CLOSED'; }
     paint(M[k]);
   });});
   paint();
 })();
 
+// 演练二：status 解码器
+(function(){
+  var D={
+    '8':['HCI 链路码','连接超时','查距离 / 干扰 / 连接参数 / 设备是否还在广播'],
+    '19':['HCI 链路码','对端主动断开','查设备为什么断（固件 / 电量 / 策略）'],
+    '22':['HCI 链路码','本机主动断开','查自己 disconnect / 系统回收'],
+    '62':['HCI 链路码','连接建立失败','查句柄新鲜度 / 可连接性'],
+    '133':['HCI 链路码','通用内部错误 GATT_ERROR','阶段 + HCI 抓包 + 紧邻系统事件三件套定位，别直接怪固件'],
+    '5':['GATT 操作码','GATT_INSUFFICIENT_AUTHENTICATION','需要配对 / 认证，走 B11'],
+    '15':['GATT 操作码','GATT_INSUFFICIENT_ENCRYPTION','需要加密链路'],
+    '257':['GATT 操作码','GATT_FAILURE','通用失败，看具体操作与阶段']
+  };
+  document.querySelectorAll('#dec4 button').forEach(function(b){b.addEventListener('click',function(){
+    document.querySelectorAll('#dec4 button').forEach(function(x){x.classList.remove('on');});
+    b.classList.add('on');
+    var d=D[b.getAttribute('data-s')];
+    document.getElementById('decOut').innerHTML='<div class="chips"><span class="chip '+(d[0]==='HCI 链路码'?'bad':'on')+'">'+d[0]+'</span><span class="chip">status='+b.getAttribute('data-s')+'</span></div><p style="margin:8px 0 4px;font-weight:700;">'+d[1]+'</p><p style="margin:0;color:var(--muted);font-size:14px;">第一步：'+d[2]+'</p>';
+  });});
+})();
+
+// 目录高亮
 const tocLinks=[...document.querySelectorAll('.toc a')];
 const secs=tocLinks.map(a=>document.getElementById(a.getAttribute('href').slice(1)));
 const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){tocLinks.forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+e.target.id));}});},{rootMargin:'-20% 0px -70% 0px'});
 secs.forEach(s=>s&&io.observe(s));
-const QUIZ=[{"q":"1. 不用 GATT 时必须调什么防泄漏？","opts":[["close()",true,"对。释放客户端槽位。"],["disconnect()",false,"只断链路不释放。"],["stopScan",false,"那是扫描。"]]},{"q":"2. status=133 能直接怪固件吗？","opts":[["不能，是通用错误需阶段+HCI 定位",true,"对。"],["能",false,"133 含义广。"],["是权限问题",false,"权限会抛 SecurityException。"]]},{"q":"3. 长期伴随设备用 autoConnect？","opts":[["true，机会式重连",true,"对。"],["false",false,"false 是立即直连。"],["无所谓",false,"取舍不同。"]]}];
+
+// 自测
+const QUIZ=[
+ {"q":"1. 不用 GATT 时必须调什么防泄漏？","opts":[["close()",true,"对。释放客户端槽位，槽上限约 6–7。"],["disconnect()",false,"只断链路不释放槽。"],["stopScan",false,"那是扫描。"]]},
+ {"q":"2. status=133 能直接怪固件吗？","opts":[["不能，是通用错误需阶段+HCI 定位",true,"对。133 是筐错误。"],["能",false,"含义太广。"],["是权限问题",false,"权限会抛 SecurityException。"]]},
+ {"q":"3. 长期伴随设备用 autoConnect？","opts":[["true，机会式重连",true,"对。无固定超时、省电。"],["false",false,"false 是立即直连。"],["无所谓",false,"取舍不同。"]]},
+ {"q":"4. onConnectionStateChange 的 status=8 属于？","opts":[["HCI 链路码，连接超时",true,"对。连接态用 HCI 码。"],["GATT 操作码",false,"操作码是读写/发现那套。"],["权限错误",false,"无关。"]]},
+ {"q":"5. 重连时为什么要新代次？","opts":[["丢弃旧连接迟到回调，重发现/订阅/MTU",true,"对。旧回调会污染新状态。"],["为了省电",false,"无关。"],["系统强制",false,"是工程实践。"]]},
+ {"q":"6. 带 handler 的 connectGatt 重载要避开哪个版本？","opts":[["API 26（8.0），27 才修复",true,"对。26 上回调可能丢。"],["API 21",false,"无关。"],["API 33",false,"无关。"]]}
+];
 let solved=0; const box=document.getElementById('quiz-box');
 QUIZ.forEach((item,qi)=>{
   const h=document.createElement('div'); h.className='quiz-q'; h.textContent=item.q; box.appendChild(h);
@@ -329,7 +528,6 @@ QUIZ.forEach((item,qi)=>{
   });
   box.appendChild(ex);
 });
-
 </script>
 </body>
 </html>

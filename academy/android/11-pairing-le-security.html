@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>蓝牙小课堂 · B11 配对与LE安全 · 青竹蓝牙学堂</title>
+<title>蓝牙小课堂 · B11 配对与 LE 安全 · 青竹蓝牙学堂</title>
 <style>
   :root{
     --bg:#F7F6F2; --card:#FFFFFF; --ink:#2B2620; --muted:#7A7267; --faint:#A39B8E;
@@ -172,6 +172,10 @@
   .ctl-row label{display:inline-flex;align-items:center;gap:10px;}
   .ctl-row input[type=range]{accent-color:var(--coral);width:160px;}
   .ctl-row .chk input{accent-color:var(--coral);}
+  .api-lv{display:inline-block;font-family:ui-monospace,Consolas,monospace;font-size:11.5px;font-weight:800;color:#2F58A8;background:var(--blue-soft);border:1px solid var(--blue-line);border-radius:999px;padding:0 8px;white-space:nowrap;}
+  .refs{font-size:14px;}
+  .refs li{margin:7px 0;}
+  .refs .src{font-size:12px;color:var(--faint);}
 </style>
 </head>
 <body style="--coral:#E8590C;--coral-soft:#FBEADF;--coral-line:#F2C4A4">
@@ -203,41 +207,66 @@
 <main>
   <div class="crumb">蓝牙小课堂 / Android 第十一课 · B11</div>
   <h1>配对与 LE 安全：<em>createBond</em> 与加密事件</h1>
-  <p class="lead">写配置返回 0x05/0x0F，是安全层问题。这一课讲 Android createBond、绑定状态广播、加密启用，以及恢复出厂两侧密钥清理。</p>
-  <div class="meta"><span>平台：Android/Kotlin</span><span>约 12 分钟</span><span>含交互演练</span><span>前置：B4</span></div>
+  <p class="lead">写配置返回 0x05/0x0F，是安全层问题。这一课把 createBond 与绑定状态广播、LE 配对方式与密钥、加密重新启用、ATT 安全错误码、恢复出厂两侧清密钥逐一讲清，并给出官方依据。</p>
+  <div class="meta"><span>平台：Android/Kotlin</span><span>约 24 分钟</span><span>API 19 → 33</span><span>含交互演练</span><span>前置：B4</span></div>
   <div class="journey">
-    <div class="j-step"><span class="n">1</span><span class="t">createBond</span><span class="s">配对</span></div>
-    <div class="j-step"><span class="n">2</span><span class="t">状态</span><span class="s">BOND_BONDED</span></div>
+    <div class="j-step"><span class="n">1</span><span class="t">createBond</span><span class="s">状态广播</span></div>
+    <div class="j-step"><span class="n">2</span><span class="t">配对</span><span class="s">方式+密钥</span></div>
     <div class="j-step"><span class="n">3</span><span class="t">加密</span><span class="s">重新启用</span></div>
     <div class="j-step"><span class="n">4</span><span class="t">恢复出厂</span><span class="s">两侧清</span></div>
-    <div class="j-step"><span class="n">5</span><span class="t">动手</span><span class="s">走绑定</span></div>
+    <div class="j-step"><span class="n">5</span><span class="t">动手</span><span class="s">两场演练</span></div>
   </div>
 
   <section id="bond">
-    <h2><span class="no">第 1 步</span>createBond 与绑定状态</h2>
-    
-      <pre>device.createBond()
-// 监听 ACTION_BOND_STATE_CHANGED: BOND_NONE→BONDING→BONDED
-// 读写遇 0x05/0x0F 时触发配对/加密</pre>
-      <div class="recap"><b>本步收束：</b>createBond 异步，监听绑定状态广播。</div>
+    <h2><span class="no">第 1 步</span>createBond 与绑定状态广播</h2>
+    <pre>device.createBond()                 <span class="cm">// API 19，异步</span>
+<span class="cm">// 监听 ACTION_BOND_STATE_CHANGED：</span>
+<span class="cm">// EXTRA_BOND_STATE: BOND_NONE(10) → BOND_BONDING(11) → BOND_BONDED(12)</span>
+<span class="cm">// EXTRA_PREVIOUS_BOND_STATE 看从哪来；失败回 BOND_NONE</span></pre>
+    <table>
+      <tr><th>API / 常量</th><th>说明</th><th>级别</th></tr>
+      <tr><td>createBond()</td><td>发起配对</td><td><span class="api-lv">19</span></td></tr>
+      <tr><td>createBond(transport)</td><td>指定 TRANSPORT_LE / BR_EDR</td><td><span class="api-lv">19</span></td></tr>
+      <tr><td>getBondState()</td><td>查当前绑定状态</td><td>早期</td></tr>
+      <tr><td>removeBond()</td><td>删绑定（隐藏 API，反射/系统设置）</td><td>非公开</td></tr>
+    </table>
+    <div class="recap"><b>本步收束：</b>createBond 异步，监听 BOND_STATE_CHANGED 三态；removeBond 非公开。</div>
+  </section>
+
+  <section id="pairing">
+    <h2><span class="no">第 2 步</span>LE 配对方式与密钥</h2>
+    <table>
+      <tr><th>配对方式</th><th>交互</th><th>安全</th></tr>
+      <tr><td>Just Works</td><td>无确认</td><td>无 MITM 保护</td></tr>
+      <tr><td>Numeric Comparison</td><td>两端比 6 位数字</td><td>有 MITM（LE Secure Connections）</td></tr>
+      <tr><td>Passkey Entry</td><td>输入 6 位密钥</td><td>有 MITM</td></tr>
+      <tr><td>OOB</td><td>带外（NFC 等）</td><td>取决于带外通道</td></tr>
+    </table>
+    <p><b>密钥：</b>配对生成 <b>LTK</b>（长期密钥，加密用）、<b>IRK</b>（身份解析，解析私有地址）、<b>CSRK</b>（签名）。LE Secure Connections（BT 4.2）用 ECDH，更安全。绑定（bonding）= 配对 + 保存密钥供重连。</p>
+    <div class="recap"><b>本步收束：</b>四种配对方式；LTK 加密 / IRK 解析地址 / CSRK 签名；绑定=配对+存密钥。</div>
   </section>
 
   <section id="enc">
-    <h2><span class="no">第 2 步</span>绑定重连要重新启用加密</h2>
-    
-      <p>绑定保存 LTK/IRK，但重连后<b>不自动加密</b>，要用保存的 LTK 重新启用。0x05 认证不足、0x0F 加密不足是安全层（配对加密可解）；0x08 授权不足是业务层（走厂商授权）。</p>
-      <div class="recap"><b>本步收束：</b>重连重新启用加密；分清安全层与业务层错误。</div>
+    <h2><span class="no">第 3 步</span>绑定重连要重新启用加密 + 错误码分层</h2>
+    <p>绑定保存 LTK/IRK，但重连后<b>不自动加密</b>，要用保存的 LTK 重新启用（访问受保护特征时协议栈触发）。分清三层错误：</p>
+    <table>
+      <tr><th>ATT 错误</th><th>含义</th><th>层</th><th>处理</th></tr>
+      <tr><td>0x05</td><td>Insufficient Authentication</td><td>安全层</td><td>配对</td></tr>
+      <tr><td>0x0F</td><td>Insufficient Encryption</td><td>安全层</td><td>启用加密</td></tr>
+      <tr><td>0x08</td><td>Insufficient Authorization</td><td>业务层</td><td>走厂商授权</td></tr>
+    </table>
+    <div class="recap"><b>本步收束：</b>重连重新启用加密；0x05/0x0F 安全层、0x08 业务层。</div>
   </section>
 
   <section id="reset">
-    <h2><span class="no">第 3 步</span>恢复出厂两侧密钥一起清</h2>
-    
-      <div class="key"><span class="tag">重点 · 高频客诉</span>外设恢复出厂丢密钥，手机留旧 LTK→加密失败「连上但读写报错/反复弹配对」。用 <code>removeBond()</code>（反射/系统设置）删旧绑定重新配对。把恢复出厂列入测试用例。</div>
-      <div class="recap"><b>本步收束：</b>密钥失效要删旧绑定重配，两侧一起清。</div>
+    <h2><span class="no">第 4 步</span>恢复出厂两侧密钥一起清</h2>
+    <div class="key"><span class="tag">重点 · 高频客诉</span>外设恢复出厂丢密钥，手机留旧 LTK → 加密失败「连上但读写报错 / 反复弹配对」。用 <code>removeBond()</code>（反射 / 系统设置）删旧绑定重新配对。把恢复出厂列入测试用例。</div>
+    <div class="recap"><b>本步收束：</b>密钥失效要删旧绑定重配，两侧一起清。</div>
   </section>
 
   <section id="lab">
-    <h2><span class="no">动手</span>走绑定→加密，再恢复出厂看故障</h2>
+    <h2><span class="no">动手</span>两场演练</h2>
+    <h3>演练一 · 走绑定→加密，再恢复出厂看故障</h3>
     <p>点 createBond→BONDED→启用加密。再点「外设恢复出厂」后启用加密，看密钥不匹配；点 removeBond 清理后重新配对恢复。</p>
     <div class="lab">
       <div class="lab-head"><b>Android 配对演练</b><span class="hint">createBond / removeBond</span></div>
@@ -245,53 +274,106 @@
       <div class="lab-body"><div><div class="chips" id="st11"></div></div><div class="logcat"><div class="logcat-head"><span>logcat · bond</span><span>verbose</span></div><div class="logcat-body" id="log11"><span class="c">// createBond</span></div></div></div>
       <div class="lab-foot"><span class="hint">恢复出厂后加密失败→removeBond→重新 createBond</span></div>
     </div>
-    <div class="key"><span class="tag">看懂这场演练</span>createBond 异步监听状态；绑定重连要重新启用加密。恢复出厂密钥不匹配是「连上但读写报错」根因，removeBond 删旧绑定重配，两侧一起清。</div>
+    <h3>演练二 · ATT 安全错误码解码</h3>
+    <div class="lab">
+      <div class="lab-head"><b>错误码分层</b><span class="hint">安全层 vs 业务层</span></div>
+      <div class="controls"><div class="seg" id="err11"><button data-e="05" class="on">0x05</button><button data-e="0f">0x0F</button><button data-e="08">0x08</button></div></div>
+      <div class="lab-body single"><div id="errOut11" class="card" style="margin:0;"></div></div>
+    </div>
+    <div class="key"><span class="tag">看懂这两场演练</span>createBond 异步监听状态；绑定重连要重新启用加密。恢复出厂密钥不匹配是「连上但读写报错」根因，removeBond 删旧绑定重配。0x05/0x0F 安全层、0x08 业务层。</div>
   </section>
 
   <section id="quiz">
-    <h2><span class="no">自测</span>三个问题</h2>
+    <h2><span class="no">自测</span>六个问题</h2>
     <div class="card" id="quiz-box"></div>
     <p id="quiz-done" style="display:none;font-weight:700;color:#1E7268;">全对。下一课讲抓包与错误码排障。</p>
   </section>
 
-  <section id="map">
-    <h2><span class="no">回顾</span>速查</h2>
-    <table><tr><th>项</th><th>记住</th></tr><tr><td>createBond</td><td>异步+状态广播</td></tr><tr><td>0x05/0x0F</td><td>安全层</td></tr><tr><td>0x08</td><td>业务授权</td></tr><tr><td>恢复出厂</td><td>removeBond 两侧清</td></tr></table>
-    <div class="note"><span class="tag">说明</span>本页为教学简化，工程细节以正文与官方规范为准；演练为模拟，非真实设备通信。</div>
-    <footer>青竹蓝牙学堂 · 蓝牙小课堂Android 第十一课 · B11 · <a href="../index.html">回到学堂</a></footer>
+  <section id="cheatsheet">
+    <h2><span class="no">回顾</span>速查表</h2>
+    <table>
+      <tr><th>项</th><th>记住</th></tr>
+      <tr><td>createBond</td><td>异步 + 状态广播（19）</td></tr>
+      <tr><td>0x05 / 0x0F</td><td>安全层（配对/加密）</td></tr>
+      <tr><td>0x08</td><td>业务授权</td></tr>
+      <tr><td>LTK / IRK / CSRK</td><td>加密 / 解析地址 / 签名</td></tr>
+      <tr><td>恢复出厂</td><td>removeBond 两侧清</td></tr>
+    </table>
+    <div class="note"><span class="tag">说明</span>本页为教学整理，removeBond 为非公开 API；以官方文档与设备协议为准；演练为模拟。</div>
+  </section>
+
+  <section id="refs">
+    <h2><span class="no">依据</span>参考链接</h2>
+    <div class="card refs">
+      <h3 style="margin-top:0;">API 参考</h3>
+      <ul>
+        <li><a href="https://developer.android.com/reference/android/bluetooth/BluetoothDevice#createBond()" target="_blank" rel="noopener">BluetoothDevice.createBond</a> / <a href="https://developer.android.com/reference/android/bluetooth/BluetoothDevice#ACTION_BOND_STATE_CHANGED" target="_blank" rel="noopener">ACTION_BOND_STATE_CHANGED</a> <span class="src">— 配对与状态广播</span></li>
+        <li><a href="https://developer.android.com/reference/android/bluetooth/BluetoothDevice#getBondState()" target="_blank" rel="noopener">getBondState</a> <span class="src">— BOND_NONE/BONDING/BONDED</span></li>
+      </ul>
+      <h3>规范</h3>
+      <ul>
+        <li><a href="https://www.bluetooth.com/specifications/specs/" target="_blank" rel="noopener">Core Spec · SM（Security Manager）</a> <span class="src">— 配对方式、LTK/IRK/CSRK、LE Secure Connections</span></li>
+        <li><a href="https://www.bluetooth.com/specifications/specs/" target="_blank" rel="noopener">Core Spec · ATT 错误码</a> <span class="src">— 0x05/0x08/0x0F</span></li>
+      </ul>
+    </div>
+    <div class="next-links">
+      <a href="10-background-fgs-cdm.html">← B10 后台与前台服务</a>
+      <a href="12-hci-snoop-errors.html">B12 抓包与错误码 →</a>
+    </div>
+    <footer>青竹蓝牙学堂 · 蓝牙小课堂 Android 第十一课 · B11 · <a href="../index.html">回到学堂</a></footer>
   </section>
 </main>
 <aside class="toc" id="toc">
   <div class="toc-title">本课目录</div>
   <a href="#bond">createBond</a>
-  <a href="#enc">加密</a>
+  <a href="#pairing">配对方式与密钥</a>
+  <a href="#enc">加密与错误码</a>
   <a href="#reset">恢复出厂</a>
-  <a href="#lab">动手演练</a>
+  <a href="#lab">两场演练</a>
   <a href="#quiz">本课自测</a>
-  <a href="#map">回顾与速查</a>
+  <a href="#cheatsheet">速查表</a>
+  <a href="#refs">参考链接</a>
 </aside>
 </div>
 <script>
-
+// 演练一：配对
 (function(){
-  var bonded=false, devKeys=true, enc=false;
-  function paint(){ document.getElementById('st11').innerHTML='<span class="chip '+(bonded?'on':'')+'">'+(bonded?'BONDED':'BOND_NONE')+'</span><span class="chip '+(enc?'on':'')+'">'+(enc?'加密':'明文')+'</span><span class="chip '+(devKeys?'':'bad')+'">'+(devKeys?'外设有密钥':'外设已清空')+'</span>'; }
+  var bonded=false, devKeys=true, enc=false, log=document.getElementById('log11'), st=document.getElementById('st11');
+  function line(h){ var d=document.createElement('div'); d.innerHTML=h; log.appendChild(d); log.scrollTop=log.scrollHeight; }
+  function chips(){ st.innerHTML='<span class="chip'+(bonded?' on':'')+'">'+(bonded?'BONDED':'BOND_NONE')+'</span><span class="chip'+(enc?' on':'')+'">'+(enc?'加密开':'未加密')+'</span><span class="chip'+(devKeys?' on':' bad')+'">'+(devKeys?'外设有密钥':'外设密钥丢')+'</span>'; }
   document.querySelectorAll('#b11 button').forEach(function(b){b.addEventListener('click',function(){
-    var k=b.getAttribute('data-b'), log=document.getElementById('log11');
-    if(k==='bond'){bonded=true;devKeys=true;enc=false;log.innerHTML='<div><span class="ok">BOND_NONE→BONDING→BONDED</span> 存 LTK/IRK</div>';}
-    if(k==='enc'){ if(!bonded){log.innerHTML='<div><span class="warn">先 createBond</span></div>';} else if(!devKeys){enc=false;log.innerHTML='<div><span class="err">✗ 旧 LTK 不匹配（0x05/0x0F）</span></div><div><span class="warn">→ removeBond 重新配对</span></div>';} else {enc=true;log.innerHTML='<div><span class="ok">用 LTK 启用加密</span></div>';} }
-    if(k==='reset'){devKeys=false;enc=false;log.innerHTML='<div><span class="warn">外设恢复出厂清空密钥</span> 手机仍留旧 LTK</div>';}
-    if(k==='remove'){bonded=false;enc=false;log.innerHTML='<div><span class="api">removeBond()</span> 删旧绑定 → 重新 createBond</div>';}
-    paint();
+    var k=b.getAttribute('data-b');
+    if(k==='bond'){ bonded=true; enc=false; line('<span class="api">createBond()</span> → BONDING → <span class="ok">BONDED</span>，存 LTK'); }
+    else if(k==='enc'){ if(!bonded){ line('<span class="warn">未绑定，先 createBond</span>'); } else if(!devKeys){ enc=false; line('<span class="err">启用加密失败：外设密钥已丢，LTK 不匹配（0x05）</span>'); } else { enc=true; line('<span class="ok">用 LTK 重新启用加密成功</span>'); } }
+    else if(k==='reset'){ devKeys=false; enc=false; line('<span class="warn">外设恢复出厂 → 密钥清空，手机仍留旧 LTK</span>'); }
+    else if(k==='remove'){ bonded=false; enc=false; devKeys=true; line('<span class="api">removeBond()</span> 删旧绑定 → 重新 createBond 即可恢复'); }
+    chips();
   });});
-  paint();
+  chips();
 })();
-
+// 演练二：错误码
+(function(){
+  var E={'05':['Insufficient Authentication','安全层','触发配对 createBond'],
+    '0f':['Insufficient Encryption','安全层','用 LTK 启用加密'],
+    '08':['Insufficient Authorization','业务层','走厂商授权流程，非配对能解']};
+  function show(k){ var e=E[k]; document.getElementById('errOut11').innerHTML='<p style="margin:0 0 6px;font-weight:700;">0x'+k.toUpperCase()+' · '+e[0]+'</p><div class="chips"><span class="chip '+(e[1]==='安全层'?'on':'bad')+'">'+e[1]+'</span></div><p style="margin:8px 0 0;color:var(--muted);font-size:14px;">'+e[2]+'</p>'; }
+  document.querySelectorAll('#err11 button').forEach(function(b){b.addEventListener('click',function(){document.querySelectorAll('#err11 button').forEach(function(x){x.classList.remove('on');});b.classList.add('on');show(b.getAttribute('data-e'));});});
+  show('05');
+})();
+// 目录高亮
 const tocLinks=[...document.querySelectorAll('.toc a')];
 const secs=tocLinks.map(a=>document.getElementById(a.getAttribute('href').slice(1)));
 const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){tocLinks.forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+e.target.id));}});},{rootMargin:'-20% 0px -70% 0px'});
 secs.forEach(s=>s&&io.observe(s));
-const QUIZ=[{"q":"1. 0x05/0x0F 与 0x08 区别？","opts":[["前者安全层(配对加密可解)，后者业务层(厂商授权)",true,"对。"],["一样",false,"层次不同。"],["都配对解决",false,"0x08 配对没用。"]]},{"q":"2. 绑定重连后链路自动加密吗？","opts":[["不，要用 LTK 重新启用",true,"对。"],["自动",false,"需要启用。"],["看 MTU",false,"无关。"]]},{"q":"3. 外设恢复出厂后读写报错，产品流程？","opts":[["检测密钥失效，引导 removeBond 重新配对",true,"对。"],["重启 App",false,"不解决密钥。"],["换设备",false,"不必。"]]}];
+// 自测
+const QUIZ=[
+ {"q":"1. createBond 是同步还是异步？","opts":[["异步，监听状态广播",true,"对。"],["同步",false,"异步。"],["阻塞",false,"不阻塞。"]]},
+ {"q":"2. 绑定状态三态？","opts":[["NONE→BONDING→BONDED",true,"对。10/11/12。"],["只有 BONDED",false,"有三态。"],["随机",false,"有序。"]]},
+ {"q":"3. 写返回 0x0F 是哪层？","opts":[["安全层，加密不足",true,"对。启用加密。"],["业务层",false,"那是 0x08。"],["链路层",false,"ATT 安全。"]]},
+ {"q":"4. 0x08 授权不足怎么解？","opts":[["走厂商业务授权",true,"对。配对解不了。"],["createBond",false,"那是安全层。"],["重连",false,"无关。"]]},
+ {"q":"5. LTK 用来？","opts":[["加密",true,"对。IRK 解析地址。"],["解析地址",false,"那是 IRK。"],["签名",false,"那是 CSRK。"]]},
+ {"q":"6. 外设恢复出厂后连上但读写报错？","opts":[["手机旧 LTK 不匹配，removeBond 重配",true,"对。两侧清。"],["固件坏",false,"密钥问题。"],["权限",false,"无关。"]]}
+];
 let solved=0; const box=document.getElementById('quiz-box');
 QUIZ.forEach((item,qi)=>{
   const h=document.createElement('div'); h.className='quiz-q'; h.textContent=item.q; box.appendChild(h);
@@ -311,7 +393,6 @@ QUIZ.forEach((item,qi)=>{
   });
   box.appendChild(ex);
 });
-
 </script>
 </body>
 </html>

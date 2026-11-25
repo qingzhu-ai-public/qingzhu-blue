@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>蓝牙小课堂 · B13 厂商兼容与机型矩阵 · 青竹蓝牙学堂</title>
+<title>蓝牙小课堂 · B13 厂商兼容机型矩阵 · 青竹蓝牙学堂</title>
 <style>
   :root{
     --bg:#F7F6F2; --card:#FFFFFF; --ink:#2B2620; --muted:#7A7267; --faint:#A39B8E;
@@ -172,6 +172,10 @@
   .ctl-row label{display:inline-flex;align-items:center;gap:10px;}
   .ctl-row input[type=range]{accent-color:var(--coral);width:160px;}
   .ctl-row .chk input{accent-color:var(--coral);}
+  .api-lv{display:inline-block;font-family:ui-monospace,Consolas,monospace;font-size:11.5px;font-weight:800;color:#2F58A8;background:var(--blue-soft);border:1px solid var(--blue-line);border-radius:999px;padding:0 8px;white-space:nowrap;}
+  .refs{font-size:14px;}
+  .refs li{margin:7px 0;}
+  .refs .src{font-size:12px;color:var(--faint);}
 </style>
 </head>
 <body style="--coral:#E8590C;--coral-soft:#FBEADF;--coral-line:#F2C4A4">
@@ -203,98 +207,167 @@
 <main>
   <div class="crumb">蓝牙小课堂 / Android 第十三课 · B13</div>
   <h1>厂商兼容与机型矩阵：<em>平台行为</em>要实测</h1>
-  <p class="lead">同一份代码在不同厂商手机上行为不同：扫描限流阈值、后台策略、GATT 回调线程、连接槽数。这一课讲怎么建可复测的机型矩阵分离变量。</p>
-  <div class="meta"><span>平台：Android/Kotlin</span><span>约 12 分钟</span><span>含交互演练</span><span>前置：B12</span></div>
+  <p class="lead">同一份代码在不同厂商手机上行为不同：扫描限流阈值、后台策略、GATT 回调线程、连接槽数。这一课把常见差异点、能力查询 API、可复测矩阵、单变量隔离与记录规范逐一讲清，并给出官方依据。</p>
+  <div class="meta"><span>平台：Android/Kotlin</span><span>约 22 分钟</span><span>兼容课</span><span>含交互演练</span><span>前置：B12</span></div>
   <div class="journey">
     <div class="j-step"><span class="n">1</span><span class="t">差异</span><span class="s">平台行为</span></div>
-    <div class="j-step"><span class="n">2</span><span class="t">矩阵</span><span class="s">可复测</span></div>
-    <div class="j-step"><span class="n">3</span><span class="t">隔离</span><span class="s">单变量</span></div>
-    <div class="j-step"><span class="n">4</span><span class="t">记录</span><span class="s">版本固件</span></div>
-    <div class="j-step"><span class="n">5</span><span class="t">动手</span><span class="s">查差异</span></div>
+    <div class="j-step"><span class="n">2</span><span class="t">能力</span><span class="s">查询 API</span></div>
+    <div class="j-step"><span class="n">3</span><span class="t">矩阵</span><span class="s">单变量</span></div>
+    <div class="j-step"><span class="n">4</span><span class="t">记录</span><span class="s">四要素</span></div>
+    <div class="j-step"><span class="n">5</span><span class="t">动手</span><span class="s">两场演练</span></div>
   </div>
 
   <section id="diff">
     <h2><span class="no">第 1 步</span>常见厂商差异点</h2>
-    
-      <ul><li>扫描限流阈值与熄屏策略各家不同。</li>
-        <li>GATT 回调线程/并发连接槽数差异。</li>
-        <li>后台启动 FGS、CDM 存在事件投递的厂商限制。</li>
-        <li>autoConnect 重连时机、缓存刷新行为差异。</li></ul>
-      <div class="recap"><b>本步收束：</b>差异是平台行为，不是你的 bug，要实测记录。</div>
+    <table>
+      <tr><th>差异点</th><th>表现</th><th>应对</th></tr>
+      <tr><td>扫描限流 / 熄屏</td><td>5次/30s 阈值、熄屏降级各家不同</td><td>带过滤 + 周期重启（B3）</td></tr>
+      <tr><td>GATT 回调线程</td><td>Binder 线程行为、并发差异</td><td>统一 post 进 worker（B9）</td></tr>
+      <tr><td>连接槽数</td><td>未 close 的 GATT 客户端上限约 6–7</td><td>及时 close，防 133（B4）</td></tr>
+      <tr><td>autoConnect 重连</td><td>重连时机、缓存刷新差异</td><td>直连 + 自己管重试</td></tr>
+      <tr><td>后台 FGS / CDM</td><td>事件投递、保活策略厂商限制</td><td>实测豁免（B10）</td></tr>
+      <tr><td>PHY / offload</td><td>2M/Coded、硬件过滤支持不一</td><td>先查能力 API</td></tr>
+    </table>
+    <div class="recap"><b>本步收束：</b>差异是平台行为不是你的 bug，要实测记录、防御性编程。</div>
+  </section>
+
+  <section id="cap">
+    <h2><span class="no">第 2 步</span>能力查询 API：先问再做</h2>
+    <table>
+      <tr><th>方法（BluetoothAdapter）</th><th>查什么</th><th>级别</th></tr>
+      <tr><td>isOffloadedFilteringSupported()</td><td>硬件扫描过滤</td><td><span class="api-lv">21</span></td></tr>
+      <tr><td>isOffloadedScanBatchingSupported()</td><td>硬件扫描批处理</td><td><span class="api-lv">21</span></td></tr>
+      <tr><td>isLe2MPhySupported() / isLeCodedPhySupported()</td><td>2M / Coded PHY</td><td><span class="api-lv">26</span></td></tr>
+      <tr><td>isLeExtendedAdvertisingSupported()</td><td>扩展广播</td><td><span class="api-lv">26</span></td></tr>
+      <tr><td>isMultipleAdvertisementSupported()</td><td>能否当 Peripheral</td><td><span class="api-lv">21</span></td></tr>
+    </table>
+    <div class="recap"><b>本步收束：</b>用能力 API 先问硬件支不支持，再决定走哪条路。</div>
   </section>
 
   <section id="matrix">
-    <h2><span class="no">第 2 步</span>建可复测矩阵，单变量隔离</h2>
-    
-      <table><tr><th>结果</th><th>指向</th></tr>
-        <tr><td>换手机才复现</td><td>手机侧：机型/系统/厂商策略</td></tr>
-        <tr><td>换外设才复现</td><td>外设侧：固件/硬件批次</td></tr>
-        <tr><td>怎么换都复现</td><td>共有约定：广播/服务表/协议</td></tr>
-        <tr><td>怎么换都不复现</td><td>环境时序：干扰/距离/竞争</td></tr></table>
-      <div class="recap"><b>本步收束：</b>每次只改一边，保持固件/距离/顺序可比。</div>
+    <h2><span class="no">第 3 步</span>建可复测矩阵，单变量隔离</h2>
+    <table>
+      <tr><th>结果</th><th>指向</th></tr>
+      <tr><td>换手机才复现</td><td>手机侧：机型 / 系统 / 厂商策略</td></tr>
+      <tr><td>换外设才复现</td><td>外设侧：固件 / 硬件批次</td></tr>
+      <tr><td>怎么换都复现</td><td>共有约定：广播 / 服务表 / 协议</td></tr>
+      <tr><td>怎么换都不复现</td><td>环境时序：干扰 / 距离 / 竞争</td></tr>
+    </table>
+    <div class="recap"><b>本步收束：</b>每次只改一边，保持固件 / 距离 / 顺序可比。</div>
   </section>
 
   <section id="record">
-    <h2><span class="no">第 3 步</span>记录系统版本+固件+步骤</h2>
-    
-      <p>矩阵每格记录：机型/Android 版本/外设固件/操作顺序/结果。没有这份记录，「偶现」永远只是传说；有了它变成可查事实。</p>
-      <div class="recap"><b>本步收束：</b>版本+固件+步骤+结果，四要素留痕。</div>
+    <h2><span class="no">第 4 步</span>记录四要素：版本 + 固件 + 步骤 + 结果</h2>
+    <p>矩阵每格记录：机型 / Android 版本 / 外设固件 / 操作顺序 / 结果。没有这份记录，「偶现」永远只是传说；有了它变成可查事实。把恢复出厂、熄屏、后台、多设备竞争都列入固定用例。</p>
+    <div class="recap"><b>本步收束：</b>版本 + 固件 + 步骤 + 结果四要素留痕，偶现变可查。</div>
   </section>
 
   <section id="lab">
-    <h2><span class="no">动手</span>勾选差异点，看矩阵风险与隔离方向</h2>
-    <p>勾选观察到的厂商差异，右侧给出隔离方向与应记录的字段。体会「换手机才复现→手机侧」。</p>
+    <h2><span class="no">动手</span>两场演练</h2>
+    <h3>演练一 · 勾选差异点，看隔离方向</h3>
     <div class="lab">
       <div class="lab-head"><b>机型矩阵演练</b><span class="hint">单变量隔离</span></div>
       <div class="controls"><div class="seg" id="v13"><button data-v="scan">扫描限流不同</button><button data-v="thread">回调线程不同</button><button data-v="fgs">后台FGS限制</button><button data-v="slot">连接槽数不同</button></div></div>
       <div class="lab-body"><div class="key" id="dir13"></div><div class="logcat"><div class="logcat-head"><span>矩阵记录</span><span>live</span></div><div class="logcat-body" id="log13"></div></div></div>
       <div class="lab-foot"><span class="hint">每格记：机型/系统/固件/顺序/结果</span></div>
     </div>
-    <div class="key"><span class="tag">看懂这场演练</span>厂商差异是平台行为要实测。建可复测矩阵单变量隔离：换手机才复现→手机侧；换外设才复现→外设侧；都复现→共有约定。记录版本+固件+步骤+结果。</div>
+    <h3>演练二 · 能力查询速查</h3>
+    <div class="lab">
+      <div class="lab-head"><b>先问再做</b><span class="hint">能力 API</span></div>
+      <div class="controls"><div class="seg" id="cap13"><button data-c="filter" class="on">硬件过滤</button><button data-c="phy">2M PHY</button><button data-c="adv">当 Peripheral</button><button data-c="batch">扫描批处理</button></div></div>
+      <div class="lab-body single"><div id="capOut13" class="card" style="margin:0;"></div></div>
+    </div>
+    <div class="key"><span class="tag">看懂这两场演练</span>厂商差异是平台行为要实测。建可复测矩阵单变量隔离：换手机才复现→手机侧；换外设才复现→外设侧；都复现→共有约定。能力 API 先问再做，记录四要素留痕。</div>
   </section>
 
   <section id="quiz">
-    <h2><span class="no">自测</span>三个问题</h2>
+    <h2><span class="no">自测</span>六个问题</h2>
     <div class="card" id="quiz-box"></div>
     <p id="quiz-done" style="display:none;font-weight:700;color:#1E7268;">全对。最后一课：综合实战 BTHome 温湿度计。</p>
   </section>
 
-  <section id="map">
-    <h2><span class="no">回顾</span>速查</h2>
-    <table><tr><th>结果</th><th>指向</th></tr><tr><td>换手机才复现</td><td>手机侧</td></tr><tr><td>换外设才复现</td><td>外设侧</td></tr><tr><td>都复现</td><td>共有约定</td></tr><tr><td>都不复现</td><td>环境时序</td></tr></table>
-    <div class="note"><span class="tag">说明</span>本页为教学简化，工程细节以正文与官方规范为准；演练为模拟，非真实设备通信。</div>
-    <footer>青竹蓝牙学堂 · 蓝牙小课堂Android 第十三课 · B13 · <a href="../index.html">回到学堂</a></footer>
+  <section id="cheatsheet">
+    <h2><span class="no">回顾</span>速查表</h2>
+    <table>
+      <tr><th>结果</th><th>指向</th></tr>
+      <tr><td>换手机才复现</td><td>手机侧</td></tr>
+      <tr><td>换外设才复现</td><td>外设侧</td></tr>
+      <tr><td>都复现</td><td>共有约定</td></tr>
+      <tr><td>都不复现</td><td>环境时序</td></tr>
+    </table>
+    <div class="note"><span class="tag">说明</span>本页为教学整理，具体厂商行为以实测为准；演练为模拟。</div>
+  </section>
+
+  <section id="refs">
+    <h2><span class="no">依据</span>参考链接</h2>
+    <div class="card refs">
+      <h3 style="margin-top:0;">API 参考</h3>
+      <ul>
+        <li><a href="https://developer.android.com/reference/android/bluetooth/BluetoothAdapter" target="_blank" rel="noopener">BluetoothAdapter</a> <span class="src">— isOffloaded*/isLe*PhySupported/isMultipleAdvertisementSupported</span></li>
+        <li><a href="https://developer.android.com/reference/android/bluetooth/le/ScanSettings" target="_blank" rel="noopener">ScanSettings</a> <span class="src">— 扫描模式与 offload</span></li>
+      </ul>
+      <h3>实测深入</h3>
+      <ul>
+        <li><a href="https://punchthrough.com/android-ble-guide/" target="_blank" rel="noopener">Punch Through · Android BLE Guide</a> <span class="src">— 厂商差异与兼容实践</span></li>
+        <li><a href="https://dev.to/nedmah/your-android-ble-scan-quietly-dies-after-5-minutes-and-you-dont-even-know-it-1l60" target="_blank" rel="noopener">BLE scan quietly dies</a> <span class="src">— 扫描超时厂商差异</span></li>
+        <li><a href="https://github.com/NordicSemiconductor/Android-BLE-Library/issues/54" target="_blank" rel="noopener">Nordic BLE Library issue #54</a> <span class="src">— connectGatt handler 26 bug</span></li>
+      </ul>
+    </div>
+    <div class="next-links">
+      <a href="12-hci-snoop-errors.html">← B12 抓包与错误码</a>
+      <a href="14-bthome-project.html">B14 综合实战 →</a>
+    </div>
+    <footer>青竹蓝牙学堂 · 蓝牙小课堂 Android 第十三课 · B13 · <a href="../index.html">回到学堂</a></footer>
   </section>
 </main>
 <aside class="toc" id="toc">
   <div class="toc-title">本课目录</div>
   <a href="#diff">平台行为差异</a>
+  <a href="#cap">能力查询 API</a>
   <a href="#matrix">机型矩阵</a>
-  <a href="#record">记录</a>
-  <a href="#lab">动手演练</a>
+  <a href="#record">记录四要素</a>
+  <a href="#lab">两场演练</a>
   <a href="#quiz">本课自测</a>
-  <a href="#map">回顾与速查</a>
+  <a href="#cheatsheet">速查表</a>
+  <a href="#refs">参考链接</a>
 </aside>
 </div>
 <script>
-
+// 演练一：差异隔离
 (function(){
-  var D={scan:['扫描限流/熄屏策略','手机侧厂商策略','后台带过滤+控制启停频率'],thread:['GATT 回调线程','手机侧','回调入口复制数据再投递'],fgs:['后台启动FGS','手机侧豁免核对','用户前台发起+核对豁免'],slot:['并发连接槽数','手机侧','用完 close+限制并发']};
-  var on={};
-  function calc(){
-    var act=Object.keys(on).filter(function(k){return on[k];});
-    document.getElementById('dir13').innerHTML='<span class="tag">隔离方向</span>'+(act.length?act.map(function(k){return '<b>'+D[k][0]+'</b>→'+D[k][1];}).join('；'):'勾选差异点');
-    document.getElementById('log13').innerHTML=act.length?act.map(function(k){return '<div><span class="warn">'+D[k][0]+'</span> <span class="c">// 对策：'+D[k][2]+'</span></div>';}).join('')+'<div><span class="c">// 记录：机型/系统/固件/顺序/结果</span></div>':'<span class="c">// 勾选差异</span>';
-  }
-  document.querySelectorAll('#v13 button').forEach(function(b){b.addEventListener('click',function(){var k=b.getAttribute('data-v');on[k]=!on[k];b.classList.toggle('on',on[k]);calc();});});
-  calc();
+  var D={scan:['手机侧','扫描限流/熄屏策略','带过滤+周期重启；记录机型/系统/阈值'],
+    thread:['手机侧','GATT 回调线程/并发','统一 post worker；记录回调线程行为'],
+    fgs:['手机侧','后台 FGS/CDM 保活','实测豁免；记录后台启动结果'],
+    slot:['手机侧','连接槽数上限','及时 close；记录槽数与 133 关系']};
+  function show(k){ var d=D[k]; document.getElementById('dir13').innerHTML='<span class="tag">隔离方向</span> '+d[0]+' · '+d[1];
+    document.getElementById('log13').innerHTML='<div><span class="c">// 应对：'+d[2]+'</span></div><div>每格记：机型/系统/固件/顺序/结果</div>'; }
+  document.querySelectorAll('#v13 button').forEach(function(b){b.addEventListener('click',function(){document.querySelectorAll('#v13 button').forEach(function(x){x.classList.remove('on');});b.classList.add('on');show(b.getAttribute('data-v'));});});
+  show('scan');
 })();
-
+// 演练二：能力查询
+(function(){
+  var C={filter:['isOffloadedFilteringSupported()','21','硬件过滤，省电'],
+    phy:['isLe2MPhySupported()','26','支持才请求 2M'],
+    adv:['isMultipleAdvertisementSupported()','21','支持才能当 Peripheral'],
+    batch:['isOffloadedScanBatchingSupported()','21','硬件批处理，setReportDelay']};
+  function show(k){ var c=C[k]; document.getElementById('capOut13').innerHTML='<p style="margin:0 0 6px;font-weight:700;">'+c[0]+' <span class="api-lv">'+c[1]+'</span></p><p style="margin:0;color:var(--muted);font-size:14px;">'+c[2]+'</p>'; }
+  document.querySelectorAll('#cap13 button').forEach(function(b){b.addEventListener('click',function(){document.querySelectorAll('#cap13 button').forEach(function(x){x.classList.remove('on');});b.classList.add('on');show(b.getAttribute('data-c'));});});
+  show('filter');
+})();
+// 目录高亮
 const tocLinks=[...document.querySelectorAll('.toc a')];
 const secs=tocLinks.map(a=>document.getElementById(a.getAttribute('href').slice(1)));
 const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){tocLinks.forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+e.target.id));}});},{rootMargin:'-20% 0px -70% 0px'});
 secs.forEach(s=>s&&io.observe(s));
-const QUIZ=[{"q":"1. 换手机才复现指向？","opts":[["手机侧：机型/系统/厂商策略",true,"对。"],["外设固件",false,"换外设才复现才是。"],["共有约定",false,"都复现才是。"]]},{"q":"2. 怎么换都复现查？","opts":[["共有约定：广播/服务表/协议",true,"对。"],["手机",false,"已排除。"],["环境",false,"都不复现才是环境。"]]},{"q":"3. 矩阵每格记录什么？","opts":[["机型/系统/固件/顺序/结果",true,"对。"],["只记结果",false,"无法复测。"],["只记机型",false,"要素不全。"]]}];
+// 自测
+const QUIZ=[
+ {"q":"1. 换手机才复现的问题指向？","opts":[["手机侧",true,"对。机型/系统/厂商策略。"],["外设侧",false,"换外设才复现才是。"],["共有约定",false,"都复现才是。"]]},
+ {"q":"2. 查 2M PHY 支持用？","opts":[["isLe2MPhySupported()",true,"对。26。"],["requestMtu",false,"那是 MTU。"],["createBond",false,"那是配对。"]]},
+ {"q":"3. 厂商差异是你的 bug 吗？","opts":[["不是，是平台行为，要实测",true,"对。"],["是",false,"先实测分离。"],["忽略",false,"要记录。"]]},
+ {"q":"4. 矩阵每格记什么？","opts":[["机型/系统/固件/顺序/结果",true,"对。四要素。"],["只结果",false,"不够。"],["只机型",false,"不够。"]]},
+ {"q":"5. 连接槽数耗尽会？","opts":[["133，要及时 close",true,"对。约 6–7 个。"],["扫描失败",false,"那是限流。"],["配对失败",false,"无关。"]]},
+ {"q":"6. 怎么换都复现指向？","opts":[["共有约定（广播/服务表/协议）",true,"对。"],["手机侧",false,"换手机才复现才是。"],["环境",false,"都不复现才是。"]]}
+];
 let solved=0; const box=document.getElementById('quiz-box');
 QUIZ.forEach((item,qi)=>{
   const h=document.createElement('div'); h.className='quiz-q'; h.textContent=item.q; box.appendChild(h);
@@ -314,7 +387,6 @@ QUIZ.forEach((item,qi)=>{
   });
   box.appendChild(ex);
 });
-
 </script>
 </body>
 </html>
