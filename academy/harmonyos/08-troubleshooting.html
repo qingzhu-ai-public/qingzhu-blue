@@ -172,6 +172,10 @@
   .ctl-row label{display:inline-flex;align-items:center;gap:10px;}
   .ctl-row input[type=range]{accent-color:var(--coral);width:160px;}
   .ctl-row .chk input{accent-color:var(--coral);}
+  .api-lv{display:inline-block;font-family:ui-monospace,Consolas,monospace;font-size:11.5px;font-weight:800;color:#2F58A8;background:var(--blue-soft);border:1px solid var(--blue-line);border-radius:999px;padding:0 8px;white-space:nowrap;}
+  .refs{font-size:14px;}
+  .refs li{margin:7px 0;}
+  .refs .src{font-size:12px;color:var(--faint);}
 </style>
 </head>
 <body style="--coral:#E8590C;--coral-soft:#FBEADF;--coral-line:#F2C4A4">
@@ -198,65 +202,218 @@
 <main>
   <div class="crumb">蓝牙小课堂 / 鸿蒙第八课 · D8</div>
   <h1>按阶段排障：<em>最后成功</em>定位法</h1>
-  <p class="lead">排障方法跨平台通用：先找最后一步成功记录钉住阶段，再取证。这一课把通用方法落到鸿蒙日志。</p>
-  <div class="meta"><span>约 10 分钟</span><span>含交互演练</span><span>跨端对照</span></div>
+  <p class="lead">排障方法跨平台通用：先找最后一步成功记录钉住阶段，再取证。这一课把通用方法落到鸿蒙：五道关证据链、十个错误码速查、hilog 会话编号归因。</p>
+  <div class="meta"><span>平台：HarmonyOS/ArkTS</span><span>约 24 分钟</span><span>错误码速查</span><span>含两场交互演练</span><span>跨端对照</span></div>
   <div class="journey">
     <div class="j-step"><span class="n">1</span><span class="t">定位</span><span class="s">最后成功</span></div>
-    <div class="j-step"><span class="n">2</span><span class="t">取证</span><span class="s">按阶段</span></div>
+    <div class="j-step"><span class="n">2</span><span class="t">错误码</span><span class="s">十码速查</span></div>
+    <div class="j-step"><span class="n">3</span><span class="t">日志</span><span class="s">会话编号</span></div>
+    <div class="j-step"><span class="n">4</span><span class="t">动手</span><span class="s">两场演练</span></div>
+    <div class="j-step"><span class="n">5</span><span class="t">自测</span><span class="s">六个问题</span></div>
   </div>
 
   <section id="a">
-    <h2><span class="no">第 1 步</span>五道关</h2>
-    <p>广播→连接→发现→订阅→业务。先问最后成功记录，钉住阶段再取证（同 A10）。</p><div class="recap"><b>收束：</b>先定位再取证。</div>
+    <h2><span class="no">第 1 步</span>五道关与证据链</h2>
+    <p>广播→连接→发现→订阅→业务。先问最后成功记录，钉住阶段再取证（同 A10）。</p>
+    <figure>
+      <svg viewBox="0 0 760 190" role="img" aria-label="五道关证据链">
+        <defs><marker id="arh8" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#A39B8E"/></marker></defs>
+        <rect x="15" y="30" width="132" height="70" rx="11" fill="#E9F4F2" stroke="#BFE0DB"/>
+        <text x="81" y="54" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#1E7268">① 广播</text>
+        <text x="81" y="74" text-anchor="middle" font-size="9.5" fill="#4E8A80">BLEDeviceFind</text>
+        <text x="81" y="88" text-anchor="middle" font-size="9.5" fill="#4E8A80">原始 data 到达</text>
+        <rect x="167" y="30" width="132" height="70" rx="11" fill="#E9F4F2" stroke="#BFE0DB"/>
+        <text x="233" y="54" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#1E7268">② 连接</text>
+        <text x="233" y="74" text-anchor="middle" font-size="9.5" fill="#4E8A80">ConnectionState</text>
+        <text x="233" y="88" text-anchor="middle" font-size="9.5" fill="#4E8A80">Change=CONNECTED</text>
+        <rect x="319" y="30" width="132" height="70" rx="11" fill="#E9F4F2" stroke="#BFE0DB"/>
+        <text x="385" y="54" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#1E7268">③ 发现</text>
+        <text x="385" y="74" text-anchor="middle" font-size="9.5" fill="#4E8A80">getServices 返回</text>
+        <text x="385" y="88" text-anchor="middle" font-size="9.5" fill="#4E8A80">目标 UUID 在树里</text>
+        <rect x="471" y="30" width="132" height="70" rx="11" fill="#E9F4F2" stroke="#BFE0DB"/>
+        <text x="537" y="54" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#1E7268">④ 订阅</text>
+        <text x="537" y="74" text-anchor="middle" font-size="9.5" fill="#4E8A80">Characteristic</text>
+        <text x="537" y="88" text-anchor="middle" font-size="9.5" fill="#4E8A80">Change 进回调</text>
+        <rect x="623" y="30" width="122" height="70" rx="11" fill="#FBF3E4" stroke="#EDD9B4"/>
+        <text x="684" y="54" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#8A5510">⑤ 业务</text>
+        <text x="684" y="74" text-anchor="middle" font-size="9.5" fill="#A8762A">解析值合理</text>
+        <text x="684" y="88" text-anchor="middle" font-size="9.5" fill="#A8762A">UI 更新</text>
+        <line x1="147" y1="65" x2="165" y2="65" stroke="#A39B8E" stroke-width="1.8" marker-end="url(#arh8)"/>
+        <line x1="299" y1="65" x2="317" y2="65" stroke="#A39B8E" stroke-width="1.8" marker-end="url(#arh8)"/>
+        <line x1="451" y1="65" x2="469" y2="65" stroke="#A39B8E" stroke-width="1.8" marker-end="url(#arh8)"/>
+        <line x1="603" y1="65" x2="621" y2="65" stroke="#A39B8E" stroke-width="1.8" marker-end="url(#arh8)"/>
+        <text x="380" y="135" text-anchor="middle" font-size="12.5" fill="#6B5B3E">「最后成功记录」在哪一关，问题就在下一关</text>
+        <text x="380" y="160" text-anchor="middle" font-size="11.5" fill="#A39B8E">例：CONNECTED 有、getServices 空 → 钉在③：查 UUID / 查对端属性表 / 查串行时序</text>
+      </svg>
+      <figcaption>五道关各自的成功证据；排障=找最后一条成功日志。</figcaption>
+    </figure>
+    <div class="recap"><b>收束：</b>先定位再取证；每关只认自己的证据。</div>
   </section>
 
   <section id="b">
-    <h2><span class="no">第 2 步</span>鸿蒙日志</h2>
-    <p>记录 BLEConnectionStateChange / getServices 结果 / BLECharacteristicChange 是否进。会话编号归因迟到回调。</p><div class="key"><span class="tag">重点</span>界面不更新≠没收到事件，分开记。</div>
+    <h2><span class="no">第 2 步</span>错误码速查：号码即阶段</h2>
+    <table>
+      <tr><th>错误码</th><th>含义</th><th>钉在哪关</th><th>第一反应</th></tr>
+      <tr><td><code>201</code></td><td>权限拒绝</td><td>⓪ 门控</td><td>查声明+弹窗授权（D2）</td></tr>
+      <tr><td><code>401</code></td><td>参数错误</td><td>任意</td><td>查 UUID 格式 / ArrayBuffer / 枚举值</td></tr>
+      <tr><td><code>801</code></td><td>能力不支持</td><td>任意</td><td>设备不支持该特性（如扩展广播）</td></tr>
+      <tr><td><code>2900001</code></td><td>蓝牙服务停止</td><td>⓪ 门控</td><td>等系统服务恢复再试</td></tr>
+      <tr><td><code>2900003</code></td><td>蓝牙未开启</td><td>⓪ 门控</td><td>getState 门控 + stateChange（D2）</td></tr>
+      <tr><td><code>2900009</code></td><td>扫描硬件资源不足</td><td>① 广播</td><td>过滤器太多（≤3）/ 别的 App 占着</td></tr>
+      <tr><td><code>2900011</code></td><td>操作忙</td><td>③④⑤</td><td>GATT 串行：等上一步回调（D4）</td></tr>
+      <tr><td><code>2900099</code></td><td>操作失败</td><td>任意</td><td>通用失败：抓 hilog 看底层原因</td></tr>
+      <tr><td><code>2901003</code></td><td>设备未连接</td><td>② 连接</td><td>CONNECTED 回调到了吗？重连了吗？</td></tr>
+      <tr><td><code>2902050</code></td><td>扫描已开启</td><td>① 广播</td><td>单路扫描：先 stopBLEScan 再换过滤</td></tr>
+    </table>
+    <div class="key"><span class="tag">重点</span>错误码本身就是定位信息：2900011 不用猜，就是串行没守住；2902050 就是重复开扫描。把 catch 里的 code 记进日志，排障快一半。</div>
+    <div class="recap"><b>收束：</b>号码即阶段；catch 必记 code。</div>
+  </section>
+
+  <section id="c">
+    <h2><span class="no">第 3 步</span>鸿蒙日志与会话编号</h2>
+    <p>记录 BLEConnectionStateChange / getServices 结果 / BLECharacteristicChange 是否进。会话编号归因迟到回调。</p>
+    <pre>import { hilog } from '@kit.PerformanceAnalysisKit';
+let session = 0; <span class="cm">// 每次 connect 递增</span>
+
+dev.on('BLEConnectionStateChange', (s) =&gt; {
+  hilog.info(0x0001, 'BLE', 's%{public}d state=%{public}d', session, s.state);
+});
+dev.on('BLECharacteristicChange', (ch) =&gt; {
+  hilog.info(0x0001, 'BLE', 's%{public}d ch=%{public}s len=%{public}d',
+    session, ch.characteristicUuid, ch.characteristicValue.byteLength);
+});
+<span class="cm">// 迟到回调：s3 的帧在 s4 会话里到达 → 按编号丢弃，别污染新会话</span></pre>
+    <ul>
+      <li><b>界面不更新≠没收到事件</b>：回调日志与 UI 日志分开记，先分清是④还是⑤的问题。</li>
+      <li><b>虚拟 MAC 陷阱</b>：重启蓝牙后 deviceId 变了，旧日志里的地址对不上新扫描——用会话编号+广播内容归因，别用地址。</li>
+      <li><b>hilog 过滤</b>：DevEco Studio Log 面板按 tag=BLE 过滤；真机 hdc shell hilog 同样可抓。</li>
+    </ul>
+    <div class="key"><span class="tag">重点</span>界面不更新≠没收到事件，分开记。</div>
+    <div class="recap"><b>收束：</b>每条日志带会话编号；迟到回调按编号丢弃。</div>
   </section>
 
   <section id="lab">
-    <h2><span class="no">动手</span>选症状定位</h2>
-    <p>点症状，看它钉在哪个阶段、取什么证。</p>
+    <h2><span class="no">动手</span>两场演练：症状定位、错误码诊断台</h2>
+    <p>演练一点症状看钉在哪关、取什么证。演练二选错误码，看原因与修复动作。</p>
     <div class="lab">
-      <div class="lab-head"><b>选症状定位</b><span class="hint">先找最后成功记录</span></div>
-      <div class="controls"><div class="seg" id="d8"><button data-k="scan" class="on">扫不到</button><button data-k="conn">连不上</button><button data-k="notify">收不到通知</button><button data-k="parse">解析错</button></div></div>
-      <div class="lab-body"><div class="key" id="d8out"></div><div class="logcat"><div class="logcat-head"><span>要点</span><span>live</span></div><div class="logcat-body" id="d8log"></div></div></div>
-      <div class="lab-foot"><span class="hint">先找最后成功记录</span></div>
+      <div class="lab-head"><b>演练一 · 选症状定位</b><span class="hint">先找最后成功记录</span></div>
+      <div class="controls"><div class="seg" id="d8"><button data-k="scan" class="on">扫不到</button><button data-k="conn">连不上</button><button data-k="disc">服务空</button><button data-k="notify">收不到通知</button><button data-k="busy">读写报忙</button><button data-k="parse">解析错</button></div></div>
+      <div class="lab-body"><div class="key" id="d8out"></div><div class="logcat"><div class="logcat-head"><span>取证清单</span><span>live</span></div><div class="logcat-body" id="d8log"></div></div></div>
+      <div class="lab-foot"><span class="hint">先找最后成功记录，钉住阶段再取证</span></div>
     </div>
-    <div class="key"><span class="tag">看懂这场演练</span>先找最后成功记录，钉住阶段再取证。</div>
+    <div class="lab">
+      <div class="lab-head"><b>演练二 · 错误码诊断台</b><span class="hint">号码即阶段</span></div>
+      <div class="controls"><div class="seg" id="ec8"><button data-e="201" class="on">201</button><button data-e="2900003">2900003</button><button data-e="2900011">2900011</button><button data-e="2901003">2901003</button><button data-e="2902050">2902050</button><button data-e="2900009">2900009</button></div></div>
+      <div class="lab-body"><div><div class="chips" id="ec8chips"></div><div class="key" id="ec8hint"></div></div><div class="logcat"><div class="logcat-head"><span>诊断</span><span>live</span></div><div class="logcat-body" id="ec8log"></div></div></div>
+      <div class="lab-foot"><span class="hint">catch 里记 code，排障快一半</span></div>
+    </div>
+    <div class="key"><span class="tag">看懂这两场演练</span>症状→阶段→证据；错误码→原因→动作。两条路都通向「最后成功记录」。</div>
   </section>
 
   <section id="quiz">
-    <h2><span class="no">自测</span>三个问题</h2>
+    <h2><span class="no">自测</span>六个问题</h2>
     <div class="card" id="quiz-box"></div>
     <p id="quiz-done" style="display:none;font-weight:700;color:#1E7268;">全对。最后一课：综合实战。</p>
   </section>
 
   <section id="map">
-    <h2><span class="no">回顾</span>速查</h2>
-    <table><tr><th>阶段</th><th>证据</th></tr><tr><td>广播</td><td>BLEDeviceFind</td></tr><tr><td>连接</td><td>ConnectionStateChange</td></tr><tr><td>订阅</td><td>CharacteristicChange</td></tr></table>
-    <div class="note"><span class="tag">说明</span>本页为教学简化，工程细节以正文与官方规范为准；演练为模拟，非真实设备通信。</div>
+    <h2><span class="no">回顾</span>速查表</h2>
+    <table>
+      <tr><th>阶段</th><th>成功证据</th><th>常见错误码</th></tr>
+      <tr><td>⓪ 门控</td><td>授权+STATE_ON</td><td>201 / 2900003 / 2900001</td></tr>
+      <tr><td>① 广播</td><td>BLEDeviceFind 原始 data</td><td>2902050 / 2900009</td></tr>
+      <tr><td>② 连接</td><td>CONNECTED 回调</td><td>2901003</td></tr>
+      <tr><td>③ 发现</td><td>getServices 目标 UUID</td><td>2900011 / 2900099</td></tr>
+      <tr><td>④ 订阅</td><td>CharacteristicChange 进回调</td><td>2900011</td></tr>
+      <tr><td>⑤ 业务</td><td>解析值合理 + UI 更新</td><td>（无码：字节序/符号/越界）</td></tr>
+    </table>
+    <div class="note"><span class="tag">说明</span>本页为教学整理，错误码含义对照华为官方文档核实；演练为模拟，非真实日志。</div>
+  </section>
+
+  <section id="refs">
+    <h2><span class="no">依据</span>参考链接</h2>
+    <div class="card refs">
+      <h3 style="margin-top:0;">华为官方文档</h3>
+      <ul>
+        <li><a href="https://developer.huawei.com/consumer/cn/doc/harmonyos-references/js-apis-bluetooth-ble" target="_blank" rel="noopener">@ohos.bluetooth.ble API 参考</a> <span class="src">— 各接口错误码段（2900011/2901003/2902050 等）</span></li>
+        <li><a href="https://developer.huawei.com/consumer/en/doc/best-practices/bpta-bluetooth-low-energy" target="_blank" rel="noopener">Best Practices · Bluetooth Low Energy</a> <span class="src">— 常见故障与工程建议</span></li>
+      </ul>
+      <h3>实测与深入</h3>
+      <ul>
+        <li><a href="https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/gatt-development-guide-V14" target="_blank" rel="noopener">GATT 开发指南</a> <span class="src">— 串行要求与订阅前提</span></li>
+      </ul>
+    </div>
+    <div class="next-links">
+      <a href="07-peripheral.html">← D7 外设角色</a>
+      <a href="09-project.html">D9 综合实战 →</a>
+    </div>
     <footer>青竹蓝牙学堂 · 蓝牙小课堂鸿蒙第八课 · D8 · <a href="../index.html">回到学堂</a></footer>
   </section>
 </main>
 <aside class="toc" id="toc">
   <div class="toc-title">本课目录</div>
   <a href="#a">五道关</a>
-  <a href="#b">鸿蒙日志</a>
-  <a href="#lab">动手演练</a>
+  <a href="#b">错误码速查</a>
+  <a href="#c">日志与会话</a>
+  <a href="#lab">两场演练</a>
   <a href="#quiz">本课自测</a>
-  <a href="#map">回顾与速查</a>
+  <a href="#map">速查表</a>
+  <a href="#refs">参考链接</a>
 </aside>
 </div>
 <script>
-(function(){var D=[{"k":"scan","t":"扫不到"},{"k":"conn","t":"连不上"},{"k":"notify","t":"收不到通知"},{"k":"parse","t":"解析错"}];var M={"scan":"广播阶段：看 BLEDeviceFind 有无原始广播、是否被过滤","conn":"连接阶段：看 BLEConnectionStateChange、设备是否被占用","notify":"订阅阶段：本地+CCCD 是否齐、CharacteristicChange 是否进","parse":"业务阶段：回调进了但字节序/符号解错"};function show(k){var o=D.filter(function(x){return x.k===k;})[0];var txt=(M[k]||o.t);document.getElementById("d8out").innerHTML="<span class=\"tag\">要点</span><b>"+o.t+"</b>";document.getElementById("d8log").innerHTML="<div><span class=\"ok\">"+txt+"</span></div>";}document.querySelectorAll("#d8 button").forEach(function(b){b.addEventListener("click",function(){document.querySelectorAll("#d8 button").forEach(function(x){x.classList.remove("on");});b.classList.add("on");show(b.getAttribute("data-k"));});});show(D[0].k);})();
+(function(){
+  var M={
+    scan:{t:'扫不到',stage:'① 广播',lines:['<span class="api">最后成功：授权+STATE_ON？</span>','<span class="c">去掉过滤全扫，看 BLEDeviceFind 有无原始 data</span>','<span class="c">有 data → 过滤字段不在广播里（D3）</span>','<span class="c">无 data → 设备没广播 / 距离 / 2900009 资源</span>']},
+    conn:{t:'连不上',stage:'② 连接',lines:['<span class="api">最后成功：BLEDeviceFind 有目标？</span>','<span class="c">先 stopBLEScan 再 connect</span>','<span class="c">deviceId 是旧会话的虚拟 MAC？重新扫</span>','<span class="c">设备被别的手机连着 / connectable=false</span>']},
+    disc:{t:'服务空',stage:'③ 发现',lines:['<span class="api">最后成功：CONNECTED 回调？</span>','<span class="c">getServices 在 CONNECTED 之后调了吗（2901003）</span>','<span class="c">UUID 大小写/格式：128 位小写带连字符</span>','<span class="c">对端属性表真有这个服务吗</span>']},
+    notify:{t:'收不到通知',stage:'④ 订阅',lines:['<span class="api">最后成功：读写通了？</span>','<span class="c">对端特征有 0x2902 + notify 位吗（D6）</span>','<span class="c">重连后重订了吗</span>','<span class="c">触发新读数验证，别只看写成功</span>']},
+    busy:{t:'读写报忙',stage:'③④⑤ 串行',lines:['<span class="api">2900011 = 上一步回调没回来</span>','<span class="c">把 GATT 操作排 Promise 链（D4）</span>','<span class="c">检查有没有并发定时器同时发读写</span>']},
+    parse:{t:'解析错',stage:'⑤ 业务',lines:['<span class="api">最后成功：CharacteristicChange 进回调？</span>','<span class="c">进了 → 字节序/符号/分辨率（D5）</span>','<span class="c">小端 getInt16(off,true)；湿度越界要报错</span>','<span class="c">界面不更新≠没收到，分开记日志</span>']}
+  };
+  function show(k){
+    var m=M[k];
+    document.getElementById('d8out').innerHTML='<span class="tag">'+m.stage+'</span><b>'+m.t+'</b>：先找最后成功记录，再按清单取证。';
+    document.getElementById('d8log').innerHTML=m.lines.map(function(l){return '<div>'+l+'</div>';}).join('');
+  }
+  document.querySelectorAll('#d8 button').forEach(function(b){b.addEventListener('click',function(){
+    document.querySelectorAll('#d8 button').forEach(function(x){x.classList.remove('on');});
+    b.classList.add('on'); show(b.getAttribute('data-k'));
+  });});
+  show('scan');
+})();
+
+// 演练二：错误码诊断台
+(function(){
+  var E={
+    '201':{n:'权限拒绝',stage:'⓪ 门控',fix:'查 module.json5 声明 + requestPermissionsFromUser 授权结果；被拒给「去设置」引导。'},
+    '2900003':{n:'蓝牙未开启',stage:'⓪ 门控',fix:'getState 门控；监听 stateChange，ON 后恢复；别在 OFF 态重试。'},
+    '2900011':{n:'操作忙',stage:'③④⑤',fix:'GATT 串行：等上一步异步回调再发下一步；排 Promise 链。'},
+    '2901003':{n:'设备未连接',stage:'② 连接',fix:'确认 CONNECTED 回调到达再操作；断线后重连当新会话。'},
+    '2902050':{n:'扫描已开启',stage:'① 广播',fix:'单路扫描：先 stopBLEScan 再换过滤重开；多路用 BleScanner（API 15+）。'},
+    '2900009':{n:'扫描硬件资源不足',stage:'① 广播',fix:'过滤器全局共享：单应用 ≤3；停掉不用的扫描实例。'}
+  };
+  function show(c){
+    var e=E[c];
+    document.getElementById('ec8chips').innerHTML='<span class="chip bad">'+c+'</span><span class="chip on">'+e.n+'</span><span class="chip on">'+e.stage+'</span>';
+    document.getElementById('ec8hint').innerHTML='<span class="tag">修复</span>'+e.fix;
+    document.getElementById('ec8log').innerHTML=
+      '<div><span class="err">catch (err) → code='+c+'</span></div>'+
+      '<div><span class="api">hilog: s'+Math.floor(Math.random()*3+1)+' '+e.n+'</span></div>'+
+      '<div><span class="ok">'+e.fix+'</span></div>';
+  }
+  document.querySelectorAll('#ec8 button').forEach(function(b){b.addEventListener('click',function(){
+    document.querySelectorAll('#ec8 button').forEach(function(x){x.classList.remove('on');});
+    b.classList.add('on'); show(b.getAttribute('data-e'));
+  });});
+  show('201');
+})();
 
 const tocLinks=[...document.querySelectorAll('.toc a')];
 const secs=tocLinks.map(a=>document.getElementById(a.getAttribute('href').slice(1)));
 const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){tocLinks.forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+e.target.id));}});},{rootMargin:'-20% 0px -70% 0px'});
 secs.forEach(s=>s&&io.observe(s));
-const QUIZ=[{"q":"1. 排障第一步？","opts":[["找最后成功记录",true,"对。"],["猜",false,"先取证。"],["重启",false,"不定位。"]]},{"q":"2. 界面不更新等于没收到？","opts":[["不等于，可能解析错",true,"对。"],["等于",false,"两阶段。"],["是硬件",false,"未必。"]]},{"q":"3. 迟到回调靠什么归因？","opts":[["会话编号",true,"对。"],["时间猜",false,"用编号。"],["忽略",false,"要归因。"]]}];
+const QUIZ=[{"q":"1. 排障第一步？","opts":[["找最后成功记录",true,"对。"],["猜",false,"先取证。"],["重启",false,"不定位。"]]},{"q":"2. 界面不更新等于没收到？","opts":[["不等于，可能解析错",true,"对。"],["等于",false,"两阶段。"],["是硬件",false,"未必。"]]},{"q":"3. 迟到回调靠什么归因？","opts":[["会话编号",true,"对。"],["时间猜",false,"用编号。"],["忽略",false,"要归因。"]]},{"q":"4. 2900011 说明什么？","opts":[["上一步 GATT 回调没回来",true,"对。串行没守住。"],["蓝牙关了",false,"那是 2900003。"],["没权限",false,"那是 201。"]]},{"q":"5. 2902050 怎么处理？","opts":[["先 stopBLEScan 再换过滤",true,"对。单路扫描不能重复开。"],["再 start 一次",false,"会继续报。"],["重启手机",false,"不必。"]]},{"q":"6. 2901003 第一反应？","opts":[["查 CONNECTED 回调到了吗",true,"对。未连接就操作了。"],["查权限",false,"那是 201。"],["查字节序",false,"那是业务层。"]]}];
 let solved=0; const box=document.getElementById('quiz-box');
 QUIZ.forEach((item,qi)=>{
   const h=document.createElement('div'); h.className='quiz-q'; h.textContent=item.q; box.appendChild(h);

@@ -172,6 +172,10 @@
   .ctl-row label{display:inline-flex;align-items:center;gap:10px;}
   .ctl-row input[type=range]{accent-color:var(--coral);width:160px;}
   .ctl-row .chk input{accent-color:var(--coral);}
+  .api-lv{display:inline-block;font-family:ui-monospace,Consolas,monospace;font-size:11.5px;font-weight:800;color:#2F58A8;background:var(--blue-soft);border:1px solid var(--blue-line);border-radius:999px;padding:0 8px;white-space:nowrap;}
+  .refs{font-size:14px;}
+  .refs li{margin:7px 0;}
+  .refs .src{font-size:12px;color:var(--faint);}
 </style>
 </head>
 <body style="--coral:#E8590C;--coral-soft:#FBEADF;--coral-line:#F2C4A4">
@@ -198,68 +202,234 @@
 <main>
   <div class="crumb">蓝牙小课堂 / 鸿蒙第七课 · D7</div>
   <h1>外设角色：<em>GattServer</em> 与广播</h1>
-  <p class="lead">鸿蒙手机也能当外设：createGattServerDevice 添加服务、startAdvertising 发广播、响应读写与发通知。这一课讲外设角色。</p>
-  <div class="meta"><span>约 10 分钟</span><span>含交互演练</span><span>跨端对照</span></div>
+  <p class="lead">鸿蒙手机也能当外设：createGattServer 添加服务、startAdvertising 发广播、响应读写与发通知。关键优势：AdvertiseData 支持 serviceData——鸿蒙能当真正的 BTHome 广播源（iOS 做不到）。这一课讲外设全链路。</p>
+  <div class="meta"><span>平台：HarmonyOS/ArkTS</span><span>约 25 分钟</span><span>API 10 → 22</span><span>含两场交互演练</span><span>跨端对照</span></div>
   <div class="journey">
-    <div class="j-step"><span class="n">1</span><span class="t">Server</span><span class="s">addService</span></div>
-    <div class="j-step"><span class="n">2</span><span class="t">广播</span><span class="s">startAdvertising</span></div>
+    <div class="j-step"><span class="n">1</span><span class="t">Server</span><span class="s">属性表+响应</span></div>
+    <div class="j-step"><span class="n">2</span><span class="t">广播</span><span class="s">31字节预算</span></div>
+    <div class="j-step"><span class="n">3</span><span class="t">BTHome</span><span class="s">服务数据源</span></div>
+    <div class="j-step"><span class="n">4</span><span class="t">动手</span><span class="s">预算计算器</span></div>
+    <div class="j-step"><span class="n">5</span><span class="t">自测</span><span class="s">六个问题</span></div>
   </div>
 
   <section id="a">
-    <h2><span class="no">第 1 步</span>GattServer</h2>
-    <pre>let server = ble.createGattServerDevice()
+    <h2><span class="no">第 1 步</span>GattServer：属性表 + 响应</h2>
+    <pre>let server = ble.createGattServer()
 server.addService(service)
-server.on('characteristicRead'/'characteristicWrite', respond)</pre><div class="recap"><b>收束：</b>Server 提供属性表+响应读写。</div>
+server.on('characteristicRead'/'characteristicWrite', respond)</pre>
+    <table>
+      <tr><th>API</th><th>版本</th><th>说明</th></tr>
+      <tr><td>createGattServer()</td><td><span class="api-lv">API 10</span></td><td>创建服务端对象</td></tr>
+      <tr><td>addService / removeService / removeAllServices</td><td><span class="api-lv">API 10</span></td><td>管理属性表（服务/特征/描述符）</td></tr>
+      <tr><td>on('characteristicRead' / 'characteristicWrite')</td><td><span class="api-lv">API 10</span></td><td>中心来读写时触发，<b>必须 sendResponse</b></td></tr>
+      <tr><td>sendResponse(serverResponse)</td><td><span class="api-lv">API 10</span></td><td>回数据/确认；不回中心会超时</td></tr>
+      <tr><td>notifyCharacteristicChanged(deviceId, notifyChar)</td><td><span class="api-lv">API 10</span></td><td>给已订阅的中心推通知/指示</td></tr>
+      <tr><td>getService / getServices / getConnectedState</td><td><span class="api-lv">API 22</span></td><td>查属性表与连接状态</td></tr>
+    </table>
+    <pre><span class="cm">// 教学服务：READ+WRITE 特征 + CCCD 描述符（可被订阅）</span>
+let ch: ble.BLECharacteristic = {
+  serviceUuid: '476cdf45-6063-43a1-b8e2-8c1fbed00601',
+  characteristicUuid: '476cdf45-6063-43a1-b8e2-8c1fbed00602',
+  characteristicValue: new Uint8Array([0x40,0x02,0xC4,0x09,0x03,0xBF,0x13]).buffer,
+  descriptors: [{ descriptorUuid: '00002902-0000-1000-8000-00805f9b34fb',
+                  descriptorValue: new Uint8Array([0x00,0x00]).buffer }],
+  properties: { read: true, write: true, notify: true }
+};
+server.addService({ serviceUuid: ch.serviceUuid, isPrimary: true, characteristics: [ch] });
+
+server.on('characteristicRead', (req: ble.CharacteristicReadRequest) =&gt; {
+  server.sendResponse({ deviceId: req.deviceId, transId: req.transId,
+    status: 0, offset: req.offset, value: ch.characteristicValue });
+});</pre>
+    <div class="recap"><b>收束：</b>Server 提供属性表+响应读写；收到请求必须 sendResponse。</div>
   </section>
 
   <section id="b">
-    <h2><span class="no">第 2 步</span>广播与通知</h2>
+    <h2><span class="no">第 2 步</span>广播：31 字节预算</h2>
     <pre>ble.startAdvertising(advSettings, advData)
-server.notifyCharacteristicChanged(...)</pre><div class="key"><span class="tag">重点</span>外设发通知给已订阅的中心；双机实验一端 Server 一端 Client。</div>
+server.notifyCharacteristicChanged(...)</pre>
+    <table>
+      <tr><th>API / 参数</th><th>版本</th><th>说明</th></tr>
+      <tr><td>startAdvertising(setting, advData, advResponse)</td><td><span class="api-lv">API 10</span></td><td>传统广播：advData + 扫描响应各 31 字节</td></tr>
+      <tr><td>startAdvertising(AdvertisingParams) + enable/disableAdvertising + on('advertisingStateChange')</td><td><span class="api-lv">API 11</span></td><td>新重载：带 duration，可开关与监听</td></tr>
+      <tr><td>AdvertiseSetting.interval</td><td><span class="api-lv">API 10</span></td><td>[32, 16777215] slot×0.625ms，默认 1600（=1s）；传统广播上限 16384</td></tr>
+      <tr><td>AdvertiseSetting.txPower</td><td><span class="api-lv">API 10</span></td><td>[-127, 1]，默认 -7（高 1 / 中 -7 / 低 -15）</td></tr>
+      <tr><td>AdvertiseSetting.connectable</td><td><span class="api-lv">API 10</span></td><td>默认 true；纯传感器广播可设 false</td></tr>
+      <tr><td>AdvertiseData.serviceData</td><td><span class="api-lv">API 10</span></td><td><b>[{serviceUuid, serviceValue}]——BTHome 的关键</b></td></tr>
+      <tr><td>AdvertiseData.manufactureData / serviceUuids</td><td><span class="api-lv">API 10</span></td><td>厂商数据 / UUID 列表</td></tr>
+      <tr><td>AdvertiseData.advertiseName</td><td><span class="api-lv">API 10</span></td><td>需 ohos.permission.MANAGE_BLUETOOTH_ADVERTISER_NAME</td></tr>
+    </table>
+    <figure>
+      <svg viewBox="0 0 760 170" role="img" aria-label="BTHome 广播 31 字节预算">
+        <rect x="20" y="20" width="720" height="46" rx="9" fill="#FBF7F0" stroke="#E5D9C3"/>
+        <rect x="24" y="24" width="66" height="38" rx="6" fill="#FBF3E4" stroke="#EDD9B4"/>
+        <text x="57" y="40" text-anchor="middle" font-size="10" font-weight="bold" fill="#8A5510">Flags</text>
+        <text x="57" y="55" text-anchor="middle" font-size="9.5" fill="#A8762A">3B</text>
+        <rect x="94" y="24" width="88" height="38" rx="6" fill="#ECF1FB" stroke="#C9D8F2"/>
+        <text x="138" y="40" text-anchor="middle" font-size="10" font-weight="bold" fill="#2F58A8">UUID列表</text>
+        <text x="138" y="55" text-anchor="middle" font-size="9.5" fill="#5F7FB5">4B (FCD2)</text>
+        <rect x="186" y="24" width="242" height="38" rx="6" fill="#E9F4F2" stroke="#BFE0DB"/>
+        <text x="307" y="40" text-anchor="middle" font-size="10" font-weight="bold" fill="#1E7268">服务数据 0x16：FCD2 + BTHome 帧</text>
+        <text x="307" y="55" text-anchor="middle" font-size="9.5" fill="#4E8A80">11B（len+type+uuid2+载荷7）</text>
+        <rect x="432" y="24" width="304" height="38" rx="6" fill="#F6F1E7" stroke="#E5D9C3" stroke-dasharray="5 4"/>
+        <text x="584" y="47" text-anchor="middle" font-size="11" fill="#A39B8E">剩余 13B：可放名字/厂商数据，或留空</text>
+        <text x="380" y="100" text-anchor="middle" font-size="12.5" fill="#6B5B3E">传统广播 advData 上限 31 字节；放不下就挪到扫描响应（再 31 字节）</text>
+        <text x="380" y="126" text-anchor="middle" font-size="12" fill="#1E7268">BTHome 最小集 = Flags 3 + UUID 4 + 服务数据 11 = 18 字节，绰绰有余</text>
+        <text x="380" y="152" text-anchor="middle" font-size="11.5" fill="#A39B8E">interval 默认 1600 slot = 1 秒一包；传感器可放宽到 2–5 秒省电</text>
+      </svg>
+      <figcaption>31 字节预算：BTHome 最小集只占 18 字节。</figcaption>
+    </figure>
+    <div class="key"><span class="tag">重点</span>外设发通知给已订阅的中心；双机实验一端 Server 一端 Client。广播是「无连接也到达」的通道，通知是「连接内」的通道，两者互补。</div>
+    <div class="recap"><b>收束：</b>广播按 AD 段拼预算；interval/txPower/connectable 三个旋钮。</div>
+  </section>
+
+  <section id="c">
+    <h2><span class="no">第 3 步</span>鸿蒙当 BTHome 广播源</h2>
+    <pre>ble.startAdvertising(
+  { interval: 1600, txPower: -7, connectable: false },
+  {
+    serviceUuids: ['0000fcd2-0000-1000-8000-00805f9b34fb'],
+    serviceData: [{
+      serviceUuid: '0000fcd2-0000-1000-8000-00805f9b34fb',
+      serviceValue: new Uint8Array([0x40,0x02,0xC4,0x09,0x03,0xBF,0x13]).buffer
+    }]
+  }
+);
+<span class="cm">// 任何 BTHome 接收器（Android/iOS/鸿蒙/Home Assistant）都能收到 25.00°C / 50.55%</span></pre>
+    <table>
+      <tr><th>平台</th><th>能发 BTHome 服务数据广播？</th><th>原因</th></tr>
+      <tr><td>Android</td><td><b>能</b></td><td>AdvertiseData.setServiceData</td></tr>
+      <tr><td>鸿蒙</td><td><b>能</b></td><td>AdvertiseData.serviceData（API 10 起）</td></tr>
+      <tr><td>iOS</td><td><b>不能</b></td><td>startAdvertising 只支持 LocalName + ServiceUUIDs 两键</td></tr>
+    </table>
+    <ul>
+      <li><b>双机实验</b>：鸿蒙 A 机跑上面的广播源；鸿蒙 B 机（或 Android）按 D3 过滤 FCD2 收帧解码。iPhone 只能当接收器。</li>
+      <li><b>定时更新</b>：stopAdvertising → 改 serviceValue → startAdvertising；或用 API 11 重载的 enable/disableAdvertising。</li>
+      <li><b>connectable=false</b>：纯广播传感器不需要连接，省电且避免中心误连。</li>
+    </ul>
+    <div class="recap"><b>收束：</b>鸿蒙与 Android 一样能当 BTHome 源；这是 D9 实战「自发自收」的基础。</div>
   </section>
 
   <section id="lab">
-    <h2><span class="no">动手</span>Server / 广播</h2>
-    <p>点按钮切换本平台写法与 Android 对照，概念一一对应。</p>
+    <h2><span class="no">动手</span>两场演练：API 对照、广播预算计算器</h2>
+    <p>演练一切换写法对照。演练二勾选 AD 段，实时算 31 字节预算，超了就红。</p>
     <div class="lab">
-      <div class="lab-head"><b>Server / 广播</b><span class="hint">点按钮看 API</span></div>
-      <div class="controls"><div class="seg" id="d7"><button data-k="api" class="on">本平台 API</button><button data-k="cmp">对照 Android</button></div></div>
+      <div class="lab-head"><b>演练一 · Server / 广播 API</b><span class="hint">点按钮看 API</span></div>
+      <div class="controls"><div class="seg" id="d7"><button data-k="api" class="on">鸿蒙写法</button><button data-k="cmp">对照 Android / iOS</button></div></div>
       <div class="lab-body"><div><pre id="d7code" style="margin:0;"></pre></div><div class="logcat"><div class="logcat-head"><span>说明</span><span>live</span></div><div class="logcat-body" id="d7log"></div></div></div>
-      <div class="lab-foot"><span class="hint">Android: BluetoothGattServer + Advertiser</span></div>
+      <div class="lab-foot"><span class="hint">Android: GattServer + Advertiser · iOS: CBPeripheralManager（两键限制）</span></div>
     </div>
-    <div class="key"><span class="tag">看懂这场演练</span>手机可当外设；双机对时间线。</div>
+    <div class="lab">
+      <div class="lab-head"><b>演练二 · 广播预算计算器</b><span class="hint">advData 上限 31 字节</span></div>
+      <div class="controls">
+        <label class="ctl-row"><span class="chk"><input type="checkbox" id="bFlags" checked> Flags (3B)</span></label>
+        <label class="ctl-row"><span class="chk"><input type="checkbox" id="bUuid" checked> UUID列表 FCD2 (4B)</span></label>
+        <label class="ctl-row"><span class="chk"><input type="checkbox" id="bSdata" checked> BTHome 服务数据 (11B)</span></label>
+        <label class="ctl-row"><span class="chk"><input type="checkbox" id="bName"> 名字 QZ-Sensor (11B)</span></label>
+        <label class="ctl-row"><span class="chk"><input type="checkbox" id="bMfg"> 厂商数据 (8B)</span></label>
+      </div>
+      <div class="lab-body"><div><div class="chips" id="bud7chips"></div><div class="key" id="bud7hint"></div></div><div class="logcat"><div class="logcat-head"><span>AD 段</span><span>live</span></div><div class="logcat-body" id="bud7log"></div></div></div>
+      <div class="lab-foot"><span class="hint">放不下就挪到扫描响应（再 31 字节）</span></div>
+    </div>
+    <div class="key"><span class="tag">看懂这两场演练</span>手机可当外设；广播按段拼预算；鸿蒙能发 serviceData，BTHome 源成立。</div>
   </section>
 
   <section id="quiz">
-    <h2><span class="no">自测</span>三个问题</h2>
+    <h2><span class="no">自测</span>六个问题</h2>
     <div class="card" id="quiz-box"></div>
     <p id="quiz-done" style="display:none;font-weight:700;color:#1E7268;">全对。下一课讲排障。</p>
   </section>
 
   <section id="map">
-    <h2><span class="no">回顾</span>速查</h2>
-    <table><tr><th>项</th><th>API</th></tr><tr><td>Server</td><td>createGattServerDevice</td></tr><tr><td>广播</td><td>startAdvertising</td></tr></table>
-    <div class="note"><span class="tag">说明</span>本页为教学简化，工程细节以正文与官方规范为准；演练为模拟，非真实设备通信。</div>
+    <h2><span class="no">回顾</span>速查表</h2>
+    <table>
+      <tr><th>项</th><th>记住</th></tr>
+      <tr><td>Server</td><td>createGattServer → addService；收请求必须 sendResponse</td></tr>
+      <tr><td>广播</td><td>startAdvertising(setting, advData, advResponse)；各 31 字节</td></tr>
+      <tr><td>新重载</td><td>AdvertisingParams + enable/disable + stateChange：API 11</td></tr>
+      <tr><td>旋钮</td><td>interval 默认 1600 slot=1s；txPower 默认 -7；connectable 默认 true</td></tr>
+      <tr><td>BTHome</td><td>serviceData 可发（API 10）；最小集 18 字节</td></tr>
+      <tr><td>通知</td><td>notifyCharacteristicChanged 只给已订阅中心</td></tr>
+    </table>
+    <div class="note"><span class="tag">说明</span>本页为教学整理，参数范围与版本对照华为官方文档核实；演练为模拟，非真实射频。</div>
+  </section>
+
+  <section id="refs">
+    <h2><span class="no">依据</span>参考链接</h2>
+    <div class="card refs">
+      <h3 style="margin-top:0;">华为官方文档</h3>
+      <ul>
+        <li><a href="https://developer.huawei.com/consumer/cn/doc/harmonyos-references/js-apis-bluetooth-ble" target="_blank" rel="noopener">@ohos.bluetooth.ble API 参考</a> <span class="src">— GattServer / AdvertiseSetting / AdvertiseData 全字段</span></li>
+        <li><a href="https://developer.huawei.com/consumer/en/doc/best-practices/bpta-bluetooth-low-energy" target="_blank" rel="noopener">Best Practices · Bluetooth Low Energy</a> <span class="src">— 广播参数与功耗</span></li>
+      </ul>
+      <h3>实测与深入</h3>
+      <ul>
+        <li><a href="https://bthome.io/format/" target="_blank" rel="noopener">BTHome v2 格式规范</a> <span class="src">— 服务数据广播布局</span></li>
+        <li><a href="https://developer.apple.com/documentation/corebluetooth/cbperipheralmanager/startadvertising(_:)" target="_blank" rel="noopener">Apple · startAdvertising(_:)</a> <span class="src">— iOS 两键限制的官方依据（跨端对照）</span></li>
+      </ul>
+    </div>
+    <div class="next-links">
+      <a href="06-notify.html">← D6 订阅通知</a>
+      <a href="08-troubleshooting.html">D8 排障手册 →</a>
+    </div>
     <footer>青竹蓝牙学堂 · 蓝牙小课堂鸿蒙第七课 · D7 · <a href="../index.html">回到学堂</a></footer>
   </section>
 </main>
 <aside class="toc" id="toc">
   <div class="toc-title">本课目录</div>
   <a href="#a">GattServer</a>
-  <a href="#b">广播与通知</a>
-  <a href="#lab">动手演练</a>
+  <a href="#b">广播预算</a>
+  <a href="#c">BTHome 广播源</a>
+  <a href="#lab">两场演练</a>
   <a href="#quiz">本课自测</a>
-  <a href="#map">回顾与速查</a>
+  <a href="#map">速查表</a>
+  <a href="#refs">参考链接</a>
 </aside>
 </div>
 <script>
-(function(){var API="点按钮看写法。";var CMP="server.addService(service)\nble.startAdvertising(settings, data)\nserver.notifyCharacteristicChanged(...)";var NT="Android: BluetoothGattServer + Advertiser";function show(k){document.getElementById("d7code").textContent=(k==="api"?API:CMP);document.getElementById("d7log").innerHTML="<div><span class=\"ok\">"+(k==="api"?"本平台写法":"Android 对照")+"</span></div><div><span class=\"c\">// "+(k==="api"?NT:"概念相同，API 名不同")+"</span></div>";}document.querySelectorAll("#d7 button").forEach(function(b){b.addEventListener("click",function(){document.querySelectorAll("#d7 button").forEach(function(x){x.classList.remove("on");});b.classList.add("on");show(b.getAttribute("data-k"));});});show("api");})();
+(function(){
+  var API="let server = ble.createGattServer();\nserver.on('characteristicRead', (req) => {\n  server.sendResponse({ deviceId: req.deviceId, transId: req.transId,\n    status: 0, offset: req.offset, value: ch.characteristicValue });\n});\nserver.addService(service);\nble.startAdvertising(\n  { interval: 1600, txPower: -7, connectable: false },\n  { serviceData: [{ serviceUuid: '0000fcd2-...', serviceValue: frame }] }\n);\nserver.notifyCharacteristicChanged(deviceId, notifyChar);";
+  var CMP="Android: BluetoothGattServer + BluetoothLeAdvertiser\n         AdvertiseData.setServiceData(uuid, bytes) ✓\niOS:     CBPeripheralManager.startAdvertising(dict)\n         只支持 LocalName + ServiceUUIDs 两键 ✗\n         发不出 BTHome 服务数据\n\n鸿蒙像 Android：serviceData 可发 → 真 BTHome 源";
+  function show(k){
+    document.getElementById("d7code").textContent=(k==="api"?API:CMP);
+    document.getElementById("d7log").innerHTML="<div><span class=\"ok\">"+(k==="api"?"鸿蒙写法":"三平台对照")+"</span></div><div><span class=\"c\">// "+(k==="api"?"收请求必须 sendResponse；通知只给已订阅者":"Android ✓ / 鸿蒙 ✓ / iOS ✗（两键限制）")+"</span></div>";
+  }
+  document.querySelectorAll("#d7 button").forEach(function(b){b.addEventListener("click",function(){document.querySelectorAll("#d7 button").forEach(function(x){x.classList.remove("on");});b.classList.add("on");show(b.getAttribute("data-k"));});});
+  show("api");
+})();
+
+// 演练二：广播预算计算器
+(function(){
+  var SEG=[
+    {id:'bFlags',n:'Flags',b:3,hex:'02 01 06'},
+    {id:'bUuid',n:'UUID列表 FCD2',b:4,hex:'03 03 D2 FC'},
+    {id:'bSdata',n:'BTHome 服务数据',b:11,hex:'08 16 D2 FC 40 02 C4 09 03 BF 13'},
+    {id:'bName',n:'名字 QZ-Sensor',b:11,hex:'0A 09 51 5A 2D 53 65 6E 73 6F 72'},
+    {id:'bMfg',n:'厂商数据',b:8,hex:'07 FF 59 00 01 02 03 04'}
+  ];
+  function calc(){
+    var total=0, lines=[];
+    SEG.forEach(function(s){
+      var on=document.getElementById(s.id).checked;
+      if(on){total+=s.b;lines.push('<div><span class="api">'+s.n+' +'+s.b+'B</span> <span class="c">'+s.hex+'</span></div>');}
+    });
+    var over=total>31;
+    document.getElementById('bud7chips').innerHTML=
+      '<span class="chip '+(over?'bad':'on')+'">'+total+' / 31 字节</span>'+
+      (over?'<span class="chip bad">超限 '+ (total-31) +'B</span>':'<span class="chip on">剩余 '+(31-total)+'B</span>');
+    document.getElementById('bud7hint').innerHTML='<span class="tag">'+(over?'超限':'预算')+'</span>'+
+      (over?'advData 放不下：把名字/厂商数据挪到扫描响应（再 31 字节），或删段。':'装得下。BTHome 最小集（Flags+UUID+服务数据）= 18B。');
+    document.getElementById('bud7log').innerHTML=lines.join('')||'<div><span class="c">（空广播）</span></div>';
+  }
+  SEG.forEach(function(s){document.getElementById(s.id).addEventListener('change',calc);});
+  calc();
+})();
 
 const tocLinks=[...document.querySelectorAll('.toc a')];
 const secs=tocLinks.map(a=>document.getElementById(a.getAttribute('href').slice(1)));
 const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){tocLinks.forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+e.target.id));}});},{rootMargin:'-20% 0px -70% 0px'});
 secs.forEach(s=>s&&io.observe(s));
-const QUIZ=[{"q":"1. 外设服务端？","opts":[["createGattServerDevice",true,"对。"],["client",false,"中心。"],["CBCentralManager",false,"iOS。"]]},{"q":"2. 发广播用？","opts":[["startAdvertising",true,"对。"],["startBLEScan",false,"扫描。"],["connect",false,"连接。"]]},{"q":"3. 外设发通知给？","opts":[["已订阅的中心",true,"对。"],["所有人",false,"已订阅者。"],["自己",false,"给中心。"]]}];
+const QUIZ=[{"q":"1. 外设服务端？","opts":[["createGattServer",true,"对。"],["client",false,"中心。"],["CBCentralManager",false,"iOS。"]]},{"q":"2. 发广播用？","opts":[["startAdvertising",true,"对。"],["startBLEScan",false,"扫描。"],["connect",false,"连接。"]]},{"q":"3. 外设发通知给？","opts":[["已订阅的中心",true,"对。"],["所有人",false,"已订阅者。"],["自己",false,"给中心。"]]},{"q":"4. 鸿蒙能发 BTHome 服务数据广播吗？","opts":[["能：AdvertiseData.serviceData",true,"对。API 10 起；iOS 才发不了。"],["不能",false,"那是 iOS 的两键限制。"],["要 API 22",false,"22 是接收侧 serviceDataMap。"]]},{"q":"5. Server 收到读请求必须？","opts":[["sendResponse 回数据",true,"对。不回中心会超时。"],["只记日志",false,"必须响应。"],["notify",false,"那是主动推送。"]]},{"q":"6. 广播 interval 默认 1600 是什么单位？","opts":[["slot×0.625ms，即 1 秒",true,"对。范围 [32,16777215]。"],["毫秒",false,"是 0.625ms 的 slot。"],["秒",false,"1600 秒太久了。"]]}];
 let solved=0; const box=document.getElementById('quiz-box');
 QUIZ.forEach((item,qi)=>{
   const h=document.createElement('div'); h.className='quiz-q'; h.textContent=item.q; box.appendChild(h);

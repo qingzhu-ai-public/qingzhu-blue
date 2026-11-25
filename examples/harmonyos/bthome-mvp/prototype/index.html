@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BTHome 温湿度计 · HarmonyOS MVP 交互原型</title>
+<style>
+  :root{--bg:#FAF3EC;--card:#fff;--ink:#201A15;--muted:#7C7166;--faint:#A79B8D;--line:#EADFD3;
+    --coral:#E8590C;--coral-soft:#FBEADF;--teal:#2A9D8F;--teal-soft:#E9F4F2;--blue:#3B6FD4;--blue-soft:#ECF1FB;
+    --code-bg:#1B1512;--code-ink:#EDE7DC;}
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--ink);font:15px/1.8 "PingFang SC","Microsoft YaHei",system-ui,sans-serif;padding:24px 16px 60px;}
+  .wrap{max-width:860px;margin:0 auto;}
+  h1{font-size:24px;margin-bottom:6px;}
+  .sub{color:var(--muted);font-size:14px;margin-bottom:18px;}
+  .sub a{color:var(--blue);}
+  .tabs{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
+  .tabs button{font:inherit;font-weight:700;padding:8px 18px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--muted);cursor:pointer;}
+  .tabs button.on{background:var(--coral);border-color:var(--coral);color:#fff;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-bottom:14px;}
+  .card h2{font-size:16px;margin-bottom:8px;}
+  .btn{font:inherit;font-weight:600;padding:8px 20px;border-radius:999px;border:1px solid var(--coral);background:var(--coral);color:#fff;cursor:pointer;}
+  .btn.ghost{background:var(--card);color:var(--muted);border-color:var(--line);}
+  .btn:disabled{opacity:.45;cursor:default;}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:8px 0;}
+  .dev{border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin:8px 0;cursor:pointer;}
+  .dev:hover{border-color:var(--teal);}
+  .dev.off{opacity:.55;}
+  .dev b{font-size:15px;}
+  .dev .val{font-size:20px;font-weight:800;color:var(--teal);}
+  .dev .val.bad{color:#B04A35;font-size:15px;}
+  .dev .meta{font-size:12.5px;color:var(--faint);}
+  .tag{display:inline-block;font-size:11.5px;font-weight:700;border-radius:999px;padding:1px 10px;background:var(--teal-soft);color:#1E7268;margin-left:6px;}
+  .tag.blue{background:var(--blue-soft);color:#2F58A8;}
+  .tag.gray{background:#F1EEE7;color:var(--faint);}
+  .log{background:var(--code-bg);color:var(--code-ink);border-radius:10px;padding:12px 14px;font:12.5px/1.9 ui-monospace,Consolas,monospace;min-height:120px;max-height:260px;overflow-y:auto;}
+  .log .ok{color:#A8D5A2;} .log .api{color:#8FC7E8;} .log .c{color:#8D8577;} .log .warn{color:#E8C07D;} .log .err{color:#E88;}
+  input[type=range]{width:220px;accent-color:var(--coral);}
+  .note{font-size:13px;color:var(--muted);background:#F4F2EC;border-left:3px solid var(--faint);border-radius:8px;padding:10px 14px;margin-top:10px;}
+  .big{font-size:26px;font-weight:800;color:var(--teal);}
+  .mono{font-family:ui-monospace,Consolas,monospace;}
+  .chip{display:inline-block;font-size:12.5px;font-weight:700;border-radius:999px;padding:2px 12px;background:var(--teal-soft);color:#1E7268;margin-right:6px;}
+  .chip.bad{background:var(--coral-soft);color:#B04A35;}
+  .pass{color:#1E7268;font-weight:700;} .fail{color:#B04A35;font-weight:700;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>BTHome 温湿度计 · HarmonyOS MVP 交互原型</h1>
+  <p class="sub">模拟射频、真实协议代码：接收/编码/解码走的都是与 ArkTS 源码等价的逻辑。真机行为以源码为准：<a href="https://github.com/qingzhu-ai-public/qingzhu-blue/tree/main/examples/harmonyos/bthome-mvp">配套源码</a> · <a href="https://qingzhu-ai-public.github.io/qingzhu-blue/academy/harmonyos/09-project.html">配套课程 D9</a></p>
+  <div class="tabs">
+    <button id="tabScan" class="on">接收器</button>
+    <button id="tabAdv">广播源</button>
+    <button id="tabPeriph">教学从端</button>
+    <button id="tabClient">教学中心</button>
+    <button id="tabTest">协议自检</button>
+  </div>
+
+  <div id="scanView">
+    <div class="card">
+      <h2>接收器 · 只收 FCD2，扫到即解码（不连接）</h2>
+      <div class="row">
+        <button class="btn" id="scanBtn">开始扫描</button>
+        <span id="scanStatus" style="color:var(--muted);font-size:13.5px;">点「开始扫描」接收 BTHome 广播</span>
+      </div>
+      <div id="devList"></div>
+      <div class="note">解码走真实路径：原始 AD → extractServiceData(0x16/FCD2) → parseBthome（升序/小端/符号/越界检查）。「广播源」页开始广播后，本机帧会出现在列表里；「教学从端」页启动后出现可连接的教学设备。停止广播约 10 秒标离线。</div>
+    </div>
+  </div>
+
+  <div id="advView" style="display:none;">
+    <div class="card">
+      <h2>广播源 · serviceData 发真 BTHome（iOS 做不到）</h2>
+      <div class="row">
+        <button class="btn" id="advBtn">开始广播</button>
+        <span id="advStatus" style="color:var(--muted);font-size:13.5px;">设定读数后开始广播</span>
+      </div>
+      <div class="row">
+        <label>温度 <b id="advTVal" class="mono">25.00</b> °C</label>
+        <input type="range" id="advT" min="-40" max="85" step="0.01" value="25">
+      </div>
+      <div class="row">
+        <label>湿度 <b id="advHVal" class="mono">50.55</b> %</label>
+        <input type="range" id="advH" min="0" max="100" step="0.01" value="50.55">
+      </div>
+      <div class="row"><span style="font-size:13.5px;color:var(--muted);">当前帧</span><span class="mono" id="advFrame" style="font-weight:700;"></span><span id="advBudget"></span></div>
+      <div class="log" id="advLog"><span class="c">// startAdvertising(setting, advData) · API 10 同步重载</span></div>
+      <div class="note"><b>鸿蒙优势：</b>AdvertiseData.serviceData（API 10）能发标准 BTHome 服务数据；iOS 只支持名字+服务 UUID。connectable=false 省电防误连；interval 1600 slot=1s。更新读数：stopAdvertising → 改帧 → startAdvertising。广播可被鸿蒙/Android/iPhone/Home Assistant 接收。</div>
+    </div>
+  </div>
+
+  <div id="periphView" style="display:none;">
+    <div class="card">
+      <h2>教学从端 · GATT 服务（写 01 回帧）</h2>
+      <div class="row">
+        <button class="btn" id="periphBtn">启动广播</button>
+        <span id="periphStatus" style="color:var(--muted);font-size:13.5px;">等待启动</span>
+      </div>
+      <div class="row"><span style="font-size:13.5px;color:var(--muted);">当前温度</span><span class="big" id="periphTemp">25.00 °C</span></div>
+      <div class="row"><span style="font-size:13.5px;color:var(--muted);">教学帧</span><span class="mono" id="periphFrame" style="font-weight:700;"></span></div>
+      <div class="log" id="periphLog"><span class="c">// 启动后，「教学中心」写 01 会在这里留痕</span></div>
+      <div class="note">教学协议三端一致：服务 476CDF45-…-0601，特征 …-0602（READ+WRITE），写 01 温度交替 25.00/26.50，湿度固定 50.55%。Android/iPhone 的 bthome-mvp 也能连这个从端；这不是 BTHome 标准，是教学 GATT 路线。</div>
+    </div>
+  </div>
+
+  <div id="clientView" style="display:none;">
+    <div class="card">
+      <h2>教学中心 · 连接 → 发现 → 写 01 → 读帧</h2>
+      <div class="row">
+        <button class="btn" id="cScanBtn">开始扫描</button>
+        <span id="cScanStatus" style="color:var(--muted);font-size:13.5px;">先在「教学从端」页启动广播，再扫描</span>
+      </div>
+      <div id="cDevList"></div>
+    </div>
+    <div class="card" id="cDetail" style="display:none;">
+      <h2>QZ-BTHome · 教学设备</h2>
+      <div class="row"><span id="cStatus" style="color:var(--muted);font-size:13.5px;"></span></div>
+      <div class="big" id="cReading"></div>
+      <div class="mono" id="cRaw" style="color:var(--faint);font-size:13px;"></div>
+      <div class="row">
+        <button class="btn" id="cReqBtn" disabled>请求新读数（写 01）</button>
+        <button class="btn ghost" id="cBackBtn">返回列表</button>
+      </div>
+      <div class="log" id="cLog"></div>
+      <div class="note">串行 Promise 链：等上一步回调再发下一步（D4）；从端停止广播会话断开。对端换成 Android/iPhone 的模拟外设，流程完全相同。</div>
+    </div>
+  </div>
+
+  <div id="testView" style="display:none;">
+    <div class="card">
+      <h2>协议层 13 项自检（与 BthomeProtocol.ets 的 selfTest 等价）</h2>
+      <div class="row">
+        <button class="btn" id="testBtn">跑 13 项自检</button>
+        <span id="testSummary" style="font-size:13.5px;color:var(--muted);"></span>
+      </div>
+      <div id="testReport" class="mono" style="font-size:13.5px;line-height:2;"></div>
+      <div class="note">不碰蓝牙，离线验证：官方样例、零下符号、升序规则、未知 ID 即停、截断、加密拒绝、湿度越界、编码闭环、AD 提取。App「自检」页跑的是同一套检查。</div>
+    </div>
+  </div>
+</div>
+<script>
+// ==== 协议核心：与 entry/src/main/ets/bluetooth/BthomeProtocol.ets 等价的纯 JS 实现 ====
+var BTHOME_UUID16 = 0xFCD2;
+var OBJECTS = [
+  { id: 0x00, label: '序号', len: 1, signed: false, factor: 1, unit: '', min: 0, max: 255 },
+  { id: 0x01, label: '电量', len: 1, signed: false, factor: 1, unit: '%', min: 0, max: 100 },
+  { id: 0x02, label: '温度', len: 2, signed: true, factor: 0.01, unit: '°C', min: -40, max: 85 },
+  { id: 0x03, label: '湿度', len: 2, signed: false, factor: 0.01, unit: '%', min: 0, max: 100 },
+  { id: 0x0C, label: '电压', len: 2, signed: false, factor: 0.001, unit: 'V', min: 0, max: 65.535 }
+];
+function findSpec(id) {
+  for (var i = 0; i < OBJECTS.length; i++) { if (OBJECTS[i].id === id) { return OBJECTS[i]; } }
+  return null;
+}
+function parseBthome(payload) {
+  if (payload.length < 2) { throw new Error('没有测量对象'); }
+  var info = payload[0];
+  var version = (info >> 5) & 7;
+  if (version !== 2) { throw new Error('需要 BTHome v2'); }
+  if ((info & 0x01) !== 0) { throw new Error('加密帧需要密钥，本示例只解析明文'); }
+  var reading = { version: version, trigger: (info & 0x04) !== 0, objects: [] };
+  var i = 1, last = -1;
+  while (i < payload.length) {
+    var id = payload[i];
+    if (id < last) { throw new Error('对象 ID 未升序'); }
+    var spec = findSpec(id);
+    if (!spec) { throw new Error('未知对象 ID 0x' + id.toString(16).toUpperCase()); }
+    if (i + 1 + spec.len > payload.length) { throw new Error('对象 0x' + id.toString(16).toUpperCase() + ' 数据不完整'); }
+    var raw = 0;
+    for (var k = 0; k < spec.len; k++) { raw |= payload[i + 1 + k] << (8 * k); }
+    if (spec.signed && spec.len === 2 && raw >= 0x8000) { raw -= 0x10000; }
+    var value = raw * spec.factor;
+    if (id === 0x03 && (value < 0 || value > 100)) { throw new Error('湿度 ' + value.toFixed(2) + '% 越界（0–100），帧可疑'); }
+    reading.objects.push({ id: id, label: spec.label, value: value, unit: spec.unit,
+      inRange: value >= spec.min && value <= spec.max });
+    last = id;
+    i += 1 + spec.len;
+  }
+  if (reading.objects.length === 0) { throw new Error('没有测量对象'); }
+  return reading;
+}
+function displayReading(reading) {
+  var parts = [];
+  reading.objects.forEach(function (m) {
+    if (m.id === 0x00) { return; }
+    var spec = findSpec(m.id);
+    var digits = spec && spec.factor === 1 ? 0 : (spec && spec.factor === 0.001 ? 3 : 2);
+    parts.push(m.label + ' ' + m.value.toFixed(digits) + (m.unit ? ' ' + m.unit : '') + (m.inRange ? '' : '（越界）'));
+  });
+  return parts.length > 0 ? parts.join(' · ') : '无可显示的读数';
+}
+function encodeBthome(temperature, humidity, packetId) {
+  var out = [0x40];
+  if (packetId !== undefined && packetId >= 0) { out.push(0x00, packetId & 0xff); }
+  var t = Math.round(temperature * 100);
+  var tu = t < 0 ? t + 0x10000 : t;
+  out.push(0x02, tu & 0xff, (tu >> 8) & 0xff);
+  var h = Math.round(humidity * 100);
+  out.push(0x03, h & 0xff, (h >> 8) & 0xff);
+  return new Uint8Array(out);
+}
+function extractServiceData(bytes, uuid16) {
+  var i = 0;
+  while (i < bytes.length) {
+    var len = bytes[i];
+    if (len === 0) { break; }
+    if (i + len >= bytes.length) { break; }
+    if (bytes[i + 1] === 0x16 && len >= 3 && (bytes[i + 2] | (bytes[i + 3] << 8)) === uuid16) {
+      return bytes.slice(i + 4, i + 1 + len);
+    }
+    i += len + 1;
+  }
+  return null;
+}
+function hexBytes(bytes) {
+  return Array.from(bytes).map(function (b) { return b.toString(16).padStart(2, '0').toUpperCase(); }).join(' ');
+}
+function bytesFromHex(hex) {
+  var clean = hex.replace(/[^0-9a-fA-F]/g, '');
+  var out = [];
+  for (var i = 0; i + 1 < clean.length; i += 2) { out.push(parseInt(clean.substring(i, i + 2), 16)); }
+  return new Uint8Array(out);
+}
+function demoFrame(temperature) {
+  var tu = temperature < 0 ? temperature + 0x10000 : temperature;
+  return new Uint8Array([0x40, 0x02, tu & 0xff, (tu >> 8) & 0xff, 0x03, 0xbf, 0x13]);
+}
+function buildAdv(payload) {
+  var head = [0x02, 0x01, 0x06, 0x03, 0x03, 0xD2, 0xFC];
+  var sd = [payload.length + 3, 0x16, 0xD2, 0xFC];
+  return new Uint8Array(head.concat(sd).concat(Array.from(payload)));
+}
+function selfTest() {
+  var report = [];
+  function check(name, ok) { report.push((ok ? 'PASS ' : 'FAIL ') + name); }
+  function throws(action) { try { action(); return false; } catch (e) { return true; } }
+  var official = parseBthome(bytesFromHex('40 02 C4 09 03 BF 13'));
+  check('官方样例 v2 明文', official.version === 2 && !official.trigger);
+  check('温度 25.00', Math.abs(official.objects[0].value - 25.0) < 0.001);
+  check('湿度 50.55', Math.abs(official.objects[1].value - 50.55) < 0.001);
+  var negative = parseBthome(bytesFromHex('40 02 DA FD'));
+  check('零下 −5.50', Math.abs(negative.objects[0].value + 5.5) < 0.001);
+  var extras = parseBthome(bytesFromHex('40 00 05 01 64 0C EA 0B'));
+  check('序号/电量/电压', extras.objects.length === 3 && extras.objects[0].value === 5 &&
+    extras.objects[1].value === 100 && Math.abs(extras.objects[2].value - 3.05) < 0.0001);
+  check('升序违规报错', throws(function () { parseBthome(bytesFromHex('40 03 BF 13 02 C4 09')); }));
+  check('未知 ID 即停', throws(function () { parseBthome(bytesFromHex('40 02 C4 09 FF 01')); }));
+  check('截断帧报错', throws(function () { parseBthome(bytesFromHex('40 02 C4')); }));
+  check('加密帧拒绝', throws(function () { parseBthome(bytesFromHex('41 02 C4 09')); }));
+  check('湿度越界报错', throws(function () { parseBthome(bytesFromHex('40 03 A2 28')); }));
+  var encoded = encodeBthome(25.0, 50.55);
+  var roundTrip = parseBthome(encodeBthome(-5.5, 50.55));
+  check('编码→解码闭环', hexBytes(encoded) === '40 02 C4 09 03 BF 13' &&
+    Math.abs(roundTrip.objects[0].value + 5.5) < 0.001);
+  var adv = bytesFromHex('02 01 06 03 03 D2 FC 0A 16 D2 FC 40 02 C4 09 03 BF 13');
+  var hit = extractServiceData(adv, BTHOME_UUID16);
+  check('AD 提取命中', hit !== null ? hexBytes(hit) === '40 02 C4 09 03 BF 13' : false);
+  check('AD 提取未命中', extractServiceData(adv, 0x180F) === null);
+  return report;
+}
+</script>
+<script>
+// ==== 界面模拟：射频是假的，协议走上面那套真代码 ====
+(function () {
+  var scanning = false, advOn = false, periphOn = false, cScanning = false, selected = false, ready = false;
+  var advT = 25.0, advH = 50.55, periphTemp = 2500, writes = 0;
+  var devices = [
+    { id: 'shelly', name: 'Shelly BLU H&T', t: 24.3, h: 47.8, rssi: -58, seen: 0 },
+    { id: 'diy', name: 'DIY-sensor', t: 25.0, h: 50.55, rssi: -71, seen: 0 }
+  ];
+  function log(el, html) {
+    var d = document.createElement('div'); d.innerHTML = html; el.appendChild(d); el.scrollTop = el.scrollHeight;
+  }
+  function decodeRaw(raw) {
+    var payload = extractServiceData(raw, BTHOME_UUID16);
+    if (payload === null) { return { fault: '不是 FCD2 服务数据' }; }
+    try {
+      var reading = parseBthome(payload);
+      return { text: displayReading(reading), raw: hexBytes(payload) };
+    } catch (e) { return { fault: e.message, raw: hexBytes(payload) }; }
+  }
+  function paintDevices() {
+    var now = Date.now(), out = '';
+    devices.forEach(function (d) {
+      var online = scanning && now - d.seen < 10000;
+      var r = decodeRaw(buildAdv(encodeBthome(d.t, d.h)));
+      out += '<div class="dev' + (online ? '' : ' off') + '"><b>' + d.name + '</b><span class="tag">BTHome v2</span>' +
+        (online ? '' : '<span class="tag gray">离线</span>') +
+        '<div class="val">' + r.text + '</div>' +
+        '<div class="meta">信号 ' + d.rssi + ' dBm · <span class="mono">' + r.raw + '</span></div></div>';
+    });
+    if (advOn) {
+      var mine = decodeRaw(buildAdv(encodeBthome(advT, advH)));
+      out += '<div class="dev"><b>鸿蒙广播源（本机）</b><span class="tag">BTHome v2</span><span class="tag blue">不可连接</span>' +
+        '<div class="val">' + mine.text + '</div>' +
+        '<div class="meta">serviceData 广播 · <span class="mono">' + mine.raw + '</span></div></div>';
+    }
+    if (periphOn) {
+      out += '<div class="dev" id="qzDev"><b>QZ-BTHome</b><span class="tag blue">可连接</span>' +
+        '<div class="val" style="font-size:15px;">教学 GATT 设备 · 点它去「教学中心」连接</div>' +
+        '<div class="meta">服务 476CDF45-…-0601 · 写 01 读帧</div></div>';
+    }
+    document.getElementById('devList').innerHTML = scanning ? out : '<div class="note">未扫描。</div>';
+    var qz = document.getElementById('qzDev');
+    if (qz) {
+      qz.addEventListener('click', function () {
+        switchTab('client');
+        openDetail();
+      });
+    }
+  }
+  function paintAdv() {
+    document.getElementById('advTVal').textContent = advT.toFixed(2);
+    document.getElementById('advHVal').textContent = advH.toFixed(2);
+    var frame = encodeBthome(advT, advH);
+    var budget = 3 + 4 + (2 + 2 + frame.length);
+    document.getElementById('advFrame').textContent = hexBytes(frame);
+    document.getElementById('advBudget').innerHTML = '<span class="chip' + (budget <= 31 ? '' : ' bad') + '">' + budget + ' / 31 字节</span>';
+  }
+  function paintPeriph() {
+    document.getElementById('periphTemp').textContent = (periphTemp / 100).toFixed(2) + ' °C';
+    document.getElementById('periphFrame').textContent = hexBytes(demoFrame(periphTemp));
+  }
+  document.getElementById('scanBtn').addEventListener('click', function () {
+    scanning = !scanning;
+    this.textContent = scanning ? '停止扫描' : '开始扫描';
+    document.getElementById('scanStatus').textContent = scanning ? '正在接收 FCD2 广播（startBLEScan + BLEDeviceFind）' : '已停止';
+    if (scanning) { devices.forEach(function (d) { d.seen = Date.now(); }); }
+    paintDevices();
+  });
+  document.getElementById('advBtn').addEventListener('click', function () {
+    advOn = !advOn;
+    this.textContent = advOn ? '停止广播' : '开始广播';
+    document.getElementById('advStatus').textContent = advOn ? '正在广播 BTHome 帧（不可连接）' : '已停止';
+    var L = document.getElementById('advLog');
+    if (advOn) {
+      log(L, '<span class="api">startAdvertising({interval:1600, txPower:-7, connectable:false},</span>');
+      log(L, '<span class="api">  {serviceUuids:[FCD2], serviceData:[{serviceUuid:FCD2, serviceValue:frame}]})</span>');
+      log(L, '<span class="ok">广播中</span> <span class="c">' + hexBytes(encodeBthome(advT, advH)) + '</span>');
+    } else {
+      log(L, '<span class="warn">stopAdvertising()</span>');
+    }
+    paintDevices();
+  });
+  function advChanged() {
+    paintAdv();
+    if (advOn) {
+      var L = document.getElementById('advLog');
+      log(L, '<span class="warn">stopAdvertising</span> → 改帧 → <span class="api">startAdvertising</span>');
+      log(L, '<span class="ok">新帧</span> <span class="c">' + hexBytes(encodeBthome(advT, advH)) + '</span>');
+      paintDevices();
+    }
+  }
+  document.getElementById('advT').addEventListener('input', function () { advT = parseFloat(this.value); advChanged(); });
+  document.getElementById('advH').addEventListener('input', function () { advH = parseFloat(this.value); advChanged(); });
+  document.getElementById('periphBtn').addEventListener('click', function () {
+    periphOn = !periphOn;
+    this.textContent = periphOn ? '停止广播' : '启动广播';
+    document.getElementById('periphStatus').textContent = periphOn ? '已发起广播，等待另一台手机连接' : '已停止';
+    var L = document.getElementById('periphLog');
+    if (periphOn) {
+      periphTemp = 2500; writes = 0;
+      log(L, '<span class="api">createGattServer() + addService(…0601/…0602 read+write)</span>');
+      log(L, '<span class="ok">startAdvertising(connectable:true, serviceUuids:[…0601])</span>');
+    } else {
+      log(L, '<span class="warn">stopAdvertising + server.close()</span>');
+      if (selected) { disconnectCentral('从端停了广播'); }
+    }
+    paintPeriph(); paintDevices(); paintCDevices();
+  });
+  function paintCDevices() {
+    var out = '';
+    if (cScanning && periphOn) {
+      out = '<div class="dev" id="cQz"><b>QZ-BTHome</b><span class="tag blue">可连接</span>' +
+        '<div class="meta">教学服务 …0601 · 信号 -46 dBm · 点它连接</div></div>';
+    } else if (cScanning) {
+      out = '<div class="note">没有找到教学设备——先去「教学从端」页启动广播。</div>';
+    } else {
+      out = '<div class="note">未扫描。</div>';
+    }
+    document.getElementById('cDevList').innerHTML = out;
+    var el = document.getElementById('cQz');
+    if (el) { el.addEventListener('click', openDetail); }
+  }
+  document.getElementById('cScanBtn').addEventListener('click', function () {
+    cScanning = !cScanning;
+    this.textContent = cScanning ? '停止扫描' : '开始扫描';
+    document.getElementById('cScanStatus').textContent = cScanning ? 'startBLEScan([{serviceUuid: …0601}])' : '已停止';
+    paintCDevices();
+  });
+  function openDetail() {
+    if (!periphOn) { return; }
+    selected = true; ready = false;
+    document.getElementById('cDetail').style.display = 'block';
+    document.getElementById('cReading').textContent = '';
+    document.getElementById('cRaw').textContent = '';
+    document.getElementById('cReqBtn').disabled = true;
+    var L = document.getElementById('cLog'); L.innerHTML = '';
+    document.getElementById('cStatus').textContent = '正在连接';
+    log(L, '<span class="api">createGattClientDevice(deviceId) + connect()</span>');
+    setTimeout(function () {
+      if (!selected) { return; }
+      if (!periphOn) { disconnectCentral('从端已停止'); return; }
+      log(L, '<span class="ok">BLEConnectionStateChange: STATE_CONNECTED</span> → getServices()');
+    }, 500);
+    setTimeout(function () {
+      if (!selected) { return; }
+      log(L, '<span class="ok">发现 …0601 / …0602（read+write）</span> → 就绪');
+      ready = true;
+      document.getElementById('cReqBtn').disabled = false;
+      document.getElementById('cStatus').textContent = '已就绪，可以请求新读数';
+    }, 1000);
+  }
+  function disconnectCentral(reason) {
+    ready = false;
+    document.getElementById('cReqBtn').disabled = true;
+    document.getElementById('cStatus').textContent = '设备已断开（' + reason + '）';
+    log(document.getElementById('cLog'), '<span class="err">STATE_DISCONNECTED · ' + reason + '</span>');
+  }
+  document.getElementById('cBackBtn').addEventListener('click', function () {
+    selected = false; ready = false;
+    document.getElementById('cDetail').style.display = 'none';
+  });
+  document.getElementById('cReqBtn').addEventListener('click', function () {
+    if (!ready) { return; }
+    ready = false; this.disabled = true;
+    var L = document.getElementById('cLog');
+    document.getElementById('cStatus').textContent = '正在写入 01';
+    log(L, '<span class="api">writeCharacteristicValue(01, GattWriteType.WRITE)</span>');
+    setTimeout(function () {
+      if (!selected) { return; }
+      if (!periphOn) { disconnectCentral('从端停了广播'); return; }
+      periphTemp = periphTemp === 2500 ? 2650 : 2500; writes++;
+      var PL = document.getElementById('periphLog');
+      log(PL, '<span class="warn">characteristicWrite 收到 01</span> → 温度交替 ' + (periphTemp / 100).toFixed(2));
+      log(PL, '<span class="ok">characteristicRead → sendResponse</span> <span class="c">' + hexBytes(demoFrame(periphTemp)) + '</span>');
+      paintPeriph();
+      log(L, '<span class="ok">写入成功</span> → readCharacteristicValue()');
+      setTimeout(function () {
+        if (!selected) { return; }
+        var frame = demoFrame(periphTemp);
+        var reading = parseBthome(frame);
+        log(L, '<span class="ok">读到帧</span> <span class="c">' + hexBytes(frame) + '</span> → parseBthome');
+        document.getElementById('cRaw').textContent = hexBytes(frame);
+        document.getElementById('cReading').textContent = displayReading(reading);
+        document.getElementById('cStatus').textContent = '读数已更新';
+        ready = true;
+        document.getElementById('cReqBtn').disabled = false;
+      }, 400);
+    }, 400);
+  });
+  function runTests() {
+    var report = selfTest();
+    var pass = report.filter(function (l) { return l.indexOf('PASS') === 0; }).length;
+    document.getElementById('testReport').innerHTML = report.map(function (l) {
+      return '<div class="' + (l.indexOf('PASS') === 0 ? 'pass' : 'fail') + '">' + l + '</div>';
+    }).join('');
+    document.getElementById('testSummary').textContent = pass + ' / ' + report.length + ' 通过';
+  }
+  document.getElementById('testBtn').addEventListener('click', runTests);
+  var tabs = { scan: 'tabScan', adv: 'tabAdv', periph: 'tabPeriph', client: 'tabClient', test: 'tabTest' };
+  var views = { scan: 'scanView', adv: 'advView', periph: 'periphView', client: 'clientView', test: 'testView' };
+  function switchTab(key) {
+    Object.keys(tabs).forEach(function (k) {
+      document.getElementById(tabs[k]).classList.toggle('on', k === key);
+      document.getElementById(views[k]).style.display = k === key ? 'block' : 'none';
+    });
+    if (key === 'test') { runTests(); }
+  }
+  Object.keys(tabs).forEach(function (k) {
+    document.getElementById(tabs[k]).addEventListener('click', function () { switchTab(k); });
+  });
+  setInterval(function () {
+    var now = Date.now();
+    if (scanning) {
+      devices[0].t = Math.round((24.3 + 0.4 * Math.sin(now / 4000)) * 100) / 100;
+      devices[0].h = Math.round((47.8 + 1.2 * Math.sin(now / 6000)) * 100) / 100;
+      devices[0].seen = now; devices[1].seen = now;
+      devices[0].rssi = -58 + Math.round(Math.random() * 4 - 2);
+      paintDevices();
+    }
+  }, 1000);
+  paintAdv(); paintPeriph(); paintDevices(); paintCDevices();
+})();
+</script>
+</body>
+</html>

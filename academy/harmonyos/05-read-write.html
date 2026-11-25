@@ -172,6 +172,10 @@
   .ctl-row label{display:inline-flex;align-items:center;gap:10px;}
   .ctl-row input[type=range]{accent-color:var(--coral);width:160px;}
   .ctl-row .chk input{accent-color:var(--coral);}
+  .api-lv{display:inline-block;font-family:ui-monospace,Consolas,monospace;font-size:11.5px;font-weight:800;color:#2F58A8;background:var(--blue-soft);border:1px solid var(--blue-line);border-radius:999px;padding:0 8px;white-space:nowrap;}
+  .refs{font-size:14px;}
+  .refs li{margin:7px 0;}
+  .refs .src{font-size:12px;color:var(--faint);}
 </style>
 </head>
 <body style="--coral:#E8590C;--coral-soft:#FBEADF;--coral-line:#F2C4A4">
@@ -198,47 +202,161 @@
 <main>
   <div class="crumb">蓝牙小课堂 / 鸿蒙第五课 · D5</div>
   <h1>读写与解析：<em>read/writeCharacteristicValue</em></h1>
-  <p class="lead">readCharacteristicValue / writeCharacteristicValue 操作特征值，字节解析同通用（小端+符号）。这一课讲读写与解析。</p>
-  <div class="meta"><span>约 10 分钟</span><span>含交互演练</span><span>跨端对照</span></div>
+  <p class="lead">readCharacteristicValue / writeCharacteristicValue 操作特征值（ArrayBuffer），写类型 WRITE=1 / WRITE_NO_RESPONSE=2。字节解析同通用：小端+符号。这一课把读写代码、分片规则与解码工坊做齐。</p>
+  <div class="meta"><span>平台：HarmonyOS/ArkTS</span><span>约 24 分钟</span><span>API 10</span><span>含两场交互演练</span><span>跨端对照</span></div>
   <div class="journey">
-    <div class="j-step"><span class="n">1</span><span class="t">读写</span><span class="s">characteristicValue</span></div>
+    <div class="j-step"><span class="n">1</span><span class="t">读写</span><span class="s">ArrayBuffer</span></div>
     <div class="j-step"><span class="n">2</span><span class="t">解析</span><span class="s">小端符号</span></div>
+    <div class="j-step"><span class="n">3</span><span class="t">闭环</span><span class="s">指令→响应</span></div>
+    <div class="j-step"><span class="n">4</span><span class="t">动手</span><span class="s">解码工坊</span></div>
+    <div class="j-step"><span class="n">5</span><span class="t">自测</span><span class="s">六个问题</span></div>
   </div>
 
   <section id="a">
     <h2><span class="no">第 1 步</span>读写 API</h2>
     <pre>dev.readCharacteristicValue(characteristic)
-dev.writeCharacteristicValue(characteristic, value, writeType)</pre><div class="recap"><b>收束：</b>读写按特征对象，writeType 分有/无响应。</div>
+dev.writeCharacteristicValue(characteristic, value, writeType)</pre>
+    <table>
+      <tr><th>API</th><th>版本</th><th>说明</th></tr>
+      <tr><td>readCharacteristicValue(ch)</td><td><span class="api-lv">API 10</span></td><td>读特征，值在返回对象的 characteristicValue（ArrayBuffer）</td></tr>
+      <tr><td>writeCharacteristicValue(ch, writeType)</td><td><span class="api-lv">API 10</span></td><td><b>要写的数据先放进 ch.characteristicValue</b>，再传对象+写类型</td></tr>
+      <tr><td>readDescriptorValue / writeDescriptorValue</td><td><span class="api-lv">API 10</span></td><td>描述符读写（CCCD 由系统代写，一般不用手动碰）</td></tr>
+      <tr><td>GattWriteType.WRITE = 1</td><td><span class="api-lv">API 10</span></td><td>有响应：对端确认，可靠</td></tr>
+      <tr><td>GattWriteType.WRITE_NO_RESPONSE = 2</td><td><span class="api-lv">API 10</span></td><td>无响应：快，但丢了不知道</td></tr>
+    </table>
+    <pre><span class="cm">// 读：Promise 返回带值的特征对象</span>
+dev.readCharacteristicValue(target).then((ch: ble.BLECharacteristic) =&gt; {
+  let bytes = new Uint8Array(ch.characteristicValue);
+  <span class="cm">// bytes 就是原始数据，进入第 2 步解析</span>
+});
+
+<span class="cm">// 写：先把 ArrayBuffer 塞进特征对象</span>
+let cmd = new Uint8Array([0x01]).buffer;
+target.characteristicValue = cmd;
+dev.writeCharacteristicValue(target, ble.GattWriteType.WRITE)
+  .then(() =&gt; { <span class="cm">/* 对端已确认 */</span> });</pre>
+    <ul>
+      <li><b>串行</b>：读写都要等上一步回调（2900011），Promise 链排队。</li>
+      <li><b>分片</b>：单包有效载荷 = MTU − 3；长数据先协商 MTU（D4）再切片循环写。</li>
+      <li><b>写类型选</b>：控制指令用 WRITE（要确认）；高频流数据且特征支持时用 WRITE_NO_RESPONSE。</li>
+    </ul>
+    <div class="recap"><b>收束：</b>读写按特征对象，值走 ArrayBuffer；writeType 分有/无响应。</div>
   </section>
 
   <section id="b">
-    <h2><span class="no">第 2 步</span>解析</h2>
+    <h2><span class="no">第 2 步</span>解析：小端 + 符号</h2>
     <pre>6A 09 → 0x096A=2410 ×0.01 = 24.10°C
-DA FD → sint16 -550 → -5.50°C</pre><div class="key"><span class="tag">重点</span>小端+温度带符号，两大坑同 A4/B14。</div>
+DA FD → sint16 -550 → -5.50°C</pre>
+    <figure>
+      <svg viewBox="0 0 760 190" role="img" aria-label="温度字节解析流程">
+        <defs><marker id="arh5" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#A39B8E"/></marker></defs>
+        <rect x="20" y="40" width="150" height="60" rx="11" fill="#1F2A24"/>
+        <text x="95" y="66" text-anchor="middle" font-family="Consolas,monospace" font-size="15" fill="#7CE0C3">DA FD</text>
+        <text x="95" y="86" text-anchor="middle" font-size="10.5" fill="#8FA89C">线上字节（小端）</text>
+        <rect x="210" y="40" width="160" height="60" rx="11" fill="#ECF1FB" stroke="#C9D8F2"/>
+        <text x="290" y="66" text-anchor="middle" font-family="Consolas,monospace" font-size="14" fill="#2F58A8">0xFDDA</text>
+        <text x="290" y="86" text-anchor="middle" font-size="10.5" fill="#5F7FB5">低位在前，拼回 16 位</text>
+        <rect x="410" y="40" width="150" height="60" rx="11" fill="#FBF3E4" stroke="#EDD9B4"/>
+        <text x="485" y="66" text-anchor="middle" font-family="Consolas,monospace" font-size="14" fill="#8A5510">-550</text>
+        <text x="485" y="86" text-anchor="middle" font-size="10.5" fill="#A8762A">sint16 带符号解释</text>
+        <rect x="600" y="40" width="140" height="60" rx="11" fill="#E9F4F2" stroke="#BFE0DB"/>
+        <text x="670" y="66" text-anchor="middle" font-family="Consolas,monospace" font-size="14" fill="#1E7268">-5.50 °C</text>
+        <text x="670" y="86" text-anchor="middle" font-size="10.5" fill="#4E8A80">× 0.01 分辨率</text>
+        <line x1="170" y1="70" x2="208" y2="70" stroke="#A39B8E" stroke-width="2" marker-end="url(#arh5)"/>
+        <line x1="370" y1="70" x2="408" y2="70" stroke="#A39B8E" stroke-width="2" marker-end="url(#arh5)"/>
+        <line x1="560" y1="70" x2="598" y2="70" stroke="#2A9D8F" stroke-width="2" marker-end="url(#arh5)"/>
+        <text x="380" y="140" text-anchor="middle" font-size="12" fill="#B04A35">坑一：当大端读 → 0xDAFD=56061，温度离谱</text>
+        <text x="380" y="162" text-anchor="middle" font-size="12" fill="#B04A35">坑二：当 uint16 读 → 64986，零下变六万度</text>
+      </svg>
+      <figcaption>四步：字节 → 小端拼 16 位 → 带符号解释 → 乘分辨率。两大坑与 A4/B14/C5 相同。</figcaption>
+    </figure>
+    <pre><span class="cm">// ArkTS 用 DataView 一步到位（第二参数 true = 小端）</span>
+let dv = new DataView(ch.characteristicValue);
+let tempRaw = dv.getInt16(offset, true);   <span class="cm">// sint16 小端</span>
+let temp = tempRaw * 0.01;
+let humiRaw = dv.getUint16(offset2, true); <span class="cm">// 湿度 uint16 无符号</span></pre>
+    <div class="key"><span class="tag">重点</span>小端+温度带符号，两大坑同 A4/B14。BTHome 对象表：0x02 温度 sint16×0.01、0x03 湿度 uint16×0.01、0x01 电量 uint8、0x0C 电压 uint16×0.001。</div>
+    <div class="recap"><b>收束：</b>getInt16(offset, true) 就是「小端+符号」的标准答案。</div>
+  </section>
+
+  <section id="c">
+    <h2><span class="no">第 3 步</span>教学闭环：指令 → 响应</h2>
+    <p>D9 实战的教学设备：服务 <code>476CDF45-…-0601</code>，特征 <code>…-0602</code>（READ+WRITE）。写指令 <code>0x01</code>，设备回 BTHome 帧：</p>
+    <pre>写:  01                          <span class="cm">// 请求一帧温湿度</span>
+读:  40 02 C4 09 03 BF 13        <span class="cm">// BTHome v2 帧</span>
+     │  │  └──┬─┘ │  └──┬─┘
+     │  │   温度对象  │  湿度对象
+     │  └ 0x02      └ 0x03
+     └ 0x40 = v2 不加密定时
+解析: C409 → 0x09C4 = 2500 → 25.00°C
+      BF13 → 0x13BF = 5055 → 50.55%</pre>
+    <ul>
+      <li>对象 ID 必须<b>升序</b>；遇到未知 ID 立即停（BTHome 规范）。</li>
+      <li>湿度 50.55% 合法（0–100）；解析出 104.02% 说明字节错位或设备故障，要报越界而不是显示。</li>
+      <li>这套 UUID/指令/帧格式与 Android B14、iOS C11 完全一致——三端 App 可连同一台设备。</li>
+    </ul>
+    <div class="recap"><b>收束：</b>写 0x01 → 读帧 → 按对象表解析；三平台同一口径。</div>
   </section>
 
   <section id="lab">
-    <h2><span class="no">动手</span>读写 / 解析</h2>
-    <p>点按钮切换本平台写法与 Android 对照，概念一一对应。</p>
+    <h2><span class="no">动手</span>两场演练：API 对照、解码工坊</h2>
+    <p>演练一切换写法对照。演练二输入 BTHome 帧十六进制，实时解析对象表，试试官方样例与故障帧。</p>
     <div class="lab">
-      <div class="lab-head"><b>读写 / 解析</b><span class="hint">点按钮看 API</span></div>
-      <div class="controls"><div class="seg" id="d5"><button data-k="api" class="on">本平台 API</button><button data-k="cmp">对照 Android</button></div></div>
+      <div class="lab-head"><b>演练一 · 读写 / 解析 API</b><span class="hint">点按钮看 API</span></div>
+      <div class="controls"><div class="seg" id="d5"><button data-k="api" class="on">鸿蒙写法</button><button data-k="cmp">对照 Android / iOS</button></div></div>
       <div class="lab-body"><div><pre id="d5code" style="margin:0;"></pre></div><div class="logcat"><div class="logcat-head"><span>说明</span><span>live</span></div><div class="logcat-body" id="d5log"></div></div></div>
-      <div class="lab-foot"><span class="hint">Android: readCharacteristic / writeCharacteristic</span></div>
+      <div class="lab-foot"><span class="hint">Android: readCharacteristic / writeCharacteristic · iOS: readValue / writeValue</span></div>
     </div>
-    <div class="key"><span class="tag">看懂这场演练</span>读写按特征对象；解析小端+符号。</div>
+    <div class="lab">
+      <div class="lab-head"><b>演练二 · BTHome 解码工坊</b><span class="hint">输入 hex，按对象表解析</span></div>
+      <div class="controls">
+        <input id="hex5" type="text" value="4002C40903BF13" style="flex:1;min-width:180px;font-family:Consolas,monospace;padding:8px 10px;border:1.5px solid var(--line);border-radius:9px;">
+        <button class="btn" id="parse5" type="button">解析</button>
+        <div class="seg" id="sample5"><button data-h="4002C40903BF13" class="on">官方样例</button><button data-h="4002DAFD">零下</button><button data-h="4003A228">越界湿度</button><button data-h="4002C409FF01">未知ID</button></div>
+      </div>
+      <div class="lab-body"><div><div class="chips" id="p5chips"></div><div class="key" id="p5hint"></div></div><div class="logcat"><div class="logcat-head"><span>解析日志</span><span>live</span></div><div class="logcat-body" id="p5log"></div></div></div>
+      <div class="lab-foot"><span class="hint">对象 ID 升序；未知即停；越界要报错</span></div>
+    </div>
+    <div class="key"><span class="tag">看懂这两场演练</span>读写按特征对象；解析小端+符号；解码器对坏帧要「停下来说清楚」，不能硬显示。</div>
   </section>
 
   <section id="quiz">
-    <h2><span class="no">自测</span>三个问题</h2>
+    <h2><span class="no">自测</span>六个问题</h2>
     <div class="card" id="quiz-box"></div>
     <p id="quiz-done" style="display:none;font-weight:700;color:#1E7268;">全对。下一课讲订阅。</p>
   </section>
 
   <section id="map">
-    <h2><span class="no">回顾</span>速查</h2>
-    <table><tr><th>项</th><th>API</th></tr><tr><td>读</td><td>readCharacteristicValue</td></tr><tr><td>写</td><td>writeCharacteristicValue</td></tr></table>
-    <div class="note"><span class="tag">说明</span>本页为教学简化，工程细节以正文与官方规范为准；演练为模拟，非真实设备通信。</div>
+    <h2><span class="no">回顾</span>速查表</h2>
+    <table>
+      <tr><th>项</th><th>记住</th></tr>
+      <tr><td>读</td><td>readCharacteristicValue(ch) → ch.characteristicValue（ArrayBuffer）</td></tr>
+      <tr><td>写</td><td>数据先放 ch.characteristicValue，再 write(ch, writeType)</td></tr>
+      <tr><td>写类型</td><td>WRITE=1 有响应；WRITE_NO_RESPONSE=2 无响应</td></tr>
+      <tr><td>解析</td><td>DataView.getInt16(off, true)：小端+符号；×0.01</td></tr>
+      <tr><td>分片</td><td>单包载荷 = MTU − 3</td></tr>
+      <tr><td>闭环</td><td>写 0x01 → 40 02 C409 03 BF13 → 25.00°C / 50.55%</td></tr>
+    </table>
+    <div class="note"><span class="tag">说明</span>本页为教学整理，API 与枚举值对照华为官方文档核实；演练为模拟，非真实设备通信。</div>
+  </section>
+
+  <section id="refs">
+    <h2><span class="no">依据</span>参考链接</h2>
+    <div class="card refs">
+      <h3 style="margin-top:0;">华为官方文档</h3>
+      <ul>
+        <li><a href="https://developer.huawei.com/consumer/cn/doc/harmonyos-references/js-apis-bluetooth-ble" target="_blank" rel="noopener">@ohos.bluetooth.ble API 参考</a> <span class="src">— 读写接口 / BLECharacteristic / GattWriteType</span></li>
+        <li><a href="https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/gatt-development-guide-V14" target="_blank" rel="noopener">GATT 开发指南</a> <span class="src">— 读写流程与串行要求</span></li>
+      </ul>
+      <h3>实测与深入</h3>
+      <ul>
+        <li><a href="https://bthome.io/format/" target="_blank" rel="noopener">BTHome v2 格式规范</a> <span class="src">— 对象表 / 分辨率 / 升序规则</span></li>
+      </ul>
+    </div>
+    <div class="next-links">
+      <a href="04-connect-discovery.html">← D4 连接与发现</a>
+      <a href="06-notify.html">D6 订阅通知 →</a>
+    </div>
     <footer>青竹蓝牙学堂 · 蓝牙小课堂鸿蒙第五课 · D5 · <a href="../index.html">回到学堂</a></footer>
   </section>
 </main>
@@ -246,19 +364,79 @@ DA FD → sint16 -550 → -5.50°C</pre><div class="key"><span class="tag">重�
   <div class="toc-title">本课目录</div>
   <a href="#a">读写 API</a>
   <a href="#b">解析</a>
-  <a href="#lab">动手演练</a>
+  <a href="#c">教学闭环</a>
+  <a href="#lab">两场演练</a>
   <a href="#quiz">本课自测</a>
-  <a href="#map">回顾与速查</a>
+  <a href="#map">速查表</a>
+  <a href="#refs">参考链接</a>
 </aside>
 </div>
 <script>
-(function(){var API="点按钮看写法。";var CMP="dev.readCharacteristicValue(ch)\ndev.writeCharacteristicValue(ch, value, type)";var NT="Android: readCharacteristic / writeCharacteristic";function show(k){document.getElementById("d5code").textContent=(k==="api"?API:CMP);document.getElementById("d5log").innerHTML="<div><span class=\"ok\">"+(k==="api"?"本平台写法":"Android 对照")+"</span></div><div><span class=\"c\">// "+(k==="api"?NT:"概念相同，API 名不同")+"</span></div>";}document.querySelectorAll("#d5 button").forEach(function(b){b.addEventListener("click",function(){document.querySelectorAll("#d5 button").forEach(function(x){x.classList.remove("on");});b.classList.add("on");show(b.getAttribute("data-k"));});});show("api");})();
+(function(){
+  var API="// 读\ndev.readCharacteristicValue(ch).then((c) => {\n  let bytes = new Uint8Array(c.characteristicValue);\n  let dv = new DataView(c.characteristicValue);\n  let temp = dv.getInt16(1, true) * 0.01; // 小端+符号\n});\n// 写：值先放进特征对象\nch.characteristicValue = new Uint8Array([0x01]).buffer;\ndev.writeCharacteristicValue(ch, ble.GattWriteType.WRITE);";
+  var CMP="Android: gatt.readCharacteristic(ch)\n         onCharacteristicRead 回调拿 byte[]\n         ch.setValue(bytes); gatt.writeCharacteristic(ch)\niOS:     peripheral.readValue(for: ch)\n         didUpdateValueFor 回调拿 Data\n         peripheral.writeValue(data, for: ch, type: .withResponse)\n\n三平台都是「特征对象 + 字节缓冲」；鸿蒙用 ArrayBuffer";
+  function show(k){
+    document.getElementById("d5code").textContent=(k==="api"?API:CMP);
+    document.getElementById("d5log").innerHTML="<div><span class=\"ok\">"+(k==="api"?"鸿蒙写法":"三平台对照")+"</span></div><div><span class=\"c\">// "+(k==="api"?"WRITE=1 有响应 / WRITE_NO_RESPONSE=2":"解析规则三平台相同：小端+符号")+"</span></div>";
+  }
+  document.querySelectorAll("#d5 button").forEach(function(b){b.addEventListener("click",function(){document.querySelectorAll("#d5 button").forEach(function(x){x.classList.remove("on");});b.classList.add("on");show(b.getAttribute("data-k"));});});
+  show("api");
+})();
+
+// 演练二：BTHome 解码工坊
+(function(){
+  var OBJ={0x00:{n:'序号',len:1,sign:false,f:1,u:''},0x01:{n:'电量',len:1,sign:false,f:1,u:'%'},
+    0x02:{n:'温度',len:2,sign:true,f:0.01,u:'°C'},0x03:{n:'湿度',len:2,sign:false,f:0.01,u:'%'},
+    0x0C:{n:'电压',len:2,sign:false,f:0.001,u:'V'}};
+  function parse(){
+    var hex=document.getElementById('hex5').value.replace(/[^0-9a-fA-F]/g,'');
+    var log=document.getElementById('p5log'), chips=document.getElementById('p5chips'), hint=document.getElementById('p5hint');
+    var lines=[], vals=[], err=null;
+    function L(cls,t){lines.push('<div><span class="'+cls+'">'+t+'</span></div>');}
+    if(hex.length===0||hex.length%2!==0){err='hex 长度为奇数或为空';}
+    else{
+      var b=[];for(var i=0;i<hex.length;i+=2)b.push(parseInt(hex.substr(i,2),16));
+      var info=b[0];
+      L('c','设备信息字节 0x'+info.toString(16).toUpperCase()+'：v'+((info>>5)&7)+' · '+(info&1?'加密':'不加密')+' · '+(info&4?'触发式':'定时'));
+      if((info&1)===1){err='加密帧需要密钥，本课解码器只处理明文';}
+      else{
+        var p=1,last=-1;
+        while(p<b.length){
+          var id=b[p];
+          if(id<last){err='对象 ID 未升序（0x'+id.toString(16)+' 在 0x'+last.toString(16)+' 之后）';break;}
+          var o=OBJ[id];
+          if(!o){err='未知对象 ID 0x'+id.toString(16).toUpperCase()+'，按规范立即停止';break;}
+          if(p+o.len>b.length-1){err='对象 0x'+id.toString(16)+' 数据不完整';break;}
+          var raw=0;
+          for(var j=0;j<o.len;j++)raw|=b[p+1+j]<<(8*j);
+          if(o.sign&&o.len===2&&raw>=0x8000)raw-=0x10000;
+          var v=raw*o.f;
+          if(id===0x03&&(v<0||v>100)){err='湿度 '+v.toFixed(2)+'% 越界（0–100），帧可疑';break;}
+          vals.push(o.n+' '+v.toFixed(o.f<1?2:0)+o.u);
+          L('ok','0x'+id.toString(16).toUpperCase()+' '+o.n+'：raw='+raw+' → '+v.toFixed(o.f<1?2:0)+o.u);
+          last=id;p+=1+o.len;
+        }
+      }
+    }
+    if(err)L('err','✗ '+err);
+    chips.innerHTML=vals.map(function(v){return '<span class="chip on">'+v+'</span>';}).join('')+(err?'<span class="chip bad">解析中止</span>':'');
+    hint.innerHTML='<span class="tag">'+(err?'故障帧':'结果')+'</span>'+(err?err+'。解码器要停下来说清楚，不能硬显示。':'解析成功：'+vals.join('，')+'。');
+    log.innerHTML=lines.join('');
+  }
+  document.getElementById('parse5').addEventListener('click',parse);
+  document.getElementById('hex5').addEventListener('keydown',function(e){if(e.key==='Enter')parse();});
+  document.querySelectorAll('#sample5 button').forEach(function(b){b.addEventListener('click',function(){
+    document.querySelectorAll('#sample5 button').forEach(function(x){x.classList.remove('on');});
+    b.classList.add('on'); document.getElementById('hex5').value=b.getAttribute('data-h'); parse();
+  });});
+  parse();
+})();
 
 const tocLinks=[...document.querySelectorAll('.toc a')];
 const secs=tocLinks.map(a=>document.getElementById(a.getAttribute('href').slice(1)));
 const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){tocLinks.forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+e.target.id));}});},{rootMargin:'-20% 0px -70% 0px'});
 secs.forEach(s=>s&&io.observe(s));
-const QUIZ=[{"q":"1. 温度 6A 09？","opts":[["24.10°C",true,"对。"],["271.45",false,"大端错。"],["2410",false,"要×0.01。"]]},{"q":"2. 零下用？","opts":[["sint16",true,"对。"],["uint16",false,"符号错。"],["float",false,"是 sint16。"]]},{"q":"3. 写类型分？","opts":[["有/无响应",true,"对。"],["只一种",false,"两种。"],["随机",false,"明确。"]]}];
+const QUIZ=[{"q":"1. 温度 6A 09？","opts":[["24.10°C",true,"对。"],["271.45",false,"大端错。"],["2410",false,"要×0.01。"]]},{"q":"2. 零下用？","opts":[["sint16",true,"对。"],["uint16",false,"符号错。"],["float",false,"是 sint16。"]]},{"q":"3. 写类型分？","opts":[["有/无响应",true,"对。"],["只一种",false,"两种。"],["随机",false,"明确。"]]},{"q":"4. 写数据放在哪里？","opts":[["ch.characteristicValue（ArrayBuffer）",true,"对。先塞值再 write(ch, writeType)。"],["write 的独立参数",false,"值在特征对象里。"],["描述符里",false,"那是 CCCD 等元数据。"]]},{"q":"5. WRITE_NO_RESPONSE 的枚举值？","opts":[["2",true,"对。WRITE=1。"],["0",false,"1 和 2。"],["4",false,"没有 4。"]]},{"q":"6. ArkTS 读小端带符号 16 位用？","opts":[["DataView.getInt16(off, true)",true,"对。第二参数 true=小端。"],["getUint16(off, false)",false,"无符号+大端，两坑全踩。"],["parseInt(hex)",false,"那是字符串解析。"]]}];
 let solved=0; const box=document.getElementById('quiz-box');
 QUIZ.forEach((item,qi)=>{
   const h=document.createElement('div'); h.className='quiz-q'; h.textContent=item.q; box.appendChild(h);

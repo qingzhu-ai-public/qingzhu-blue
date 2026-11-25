@@ -172,13 +172,17 @@
   .ctl-row label{display:inline-flex;align-items:center;gap:10px;}
   .ctl-row input[type=range]{accent-color:var(--coral);width:160px;}
   .ctl-row .chk input{accent-color:var(--coral);}
+  .api-lv{display:inline-block;font-family:ui-monospace,Consolas,monospace;font-size:11.5px;font-weight:800;color:#2F58A8;background:var(--blue-soft);border:1px solid var(--blue-line);border-radius:999px;padding:0 8px;white-space:nowrap;}
+  .refs{font-size:14px;}
+  .refs li{margin:7px 0;}
+  .refs .src{font-size:12px;color:var(--faint);}
 </style>
 </head>
 <body style="--coral:#E8590C;--coral-soft:#FBEADF;--coral-line:#F2C4A4">
 <div class="topbar"><div class="topbar-in">
   <a class="logo" href="../index.html">青竹<span>蓝牙学堂</span></a>
   <nav class="topnav">
-    <a href="https://github.com/qingzhu-ai-public/qingzhu-ble-android" target="_blank" rel="noopener" class="gh"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8"/></svg>GitHub 项目</a>
+    <a href="https://github.com/qingzhu-ai-public/qingzhu-blue/tree/main/examples/harmonyos/bthome-mvp" target="_blank" rel="noopener" class="gh"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8"/></svg>配套源码</a>
     <a href="../index.html">学堂首页</a>
   </nav>
 </div></div>
@@ -193,71 +197,474 @@
   <a href="06-notify.html"><span class="c">D6</span>通知订阅</a>
   <a href="07-peripheral.html"><span class="c">D7</span>外设广播</a>
   <a href="08-troubleshooting.html"><span class="c">D8</span>排障</a>
-  <a href="09-project.html" class="cur"><span class="c">D9</span>实战工程</a>
+  <a href="09-project.html" class="cur"><span class="c">D9</span>综合实战：BTHome</a>
 </aside>
 <main>
   <div class="crumb">蓝牙小课堂 / 鸿蒙第九课 · D9</div>
-  <h1>综合实战：<em>温湿度计</em> 双机验收</h1>
-  <p class="lead">把 D1–D8 串成温湿度计 App：扫描→连接→发现→订阅→解析→显示，双机验收。</p>
-  <div class="meta"><span>约 10 分钟</span><span>含交互演练</span><span>跨端对照</span></div>
+  <h1>综合实战：<em>BTHome 温湿度计</em> 完整 App</h1>
+  <p class="lead">与 Android B14、iOS C11 同一个项目：BTHome v2 温湿度计。鸿蒙是三端里角色最全的——既能当接收器，又能当真正的 BTHome 广播源（serviceData），还能当教学 GATT 从端。配套 ArkTS 源码工程 examples/harmonyos/bthome-mvp，教学 UUID 三端一致，可跨平台互连。</p>
+  <div class="meta"><span>平台：HarmonyOS/ArkTS</span><span>约 45 分钟</span><span>API 10 → 22</span><span>配套源码</span><span>含两场交互演练</span><span>三端互通</span></div>
   <div class="journey">
-    <div class="j-step"><span class="n">1</span><span class="t">流程</span><span class="s">六步</span></div>
-    <div class="j-step"><span class="n">2</span><span class="t">验收</span><span class="s">双机</span></div>
+    <div class="j-step"><span class="n">1</span><span class="t">协议</span><span class="s">BTHome v2</span></div>
+    <div class="j-step"><span class="n">2</span><span class="t">解析器</span><span class="s">对象表+自检</span></div>
+    <div class="j-step"><span class="n">3</span><span class="t">接收</span><span class="s">扫描解码</span></div>
+    <div class="j-step"><span class="n">4</span><span class="t">广播源</span><span class="s">serviceData</span></div>
+    <div class="j-step"><span class="n">5</span><span class="t">GATT</span><span class="s">模拟+连接</span></div>
+    <div class="j-step"><span class="n">6</span><span class="t">验收</span><span class="s">三端互通</span></div>
   </div>
 
-  <section id="a">
-    <h2><span class="no">第 1 步</span>六步流程</h2>
-    <pre>startBLEScan → connect → getServices
-→ setNotification → 解析 → UI</pre><div class="recap"><b>收束：</b>六步异步链。</div>
+  <section id="what">
+    <h2><span class="no">第 1 步</span>BTHome 是什么、三端同一个项目</h2>
+    <p>BTHome 是开源的 BLE 传感器广播格式（<a href="https://bthome.io/format/" target="_blank" rel="noopener">bthome.io</a>）：设备把温湿度等读数塞进广播的服务数据段，任何接收器不用连接就能读。Home Assistant 原生支持，市售大量传感器用它。</p>
+    <table>
+      <tr><th>平台</th><th>工程</th><th>能当什么角色</th></tr>
+      <tr><td>Android（B14）</td><td>examples/android/bthome-mvp（Java）</td><td>接收器 + BTHome 广播源 + 教学 GATT 从端</td></tr>
+      <tr><td>iOS（C11）</td><td>examples/ios/bthome-mvp（Swift）</td><td>接收器 + 教学 GATT 从端（<b>发不出</b>服务数据广播）</td></tr>
+      <tr><td><b>鸿蒙（本课）</b></td><td>examples/harmonyos/bthome-mvp（ArkTS）</td><td><b>接收器 + BTHome 广播源 + 教学 GATT 从端</b>，角色最全</td></tr>
+    </table>
+    <div class="key"><span class="tag">配套源码 · 可以直接编译</span>本课的每一行代码都在 <a href="https://github.com/qingzhu-ai-public/qingzhu-blue/tree/main/examples/harmonyos/bthome-mvp" target="_blank" rel="noopener"><b>qingzhu-blue / examples / harmonyos / bthome-mvp</b></a>：协议层（对象表/解析/编码/13 项自检）、扫描接收、广播源、模拟外设、连接客户端全在里面。浏览器里也能先走 <a href="https://qingzhu-ai-public.github.io/qingzhu-blue/examples/harmonyos/bthome-mvp/prototype/index.html" target="_blank" rel="noopener">交互原型</a>。教学 UUID 与 Android/iOS 完全一致，<b>鸿蒙、Android、iPhone 可以互连</b>。</div>
+    <figure>
+      <svg viewBox="0 0 760 230" role="img" aria-label="三端互通架构">
+        <defs><marker id="arh9" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#A39B8E"/></marker></defs>
+        <rect x="270" y="14" width="220" height="52" rx="12" fill="#FBEADF" stroke="#F2C4A4"/>
+        <text x="380" y="36" text-anchor="middle" font-size="13.5" font-weight="bold" fill="#E8590C">鸿蒙 A 机 · BTHome 广播源</text>
+        <text x="380" y="54" text-anchor="middle" font-size="10.5" fill="#B0703F">startAdvertising + serviceData FCD2</text>
+        <rect x="30" y="130" width="200" height="60" rx="12" fill="#E9F4F2" stroke="#BFE0DB"/>
+        <text x="130" y="154" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#1E7268">鸿蒙 B 机 · 接收器</text>
+        <text x="130" y="172" text-anchor="middle" font-size="10" fill="#4E8A80">startBLEScan + AD 解析</text>
+        <rect x="280" y="130" width="200" height="60" rx="12" fill="#E9F4F2" stroke="#BFE0DB"/>
+        <text x="380" y="154" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#1E7268">Android · 接收器</text>
+        <text x="380" y="172" text-anchor="middle" font-size="10" fill="#4E8A80">B14 bthome-mvp</text>
+        <rect x="530" y="130" width="200" height="60" rx="12" fill="#E9F4F2" stroke="#BFE0DB"/>
+        <text x="630" y="154" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#1E7268">iPhone · 接收器</text>
+        <text x="630" y="172" text-anchor="middle" font-size="10" fill="#4E8A80">C11 bthome-mvp</text>
+        <line x1="330" y1="66" x2="130" y2="128" stroke="#2A9D8F" stroke-width="2" marker-end="url(#arh9)"/>
+        <line x1="380" y1="66" x2="380" y2="128" stroke="#2A9D8F" stroke-width="2" marker-end="url(#arh9)"/>
+        <line x1="430" y1="66" x2="630" y2="128" stroke="#2A9D8F" stroke-width="2" marker-end="url(#arh9)"/>
+        <text x="380" y="215" text-anchor="middle" font-size="11.5" fill="#A39B8E">同一帧 40 02 C409 03 BF13，三端解出同一个 25.00°C / 50.55%；GATT 教学路线同样三端互通</text>
+      </svg>
+      <figcaption>鸿蒙当广播源，三端当接收器；反过来鸿蒙也能收 Android 发的 BTHome 帧。</figcaption>
+    </figure>
+    <div class="recap"><b>收束：</b>一个协议、三端实现、同一套教学 UUID；鸿蒙角色最全。</div>
   </section>
 
-  <section id="b">
-    <h2><span class="no">第 2 步</span>双机验收</h2>
-    <p>第二部鸿蒙手机当 GattServer 发 1809+2A6E；主力机订阅显示。改值看刷新，对双机时间线。</p><div class="recap"><b>收束：</b>双机+多场景验收。</div>
+  <section id="format">
+    <h2><span class="no">第 2 步</span>从广播包到 BTHome 数据：三层剥开</h2>
+    <pre>原始广播 data（ArrayBuffer）
+└─ AD 段循环：[len][type][value...]
+   └─ type=0x16 且 UUID=FCD2（小端 D2 FC）
+      └─ BTHome 载荷：[设备信息1B][对象ID][数据]...</pre>
+    <table>
+      <tr><th>对象 ID</th><th>含义</th><th>类型</th><th>分辨率</th></tr>
+      <tr><td>0x00</td><td>序号（packet id）</td><td>uint8</td><td>1</td></tr>
+      <tr><td>0x01</td><td>电量</td><td>uint8</td><td>1 %</td></tr>
+      <tr><td>0x02</td><td>温度</td><td><b>sint16</b></td><td>0.01 °C</td></tr>
+      <tr><td>0x03</td><td>湿度</td><td>uint16</td><td>0.01 %</td></tr>
+      <tr><td>0x0C</td><td>电压</td><td>uint16</td><td>0.001 V</td></tr>
+    </table>
+    <ul>
+      <li><b>设备信息字节</b>：bit0 加密、bit2 触发式、bit5–7 版本。<code>0x40</code> = v2 不加密定时。</li>
+      <li><b>对象 ID 必须升序</b>；遇到未知 ID 立即停止解析（规范强制）。</li>
+      <li><b>官方样例</b>：<code>40 02 C4 09 03 BF 13</code> → 25.00 °C / 50.55 %；<code>40 02 DA FD</code> → −5.50 °C。</li>
+      <li>完整对象表几十种（压力/光照/CO₂/门窗…），本课实现常用 5 种，扩展只加表项。</li>
+    </ul>
+    <div class="recap"><b>收束：</b>三层剥开：AD 段 → 0x16/FCD2 → 设备信息+升序对象。</div>
+  </section>
+
+  <section id="layout">
+    <h2><span class="no">第 3 步</span>工程结构：一个 App 四个角色</h2>
+    <pre>examples/harmonyos/bthome-mvp/entry/src/main/ets/
+├─ bluetooth/
+│  ├─ BthomeProtocol.ets    <span class="cm">// 对象表 / parse / encode / AD 提取 / 教学协议 / 13 项自检</span>
+│  ├─ BthomeScanner.ets     <span class="cm">// 接收器：过滤 FCD2 → 解码 → 按 deviceId 合并</span>
+│  ├─ BthomeAdvertiser.ets  <span class="cm">// 广播源：serviceData 发 BTHome 帧</span>
+│  ├─ SensorPeripheral.ets  <span class="cm">// 教学 GATT 从端：写 01 回帧</span>
+│  └─ SensorClient.ets      <span class="cm">// 教学 GATT 中心：连接→写01→读帧→解码</span>
+└─ pages/Index.ets          <span class="cm">// ArkUI：四个角色页 + 自检面板</span></pre>
+    <ul>
+      <li><b>协议层零依赖</b>：BthomeProtocol 只碰 Uint8Array/DataView，不碰蓝牙 API——可以离线跑 13 项自检。</li>
+      <li><b>ArkTS 约束</b>：不用 any/unknown 隐式类型；字节缓冲一律 ArrayBuffer/Uint8Array；回调显式标类型。</li>
+      <li><b>权限</b>：module.json5 声明 ACCESS_BLUETOOTH（D2），四个角色共用。</li>
+      <li>合入方式与 thermometer-mvp 相同：DevEco 新建 Empty Ability，把 ets 目录合进去（README 有步骤）。</li>
+    </ul>
+    <div class="recap"><b>收束：</b>协议层与角色层分离；先离线测协议，再上真机。</div>
+  </section>
+
+  <section id="parser">
+    <h2><span class="no">第 4 步</span>先写解析器，再用官方样例测</h2>
+    <pre><span class="cm">// BthomeProtocol.ets（节选）</span>
+export function parseBthome(payload: Uint8Array): BthomeReading {
+  const info = payload[0];
+  if ((info &amp; 0x01) !== 0) { throw new Error('加密帧需要密钥'); }
+  const reading: BthomeReading = { version: (info &gt;&gt; 5) &amp; 7, objects: [] };
+  let i = 1; let last = -1;
+  while (i &lt; payload.length) {
+    const id = payload[i];
+    if (id &lt; last) { throw new Error('对象 ID 未升序'); }
+    const spec = OBJECT_TABLE[id];
+    if (!spec) { throw new Error('未知对象 ID 0x' + id.toString(16)); }
+    <span class="cm">// 小端拼值 → 符号扩展 → 乘分辨率；湿度越界(0–100)报错</span>
+    ...
+    last = id; i += 1 + spec.len;
+  }
+  return reading;
+}</pre>
+    <pre><span class="cm">// 版本兜底：API 10–21 没有 serviceDataMap，手解 AD（D3）</span>
+export function extractServiceData(raw: ArrayBuffer, uuid16: number): Uint8Array | null {
+  const bytes = new Uint8Array(raw);
+  let i = 0;
+  while (i &lt; bytes.length) {
+    const len = bytes[i];
+    if (len === 0) { break; }
+    if (bytes[i + 1] === 0x16 &amp;&amp; len &gt;= 3 &amp;&amp;
+        (bytes[i + 2] | (bytes[i + 3] &lt;&lt; 8)) === uuid16) {
+      return bytes.slice(i + 4, i + 1 + len);
+    }
+    i += len + 1;
+  }
+  return null;
+}</pre>
+    <p>13 项自检（源码 <code>selfTest()</code>，App 里一键跑）：官方样例 25.00/50.55、零下 −5.50、电量/电压/序号、升序违规、未知 ID 即停、截断帧、加密帧拒绝、湿度越界、编码→解码闭环、AD 提取命中/未命中。</p>
+    <div class="key"><span class="tag">重点</span>解析器对坏帧要「停下来说清楚」：抛带原因的错误，UI 显示故障而不是硬显示数字。这与 Android BthomeDecoder、iOS BthomeProtocol 的行为一致。</div>
+    <div class="recap"><b>收束：</b>协议层先行 + 官方样例自检；AD 提取兜底旧版本。</div>
+  </section>
+
+  <section id="scanner">
+    <h2><span class="no">第 5 步</span>接收器：只收 FCD2，解码上屏</h2>
+    <pre><span class="cm">// BthomeScanner.ets（节选）</span>
+ble.on('BLEDeviceFind', (results: Array&lt;ble.ScanResult&gt;) =&gt; {
+  results.forEach((r: ble.ScanResult) =&gt; {
+    const payload = extractServiceData(r.data, 0xFCD2);
+    if (!payload) { return; }
+    try {
+      const reading = parseBthome(payload);
+      <span class="cm">// 按 deviceId 合并（会话内去重；虚拟 MAC 别持久化，D3）</span>
+      this.merge(r.deviceId, r.rssi, reading);
+    } catch (e) {
+      <span class="cm">// 坏帧：记日志，不上屏</span>
+    }
+  });
+});
+ble.startBLEScan([{ serviceUuid: '0000fcd2-0000-1000-8000-00805f9b34fb' }]);</pre>
+    <ul>
+      <li><b>API 22+ 捷径</b>：可直接读 <code>ScanResult.serviceDataMap</code>（系统解析好）；本工程用手解 AD，<b>API 10 起全版本可跑</b>。</li>
+      <li><b>过滤</b>：serviceUuid FCD2 对准广播 0x03 段；漏收先去掉过滤看 RAW（D3/D8）。</li>
+      <li><b>去重</b>：deviceId 会话内合并；跨会话认设备靠序号对象（0x00）或广播内容。</li>
+      <li>单路扫描：进连接流程前先 stopBLEScan（D4）。</li>
+    </ul>
+    <div class="recap"><b>收束：</b>过滤 FCD2 → AD 提取 → 对象表解码 → 合并上屏。</div>
+  </section>
+
+  <section id="advertiser">
+    <h2><span class="no">第 6 步</span>广播源：鸿蒙能发真的 BTHome</h2>
+    <pre><span class="cm">// BthomeAdvertiser.ets（节选）</span>
+const frame = encodeBthome(25.0, 50.55);  <span class="cm">// 40 02 C4 09 03 BF 13</span>
+ble.startAdvertising(
+  { interval: 1600, txPower: -7, connectable: false },
+  {
+    serviceUuids: [BTHOME_UUID],
+    serviceData: [{ serviceUuid: BTHOME_UUID, serviceValue: frame.buffer }]
+  }
+);
+<span class="cm">// 更新读数：stopAdvertising → 改 frame → startAdvertising</span></pre>
+    <table>
+      <tr><th>平台</th><th>BTHome 广播源</th><th>依据</th></tr>
+      <tr><td>鸿蒙</td><td><b>能</b></td><td>AdvertiseData.serviceData（API 10）</td></tr>
+      <tr><td>Android</td><td>能</td><td>AdvertiseData.setServiceData</td></tr>
+      <tr><td>iOS</td><td>不能</td><td>startAdvertising 仅 LocalName+ServiceUUIDs 两键</td></tr>
+    </table>
+    <ul>
+      <li><b>预算</b>：Flags 3 + UUID 列表 4 + 服务数据 11 = 18 字节 &lt; 31（D7 计算器）。</li>
+      <li><b>connectable=false</b>：纯传感器不需要连接，省电防误连。</li>
+      <li><b>interval</b>：默认 1600 slot=1s；演示可放宽到 3200（2s）。</li>
+      <li>验收：A 机发，B 机（鸿蒙/Android/iPhone）收，三端显示同一读数。</li>
+    </ul>
+    <div class="recap"><b>收束：</b>serviceData 一填，鸿蒙就是真 BTHome 设备；这是 iOS 做不到的。</div>
+  </section>
+
+  <section id="fake">
+    <h2><span class="no">第 7 步</span>没有真传感器？三种假数据源</h2>
+    <table>
+      <tr><th>假数据源</th><th>走什么链路</th><th>练什么</th></tr>
+      <tr><td>① 鸿蒙广播源（本课第 6 步）</td><td><b>真实射频</b>：BTHome 服务数据广播</td><td>扫描/过滤/AD 解析全链路</td></tr>
+      <tr><td>② 教学 GATT 从端（SensorPeripheral）</td><td>真实射频：连接+写01+读帧</td><td>连接/发现/读写/串行</td></tr>
+      <tr><td>③ 协议自检（selfTest）</td><td>离线：不碰蓝牙</td><td>对象表/边界/坏帧处理</td></tr>
+    </table>
+    <p>Android bthome-mvp 也能当①②的信号源；iPhone 只能当②（教学 GATT 从端）和接收器。三种源覆盖 D3–D7 全部技能点。</p>
+    <div class="recap"><b>收束：</b>两台手机就能走完全部链路；一台手机也能离线测协议。</div>
+  </section>
+
+  <section id="connect">
+    <h2><span class="no">第 8 步</span>教学 GATT 路线：写 01 读帧（三端互连）</h2>
+    <pre><span class="cm">// SensorClient.ets（节选）：串行 Promise 链</span>
+const client = ble.createGattClientDevice(deviceId);
+client.on('BLEConnectionStateChange', async (s: ble.BLEConnectionChangeState) =&gt; {
+  if (s.state !== constant.ProfileConnectionState.STATE_CONNECTED) { return; }
+  const services = await client.getServices();
+  const target = findDemoCharacteristic(services);   <span class="cm">// …-0602</span>
+  <span class="cm">// 写 0x01 → 读帧 → parseBthome</span>
+});
+client.connect();
+
+<span class="cm">// 请求读数（等上一步回调再发下一步，D4 串行规则）</span>
+const cmd: ble.BLECharacteristic = { serviceUuid: DEMO_SERVICE,
+  characteristicUuid: DEMO_CHAR, characteristicValue: new Uint8Array([0x01]).buffer,
+  descriptors: [] };
+await client.writeCharacteristicValue(cmd, ble.GattWriteType.WRITE);
+const resp = await client.readCharacteristicValue(target);
+const reading = parseBthome(new Uint8Array(resp.characteristicValue));</pre>
+    <table>
+      <tr><th>教学协议</th><th>值（三端一致）</th></tr>
+      <tr><td>服务 UUID</td><td><code>476CDF45-6063-43A1-B8E2-8C1FBED00601</code></td></tr>
+      <tr><td>特征 UUID（READ+WRITE）</td><td><code>476CDF45-6063-43A1-B8E2-8C1FBED00602</code></td></tr>
+      <tr><td>指令</td><td><code>0x01</code>（请求一帧）</td></tr>
+      <tr><td>响应帧</td><td><code>40 02 &lt;temp sint16 LE&gt; 03 BF 13</code>（湿度固定 50.55%）</td></tr>
+    </table>
+    <p>从端 SensorPeripheral 用 <code>ble.createGattServer()</code> 建服务，on('characteristicWrite') 收 01 换温度，on('characteristicRead') 用 sendResponse 回帧——与 Android/iOS 的模拟外设行为一致。</p>
+    <div class="recap"><b>收束：</b>同一套 UUID/指令/帧，鸿蒙从端可被 Android/iPhone 连接，反之亦然。</div>
+  </section>
+
+  <section id="accept">
+    <h2><span class="no">第 9 步</span>验收清单：三端对时间线</h2>
+    <table>
+      <tr><th>#</th><th>场景</th><th>通过标准</th></tr>
+      <tr><td>1</td><td>协议自检</td><td>13 项全绿（离线，单机）</td></tr>
+      <tr><td>2</td><td>鸿蒙发 → 鸿蒙收</td><td>B 机列表出现 A 机，读数与 A 机滑杆一致</td></tr>
+      <tr><td>3</td><td>鸿蒙发 → Android/iPhone 收</td><td>三端同一帧解出同一读数</td></tr>
+      <tr><td>4</td><td>Android 发 → 鸿蒙收</td><td>AD 提取兜底路径正确</td></tr>
+      <tr><td>5</td><td>鸿蒙从端 → iPhone 连接</td><td>写 01 读帧成功，温度交替 25.00/26.50</td></tr>
+      <tr><td>6</td><td>坏帧</td><td>越界湿度/未知 ID 显示故障原因，不硬显示</td></tr>
+      <tr><td>7</td><td>关蓝牙/撤销权限</td><td>stateChange 清理，恢复后可重扫（D2）</td></tr>
+      <tr><td>8</td><td>断线重连</td><td>新会话重新发现，迟到回调按会话编号丢弃（D8）</td></tr>
+    </table>
+    <div class="key"><span class="tag">重点</span>对时间线：两端日志都带会话编号与时间戳，「A 机发了、B 机没收到」时先钉阶段（D8 五道关），再查过滤/权限/距离。</div>
+    <div class="recap"><b>收束：</b>8 项验收覆盖协议、射频、跨端、故障四条线。</div>
+  </section>
+
+  <section id="more">
+    <h2><span class="no">第 10 步</span>做完之后往哪走</h2>
+    <ul>
+      <li><b>更多对象</b>：照 bthome.io 对象表加压力/光照/CO₂，解析器只加表项。</li>
+      <li><b>加密帧</b>：BTHome v2 AES-CCM 加密（bit0=1），需要绑定密钥——进阶课题。</li>
+      <li><b>触发式设备</b>：bit2=1 的帧只在事件时发（门窗/按键），配合序号去重。</li>
+      <li><b>Home Assistant</b>：鸿蒙广播源可被 HA 的 BTHome 集成直接发现——真智能家居入口。</li>
+      <li><b>持久标识</b>：虚拟 MAC 会变（D3），跨会话认设备用 access 的持久化设备地址能力或广播序号。</li>
+      <li><b>后台</b>：长时任务（continuousTask）保活扫描/广播，按系统功耗策略收敛。</li>
+    </ul>
+    <div class="recap"><b>收束：</b>协议是开放表，工程是分层架；扩展不动骨架。</div>
+  </section>
+
+  <section id="apimap">
+    <h2><span class="no">第 11 步</span>本项目用到的鸿蒙 API 与版本</h2>
+    <table>
+      <tr><th>API</th><th>版本</th><th>用在哪</th></tr>
+      <tr><td>access.getState / on('stateChange')</td><td><span class="api-lv">API 10</span></td><td>四个角色的开关门控</td></tr>
+      <tr><td>ble.startBLEScan / on('BLEDeviceFind')</td><td><span class="api-lv">API 10</span></td><td>接收器</td></tr>
+      <tr><td>ScanResult.data（原始 AD）</td><td><span class="api-lv">API 10</span></td><td>全版本解码兜底</td></tr>
+      <tr><td>ScanResult.serviceDataMap</td><td><span class="api-lv">API 22</span></td><td>新版捷径（本工程未依赖）</td></tr>
+      <tr><td>ble.createGattClientDevice / connect / getServices</td><td><span class="api-lv">API 10</span></td><td>教学中心</td></tr>
+      <tr><td>read/writeCharacteristicValue（WRITE=1）</td><td><span class="api-lv">API 10</span></td><td>写 01 读帧</td></tr>
+      <tr><td>ble.createGattServer / addService / sendResponse</td><td><span class="api-lv">API 10</span></td><td>教学从端</td></tr>
+      <tr><td>ble.startAdvertising + AdvertiseData.serviceData</td><td><span class="api-lv">API 10</span></td><td>BTHome 广播源</td></tr>
+      <tr><td>AdvertisingParams 重载 / enableAdvertising</td><td><span class="api-lv">API 11</span></td><td>可选：带 duration 的广播</td></tr>
+      <tr><td>setBLEMtu</td><td><span class="api-lv">API 26</span></td><td>可选：长帧分片前协商</td></tr>
+    </table>
+    <div class="note"><span class="tag">说明</span>版本徽章对照华为官方 API 文档核实；工程基线 API 12（与 thermometer-mvp 一致），全部核心链路 API 10 即可跑。</div>
+    <div class="recap"><b>收束：</b>核心链路 API 10 全通；22/26 只是锦上添花。</div>
   </section>
 
   <section id="lab">
-    <h2><span class="no">动手</span>实战流程</h2>
-    <p>点按钮切换本平台写法与 Android 对照，概念一一对应。</p>
+    <h2><span class="no">动手</span>两场演练：编码闭环、解码工坊</h2>
+    <p>演练一拖滑杆生成 BTHome 帧，看字节预算与回解验证。演练二输入 hex 按对象表解析，试试官方样例与故障帧。</p>
     <div class="lab">
-      <div class="lab-head"><b>实战流程</b><span class="hint">点按钮看 API</span></div>
-      <div class="controls"><div class="seg" id="d9"><button data-k="api" class="on">本平台 API</button><button data-k="cmp">对照 Android</button></div></div>
-      <div class="lab-body"><div><pre id="d9code" style="margin:0;"></pre></div><div class="logcat"><div class="logcat-head"><span>说明</span><span>live</span></div><div class="logcat-body" id="d9log"></div></div></div>
-      <div class="lab-foot"><span class="hint">Android 同流程不同 API</span></div>
+      <div class="lab-head"><b>演练一 · 编码闭环</b><span class="hint">广播源视角 · 31 字节预算</span></div>
+      <div class="controls">
+        <div class="ctl"><label>温度</label><input type="range" id="t9" min="-2000" max="6000" value="2500" step="10"><span class="val" id="t9v">25.00°C</span></div>
+        <div class="ctl"><label>湿度</label><input type="range" id="h9" min="0" max="10000" value="5055" step="5"><span class="val" id="h9v">50.55%</span></div>
+        <label class="ctl-row"><span class="chk"><input type="checkbox" id="pid9"> 加序号对象 0x00</span></label>
+      </div>
+      <div class="lab-body"><div><pre id="enc9" style="margin:0;"></pre><div class="chips" id="enc9chips"></div></div><div class="logcat"><div class="logcat-head"><span>编码 → 回解</span><span>live</span></div><div class="logcat-body" id="enc9log"></div></div></div>
+      <div class="lab-foot"><span class="hint">编码结果再解码，值必须一致——闭环</span></div>
     </div>
-    <div class="key"><span class="tag">看懂这场演练</span>六步链+小端解析+双机验收。</div>
+    <div class="lab">
+      <div class="lab-head"><b>演练二 · 解码工坊</b><span class="hint">小端 + 符号 + 升序</span></div>
+      <div class="controls">
+        <input id="hex9" type="text" value="4002C40903BF13" style="flex:1;min-width:180px;font-family:Consolas,monospace;padding:8px 10px;border:1.5px solid var(--line);border-radius:9px;">
+        <button class="btn" id="parse9" type="button">解析</button>
+        <div class="seg" id="sample9"><button data-h="4002C40903BF13" class="on">官方样例</button><button data-h="4002DAFD">零下</button><button data-h="400005016402C40903BF13">带序号+电量</button><button data-h="4003A228">越界湿度</button><button data-h="4002C409FF01">未知ID</button></div>
+      </div>
+      <div class="lab-body"><div><div class="chips" id="p9chips"></div><div class="key" id="p9hint"></div></div><div class="logcat"><div class="logcat-head"><span>解析日志</span><span>live</span></div><div class="logcat-body" id="p9log"></div></div></div>
+      <div class="lab-foot"><span class="hint">对象 ID 升序；未知即停；越界要报错</span></div>
+    </div>
+    <div class="key"><span class="tag">看懂这两场演练</span>编码闭环保证「发得对」，解码工坊保证「收得稳」；两边都用同一张对象表——这就是协议层分离的意义。</div>
   </section>
 
   <section id="quiz">
-    <h2><span class="no">自测</span>三个问题</h2>
+    <h2><span class="no">自测</span>7 个问题</h2>
     <div class="card" id="quiz-box"></div>
-    <p id="quiz-done" style="display:none;font-weight:700;color:#1E7268;">全对。鸿蒙板九课完成。接下来 Flutter / RN。</p>
+    <p id="quiz-done" style="display:none;font-weight:700;color:#1E7268;">全对。鸿蒙板九课完成，三端 BTHome 项目齐了。</p>
   </section>
 
   <section id="map">
-    <h2><span class="no">回顾</span>速查</h2>
-    <table><tr><th>步</th><th>API</th></tr><tr><td>扫描</td><td>startBLEScan</td></tr><tr><td>订阅</td><td>setCharacteristicChangeNotification</td></tr></table>
-    <div class="note"><span class="tag">说明</span>本页为教学简化，工程细节以正文与官方规范为准；演练为模拟，非真实设备通信。</div>
+    <h2><span class="no">回顾</span>项目速查</h2>
+    <table>
+      <tr><th>项</th><th>值</th><th>备注</th></tr>
+      <tr><td>BTHome UUID</td><td>FCD2（字节 D2 FC）</td><td>0x16 服务数据段</td></tr>
+      <tr><td>设备信息</td><td>0x40 = v2 不加密定时</td><td>bit0 加密 / bit2 触发 / bit5-7 版本</td></tr>
+      <tr><td>温度</td><td>0x02 sint16 ×0.01</td><td>小端+符号</td></tr>
+      <tr><td>湿度</td><td>0x03 uint16 ×0.01</td><td>0–100 越界报错</td></tr>
+      <tr><td>教学服务</td><td>476CDF45-…-0601</td><td>三端一致</td></tr>
+      <tr><td>教学特征</td><td>…-0602，写 01 读帧</td><td>READ+WRITE</td></tr>
+      <tr><td>广播源</td><td>serviceData（API 10）</td><td>iOS 发不了，鸿蒙能</td></tr>
+      <tr><td>源码</td><td>examples/harmonyos/bthome-mvp</td><td>13 项自检</td></tr>
+    </table>
+    <div class="note"><span class="tag">说明</span>本页为教学整理，版本徽章对照华为官方文档核实；演练为模拟，真机验收按第 9 步清单。</div>
+  </section>
+
+  <section id="refs">
+    <h2><span class="no">依据</span>参考链接</h2>
+    <div class="card refs">
+      <h3 style="margin-top:0;">规范与官方文档</h3>
+      <ul>
+        <li><a href="https://bthome.io/format/" target="_blank" rel="noopener">BTHome v2 格式规范</a> <span class="src">— 设备信息字节 / 对象表 / 升序规则</span></li>
+        <li><a href="https://developer.huawei.com/consumer/cn/doc/harmonyos-references/js-apis-bluetooth-ble" target="_blank" rel="noopener">@ohos.bluetooth.ble API 参考</a> <span class="src">— 扫描/广播/GATT 全接口与版本</span></li>
+        <li><a href="https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/gatt-development-guide-V14" target="_blank" rel="noopener">GATT 开发指南</a> <span class="src">— 客户端/服务端流程</span></li>
+      </ul>
+      <h3>配套源码与跨端</h3>
+      <ul>
+        <li><a href="https://github.com/qingzhu-ai-public/qingzhu-blue/tree/main/examples/harmonyos/bthome-mvp" target="_blank" rel="noopener">qingzhu-blue / examples / harmonyos / bthome-mvp</a> <span class="src">— ArkTS 工程 + 13 项协议自检</span></li>
+        <li><a href="https://qingzhu-ai-public.github.io/qingzhu-blue/examples/harmonyos/bthome-mvp/prototype/index.html" target="_blank" rel="noopener">交互原型</a> <span class="src">— 浏览器里走完编码/解码/自检</span></li>
+        <li><a href="https://github.com/qingzhu-ai-public/qingzhu-blue/tree/main/examples/android/bthome-mvp" target="_blank" rel="noopener">Android bthome-mvp</a> · <a href="https://github.com/qingzhu-ai-public/qingzhu-blue/tree/main/examples/ios/bthome-mvp" target="_blank" rel="noopener">iOS bthome-mvp</a> <span class="src">— 同一项目的另外两端</span></li>
+        <li><a href="https://github.com/Bluetooth-Devices/bthome-ble" target="_blank" rel="noopener">bthome-ble 参考解析器</a> <span class="src">— 含各类型测试样例</span></li>
+      </ul>
+    </div>
+    <div class="next-links">
+      <a href="08-troubleshooting.html">← D8 排障手册</a>
+      <a href="../android/14-bthome-project.html">Android B14 同项目 →</a>
+      <a href="../ios/11-project-temp.html">iOS C11 同项目 →</a>
+    </div>
     <footer>青竹蓝牙学堂 · 蓝牙小课堂鸿蒙第九课 · D9 · <a href="../index.html">回到学堂</a></footer>
   </section>
 </main>
 <aside class="toc" id="toc">
   <div class="toc-title">本课目录</div>
-  <a href="#a">六步流程</a>
-  <a href="#b">双机验收</a>
-  <a href="#lab">动手演练</a>
+  <a href="#what">BTHome 与三端</a>
+  <a href="#format">格式三层</a>
+  <a href="#layout">工程结构</a>
+  <a href="#parser">解析器</a>
+  <a href="#scanner">接收器</a>
+  <a href="#advertiser">广播源</a>
+  <a href="#fake">假数据源</a>
+  <a href="#connect">教学 GATT</a>
+  <a href="#accept">验收清单</a>
+  <a href="#more">扩展方向</a>
+  <a href="#apimap">API 地图</a>
+  <a href="#lab">两场演练</a>
   <a href="#quiz">本课自测</a>
-  <a href="#map">回顾与速查</a>
+  <a href="#map">项目速查</a>
+  <a href="#refs">参考链接</a>
 </aside>
 </div>
 <script>
-(function(){var API="点按钮看流程代码。";var CMP="startBLEScan([1809])\ndev.connect(); dev.getServices()\ndev.setCharacteristicChangeNotification(ch,true)\n// 6A 09 → 24.10°C";var NT="Android 同流程不同 API";function show(k){document.getElementById("d9code").textContent=(k==="api"?API:CMP);document.getElementById("d9log").innerHTML="<div><span class=\"ok\">"+(k==="api"?"本平台写法":"Android 对照")+"</span></div><div><span class=\"c\">// "+(k==="api"?NT:"概念相同，API 名不同")+"</span></div>";}document.querySelectorAll("#d9 button").forEach(function(b){b.addEventListener("click",function(){document.querySelectorAll("#d9 button").forEach(function(x){x.classList.remove("on");});b.classList.add("on");show(b.getAttribute("data-k"));});});show("api");})();
+// 演练一：编码闭环
+(function(){
+  function hex(n){return ('0'+n.toString(16)).slice(-2).toUpperCase();}
+  function enc(){
+    var t=parseInt(document.getElementById('t9').value,10);
+    var h=parseInt(document.getElementById('h9').value,10);
+    var pid=document.getElementById('pid9').checked;
+    document.getElementById('t9v').textContent=(t/100).toFixed(2)+'°C';
+    document.getElementById('h9v').textContent=(h/100).toFixed(2)+'%';
+    var b=[0x40];
+    if(pid){b.push(0x00,0x05);}
+    var tu=t<0?t+0x10000:t;
+    b.push(0x02,tu&255,(tu>>8)&255,0x03,h&255,(h>>8)&255);
+    var frame=b.map(hex).join(' ');
+    var adv=3+4+(2+2+b.length);
+    document.getElementById('enc9').textContent='BTHome 帧: '+frame+'\n广播预算: Flags 3 + UUID 4 + 服务数据 '+(2+2+b.length)+' = '+adv+' / 31 字节';
+    document.getElementById('enc9chips').innerHTML=
+      '<span class="chip on">'+(t/100).toFixed(2)+'°C</span><span class="chip on">'+(h/100).toFixed(2)+'%</span>'+
+      (pid?'<span class="chip on">序号 5</span>':'')+
+      '<span class="chip '+(adv<=31?'on':'bad')+'">'+adv+'/31B</span>';
+    var back=dec(b);
+    var ok=back&&Math.abs(back.t-t)<1&&Math.abs(back.h-h)<1;
+    document.getElementById('enc9log').innerHTML=
+      '<div><span class="api">encodeBthome('+(t/100).toFixed(2)+', '+(h/100).toFixed(2)+')</span></div>'+
+      '<div><span class="c">'+frame+'</span></div>'+
+      '<div><span class="api">parseBthome(frame) 回解</span></div>'+
+      (ok?'<div><span class="ok">✓ 闭环一致：'+(back.t/100).toFixed(2)+'°C / '+(back.h/100).toFixed(2)+'%</span></div>'
+         :'<div><span class="err">✗ 回解不一致</span></div>');
+  }
+  function dec(b){
+    var i=1,last=-1,t=null,h=null;
+    var T={0x00:1,0x01:1,0x02:2,0x03:2,0x0C:2};
+    while(i<b.length){
+      var id=b[i];if(id<last||!T[id])return null;
+      if(i+T[id]>b.length-1)return null;
+      var raw=0;for(var j=0;j<T[id];j++)raw|=b[i+1+j]<<(8*j);
+      if(id===0x02){if(raw>=0x8000)raw-=0x10000;t=raw;}
+      if(id===0x03){if(raw>10000)return null;h=raw;}
+      last=id;i+=1+T[id];
+    }
+    return (t!==null&&h!==null)?{t:t,h:h}:null;
+  }
+  ['t9','h9'].forEach(function(id){document.getElementById(id).addEventListener('input',enc);});
+  document.getElementById('pid9').addEventListener('change',enc);
+  enc();
+})();
+
+// 演练二：解码工坊
+(function(){
+  var OBJ={0x00:{n:'序号',len:1,sign:false,f:1,u:''},0x01:{n:'电量',len:1,sign:false,f:1,u:'%'},
+    0x02:{n:'温度',len:2,sign:true,f:0.01,u:'°C'},0x03:{n:'湿度',len:2,sign:false,f:0.01,u:'%'},
+    0x0C:{n:'电压',len:2,sign:false,f:0.001,u:'V'}};
+  function parse(){
+    var hex=document.getElementById('hex9').value.replace(/[^0-9a-fA-F]/g,'');
+    var lines=[],vals=[],err=null;
+    function L(cls,t){lines.push('<div><span class="'+cls+'">'+t+'</span></div>');}
+    if(hex.length===0||hex.length%2!==0){err='hex 长度为奇数或为空';}
+    else{
+      var b=[];for(var i=0;i<hex.length;i+=2)b.push(parseInt(hex.substr(i,2),16));
+      var info=b[0];
+      L('c','设备信息 0x'+info.toString(16).toUpperCase()+'：v'+((info>>5)&7)+' · '+(info&1?'加密':'不加密')+' · '+(info&4?'触发式':'定时'));
+      if((info&1)===1){err='加密帧需要密钥，本课解码器只处理明文';}
+      else{
+        var p=1,last=-1;
+        while(p<b.length){
+          var id=b[p];
+          if(id<last){err='对象 ID 未升序';break;}
+          var o=OBJ[id];
+          if(!o){err='未知对象 ID 0x'+id.toString(16).toUpperCase()+'，按规范立即停止';break;}
+          if(p+o.len>b.length-1){err='对象 0x'+id.toString(16)+' 数据不完整';break;}
+          var raw=0;for(var j=0;j<o.len;j++)raw|=b[p+1+j]<<(8*j);
+          if(o.sign&&o.len===2&&raw>=0x8000)raw-=0x10000;
+          var v=raw*o.f;
+          if(id===0x03&&(v<0||v>100)){err='湿度 '+v.toFixed(2)+'% 越界（0–100），帧可疑';break;}
+          vals.push(o.n+' '+v.toFixed(o.f<1?2:0)+o.u);
+          L('ok','0x'+id.toString(16).toUpperCase()+' '+o.n+'：raw='+raw+' → '+v.toFixed(o.f<1?2:0)+o.u);
+          last=id;p+=1+o.len;
+        }
+      }
+    }
+    if(err)L('err','✗ '+err);
+    document.getElementById('p9chips').innerHTML=vals.map(function(v){return '<span class="chip on">'+v+'</span>';}).join('')+(err?'<span class="chip bad">解析中止</span>':'');
+    document.getElementById('p9hint').innerHTML='<span class="tag">'+(err?'故障帧':'结果')+'</span>'+(err?err+'。解码器要停下来说清楚，不能硬显示。':'解析成功：'+vals.join('，')+'。');
+    document.getElementById('p9log').innerHTML=lines.join('');
+  }
+  document.getElementById('parse9').addEventListener('click',parse);
+  document.getElementById('hex9').addEventListener('keydown',function(e){if(e.key==='Enter')parse();});
+  document.querySelectorAll('#sample9 button').forEach(function(b){b.addEventListener('click',function(){
+    document.querySelectorAll('#sample9 button').forEach(function(x){x.classList.remove('on');});
+    b.classList.add('on'); document.getElementById('hex9').value=b.getAttribute('data-h'); parse();
+  });});
+  parse();
+})();
 
 const tocLinks=[...document.querySelectorAll('.toc a')];
 const secs=tocLinks.map(a=>document.getElementById(a.getAttribute('href').slice(1)));
 const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){tocLinks.forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+e.target.id));}});},{rootMargin:'-20% 0px -70% 0px'});
 secs.forEach(s=>s&&io.observe(s));
-const QUIZ=[{"q":"1. 温度解析？","opts":[["小端×0.01",true,"对。"],["大端",false,"错。"],["不乘",false,"要×0.01。"]]},{"q":"2. 订阅 API？","opts":[["setCharacteristicChangeNotification",true,"对。"],["setNotifyValue",false,"iOS。"],["setNotify",false,"Android 名。"]]},{"q":"3. 验收用？","opts":[["双机对时间线",true,"对。"],["单机",false,"要两端。"],["只看 UI",false,"对日志。"]]}];
+const QUIZ=[{"q":"1. BTHome v2 的服务 UUID？","opts":[["FCD2",true,"对。字节小端 D2 FC。"],["1809",false,"那是健康温度计 GATT 服务。"],["FFF0",false,"不是 BTHome。"]]},{"q":"2. 温度 0x02 对象的类型？","opts":[["sint16 小端 ×0.01",true,"对。零下靠符号。"],["uint16",false,"零下会错。"],["float32",false,"那是 IEEE-11073 路线。"]]},{"q":"3. 鸿蒙能当 BTHome 广播源吗？","opts":[["能：AdvertiseData.serviceData",true,"对。API 10 起；iOS 才不行。"],["不能",false,"serviceData 支持。"],["要 API 22",false,"22 是接收侧 serviceDataMap。"]]},{"q":"4. API 12 设备上没有 serviceDataMap，怎么解码？","opts":[["手解原始 data 的 AD 结构",true,"对。找 0x16 段 + FCD2。"],["没法解码",false,"data 永远在。"],["升级系统才行",false,"兜底路径全版本可跑。"]]},{"q":"5. 解析遇到未知对象 ID 应该？","opts":[["立即停止并报错",true,"对。规范强制；不能跳过继续。"],["跳过继续",false,"违反规范。"],["显示 0",false,"硬显示是事故。"]]},{"q":"6. 教学 GATT 路线的指令与响应？","opts":[["写 0x01，回 40 02 … 03 BF 13",true,"对。三端同一口径。"],["写 0xFF",false,"指令是 01。"],["只 notify",false,"教学特征是 READ+WRITE。"]]},{"q":"7. 验收「鸿蒙发 → iPhone 收」靠什么？","opts":[["同一帧三端解出同一读数",true,"对。25.00°C / 50.55%。"],["必须连线",false,"广播无连接。"],["iPhone 当广播源",false,"iPhone 发不出服务数据。"]]}];
 let solved=0; const box=document.getElementById('quiz-box');
 QUIZ.forEach((item,qi)=>{
   const h=document.createElement('div'); h.className='quiz-q'; h.textContent=item.q; box.appendChild(h);

@@ -172,6 +172,10 @@
   .ctl-row label{display:inline-flex;align-items:center;gap:10px;}
   .ctl-row input[type=range]{accent-color:var(--coral);width:160px;}
   .ctl-row .chk input{accent-color:var(--coral);}
+  .api-lv{display:inline-block;font-family:ui-monospace,Consolas,monospace;font-size:11.5px;font-weight:800;color:#2F58A8;background:var(--blue-soft);border:1px solid var(--blue-line);border-radius:999px;padding:0 8px;white-space:nowrap;}
+  .refs{font-size:14px;}
+  .refs li{margin:7px 0;}
+  .refs .src{font-size:12px;color:var(--faint);}
 </style>
 </head>
 <body style="--coral:#E8590C;--coral-soft:#FBEADF;--coral-line:#F2C4A4">
@@ -198,68 +202,231 @@
 <main>
   <div class="crumb">蓝牙小课堂 / 鸿蒙第二课 · D2</div>
   <h1>权限与适配器：<em>ACCESS_BLUETOOTH</em> 与状态</h1>
-  <p class="lead">鸿蒙要 ohos.permission.ACCESS_BLUETOOTH，运行时申请；用 access.getState 看蓝牙开关。这一课讲权限与适配器状态。</p>
-  <div class="meta"><span>约 10 分钟</span><span>含交互演练</span><span>跨端对照</span></div>
+  <p class="lead">鸿蒙要 ohos.permission.ACCESS_BLUETOOTH（API 10，user_grant 弹窗授权），声明+运行时申请缺一不可；用 access.getState 与 stateChange 门控蓝牙开关。这一课把权限申请代码、七态状态机与三平台差异讲清。</p>
+  <div class="meta"><span>平台：HarmonyOS/ArkTS</span><span>约 22 分钟</span><span>API 8 → 13</span><span>含两场交互演练</span><span>跨端对照</span></div>
   <div class="journey">
-    <div class="j-step"><span class="n">1</span><span class="t">权限</span><span class="s">ACCESS_BLUETOOTH</span></div>
-    <div class="j-step"><span class="n">2</span><span class="t">状态</span><span class="s">getState</span></div>
+    <div class="j-step"><span class="n">1</span><span class="t">权限</span><span class="s">声明+弹窗</span></div>
+    <div class="j-step"><span class="n">2</span><span class="t">状态</span><span class="s">七态门控</span></div>
+    <div class="j-step"><span class="n">3</span><span class="t">对照</span><span class="s">三平台权限</span></div>
+    <div class="j-step"><span class="n">4</span><span class="t">动手</span><span class="s">两场演练</span></div>
+    <div class="j-step"><span class="n">5</span><span class="t">自测</span><span class="s">六个问题</span></div>
   </div>
 
   <section id="a">
     <h2><span class="no">第 1 步</span>权限声明与申请</h2>
     <pre>// module.json5: ohos.permission.ACCESS_BLUETOOTH
-// 运行时 abilityAccessCtrl.requestPermissionsFromUser</pre><div class="recap"><b>收束：</b>声明+运行时申请，缺一不可。</div>
+// 运行时 abilityAccessCtrl.requestPermissionsFromUser</pre>
+    <pre><span class="cm">// module.json5 · requestPermissions（reason 必须给字符串资源）</span>
+"requestPermissions": [
+  {
+    "name": "ohos.permission.ACCESS_BLUETOOTH",
+    "reason": "$string:bluetooth_reason",
+    "usedScene": { "abilities": ["EntryAbility"], "when": "inuse" }
+  }
+]
+
+<span class="cm">// 运行时弹窗申请（user_grant）</span>
+import { abilityAccessCtrl, common } from '@kit.AbilityKit';
+let atManager = abilityAccessCtrl.createAtManager();
+atManager.requestPermissionsFromUser(context, ['ohos.permission.ACCESS_BLUETOOTH'])
+  .then((data) =&gt; {
+    if (data.authResults[0] === 0) { <span class="cm">// 0 = 已授权</span>
+      <span class="cm">// 再查蓝牙开关，STATE_ON 才扫描</span>
+    } else {
+      <span class="cm">// 引导用户去设置开启；拒绝后别死循环弹窗</span>
+    }
+  });</pre>
+    <table>
+      <tr><th>权限</th><th>授权方式</th><th>起始版本</th><th>用途</th></tr>
+      <tr><td><code>ohos.permission.ACCESS_BLUETOOTH</code></td><td>user_grant（弹窗）</td><td><span class="api-lv">API 10</span></td><td>扫描/连接/配对/广播，BLE 全场景一个权限</td></tr>
+      <tr><td><code>ohos.permission.USE_BLUETOOTH</code></td><td>system_grant（安装即授）</td><td><span class="api-lv">API 8</span></td><td>旧 API 时代：查看蓝牙配置</td></tr>
+      <tr><td><code>ohos.permission.DISCOVER_BLUETOOTH</code></td><td>system_grant</td><td><span class="api-lv">API 8</span></td><td>旧 API 时代：配置/扫描/配对</td></tr>
+    </table>
+    <ul>
+      <li><b>API 13 起权限组</b>：蓝牙并入「设备发现和连接」权限组（与星闪、多设备协同统一授权弹窗）。</li>
+      <li><b>不需要位置权限</b>：鸿蒙 NEXT 的 BLE 扫描不像 Android 11 那样要 ACCESS_FINE_LOCATION（对照下表）。</li>
+      <li><b>拒绝处理</b>：authResults 非 0 时给「去设置」引导（startAbility 跳应用设置页），别反复弹。</li>
+    </ul>
+    <table>
+      <tr><th>平台</th><th>声明</th><th>运行时</th></tr>
+      <tr><td>鸿蒙</td><td>module.json5 requestPermissions</td><td>requestPermissionsFromUser 弹窗（一个权限管全部）</td></tr>
+      <tr><td>Android 12+</td><td>BLUETOOTH_SCAN / CONNECT / ADVERTISE</td><td>运行时授权；扫描可能还要位置权限（neverForLocation 可免）</td></tr>
+      <tr><td>iOS</td><td>Info.plist 两键</td><td>首次使用自动弹窗；撤销授权 App 被终止（C2）</td></tr>
+    </table>
+    <div class="recap"><b>收束：</b>声明+运行时申请，缺一不可；一个 ACCESS_BLUETOOTH 管 BLE 全场景。</div>
   </section>
 
   <section id="b">
-    <h2><span class="no">第 2 步</span>适配器状态</h2>
+    <h2><span class="no">第 2 步</span>适配器状态：七态门控</h2>
     <pre>import { access } from '@kit.ConnectivityKit';
 access.getState()   // STATE_ON / STATE_OFF
-access.on('stateChange')</pre><div class="key"><span class="tag">重点</span>STATE_ON 才扫描；监听 stateChange 处理用户关蓝牙。</div>
+access.on('stateChange')</pre>
+    <table>
+      <tr><th>BluetoothState</th><th>值</th><th>含义</th><th>能扫描吗</th></tr>
+      <tr><td>STATE_OFF</td><td>0</td><td>蓝牙关闭</td><td>否（2900003）</td></tr>
+      <tr><td>STATE_TURNING_ON</td><td>1</td><td>正在开启</td><td>等</td></tr>
+      <tr><td>STATE_ON</td><td>2</td><td>蓝牙已开（经典+BLE）</td><td><b>能</b></td></tr>
+      <tr><td>STATE_TURNING_OFF</td><td>3</td><td>正在关闭</td><td>否，准备清理</td></tr>
+      <tr><td>STATE_BLE_TURNING_ON</td><td>4</td><td>LE-only 模式开启中</td><td>等</td></tr>
+      <tr><td>STATE_BLE_ON</td><td>5</td><td>LE-only 模式（仅 BLE）</td><td><b>能</b>（BLE 操作）</td></tr>
+      <tr><td>STATE_BLE_TURNING_OFF</td><td>6</td><td>LE-only 模式关闭中</td><td>否</td></tr>
+    </table>
+    <figure>
+      <svg viewBox="0 0 760 200" role="img" aria-label="蓝牙适配器状态机">
+        <defs><marker id="arh2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#A39B8E"/></marker></defs>
+        <rect x="20" y="60" width="130" height="56" rx="12" fill="#FBEDE9" stroke="#F0CFC6"/>
+        <text x="85" y="84" text-anchor="middle" font-size="13" font-weight="bold" fill="#B04A35">STATE_OFF</text>
+        <text x="85" y="102" text-anchor="middle" font-size="10.5" fill="#C08475">0 · 不可扫描</text>
+        <rect x="200" y="60" width="140" height="56" rx="12" fill="#FBF3E4" stroke="#EDD9B4"/>
+        <text x="270" y="84" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#8A5510">TURNING_ON</text>
+        <text x="270" y="102" text-anchor="middle" font-size="10.5" fill="#A8762A">1 · 过渡态</text>
+        <rect x="390" y="60" width="130" height="56" rx="12" fill="#E9F4F2" stroke="#BFE0DB"/>
+        <text x="455" y="84" text-anchor="middle" font-size="13" font-weight="bold" fill="#1E7268">STATE_ON</text>
+        <text x="455" y="102" text-anchor="middle" font-size="10.5" fill="#4E8A80">2 · 可扫描</text>
+        <rect x="570" y="60" width="150" height="56" rx="12" fill="#FBF3E4" stroke="#EDD9B4"/>
+        <text x="645" y="84" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#8A5510">TURNING_OFF</text>
+        <text x="645" y="102" text-anchor="middle" font-size="10.5" fill="#A8762A">3 · 清理会话</text>
+        <line x1="150" y1="88" x2="198" y2="88" stroke="#A39B8E" stroke-width="2" marker-end="url(#arh2)"/>
+        <line x1="340" y1="88" x2="388" y2="88" stroke="#2A9D8F" stroke-width="2" marker-end="url(#arh2)"/>
+        <line x1="520" y1="88" x2="568" y2="88" stroke="#A39B8E" stroke-width="2" marker-end="url(#arh2)"/>
+        <path d="M645,116 L645,160 L85,160 L85,118" fill="none" stroke="#A39B8E" stroke-width="1.6" marker-end="url(#arh2)"/>
+        <text x="365" y="152" text-anchor="middle" font-size="11" fill="#A39B8E">关闭完成 → OFF</text>
+        <rect x="390" y="10" width="130" height="34" rx="10" fill="#ECF1FB" stroke="#C9D8F2"/>
+        <text x="455" y="32" text-anchor="middle" font-size="11.5" font-weight="bold" fill="#2F58A8">STATE_BLE_ON (5)</text>
+        <line x1="455" y1="44" x2="455" y2="58" stroke="#9DB4DC" stroke-width="1.6" marker-end="url(#arh2)"/>
+        <text x="560" y="30" font-size="10.5" fill="#5F7FB5">LE-only 分支（4/5/6）</text>
+      </svg>
+      <figcaption>门控规则：STATE_ON 或 STATE_BLE_ON 才发起 BLE 操作；过渡态等待，关闭态清理。</figcaption>
+    </figure>
+    <pre>access.on('stateChange', (state: access.BluetoothState) =&gt; {
+  if (state === access.BluetoothState.STATE_ON ||
+      state === access.BluetoothState.STATE_BLE_ON) {
+    <span class="cm">// 可以恢复扫描/重连</span>
+  } else if (state === access.BluetoothState.STATE_OFF) {
+    <span class="cm">// 停扫描、断连接、清队列，UI 提示开蓝牙</span>
+  }
+});
+<span class="cm">// access.enableBluetooth() 可代码开蓝牙（需权限）；disableBluetooth 同理</span></pre>
+    <div class="key"><span class="tag">重点</span>STATE_ON 才扫描；监听 stateChange 处理用户关蓝牙。关蓝牙时所有连接会断，<b>先清理再等恢复</b>，别在 OFF 态重试操作（2900003）。</div>
+    <div class="recap"><b>收束：</b>七态里只有 ON/BLE_ON 可操作；stateChange 驱动清理与恢复。</div>
   </section>
 
   <section id="lab">
-    <h2><span class="no">动手</span>权限 / 状态</h2>
-    <p>点按钮切换本平台写法与 Android 对照，概念一一对应。</p>
+    <h2><span class="no">动手</span>两场演练：API 对照、权限×开关走查</h2>
+    <p>演练一切换写法对照。演练二选场景，看「权限门 × 开关门」两道门各自放行还是拦截。</p>
     <div class="lab">
-      <div class="lab-head"><b>权限 / 状态</b><span class="hint">点按钮看 API</span></div>
-      <div class="controls"><div class="seg" id="d2"><button data-k="api" class="on">本平台 API</button><button data-k="cmp">对照 Android</button></div></div>
+      <div class="lab-head"><b>演练一 · 权限 / 状态 API</b><span class="hint">点按钮看 API</span></div>
+      <div class="controls"><div class="seg" id="d2"><button data-k="api" class="on">鸿蒙写法</button><button data-k="cmp">对照 Android / iOS</button></div></div>
       <div class="lab-body"><div><pre id="d2code" style="margin:0;"></pre></div><div class="logcat"><div class="logcat-head"><span>说明</span><span>live</span></div><div class="logcat-body" id="d2log"></div></div></div>
-      <div class="lab-foot"><span class="hint">Android: BluetoothAdapter.isEnabled + ACTION_STATE_CHANGED</span></div>
+      <div class="lab-foot"><span class="hint">Android: isEnabled + ACTION_STATE_CHANGED · iOS: CBManagerState</span></div>
     </div>
-    <div class="key"><span class="tag">看懂这场演练</span>先查权限再查开关，STATE_ON 才扫描。</div>
+    <div class="lab">
+      <div class="lab-head"><b>演练二 · 权限×开关走查</b><span class="hint">两道门都过才扫描</span></div>
+      <div class="controls"><div class="seg" id="g2"><button data-g="ok" class="on">已授权+ON</button><button data-g="off">已授权+OFF</button><button data-g="deny">未授权</button><button data-g="revoke">扫描中撤销授权</button><button data-g="btoff">扫描中关蓝牙</button></div></div>
+      <div class="lab-body"><div><div class="chips" id="g2chips"></div><div class="key" id="g2hint"></div></div><div class="logcat"><div class="logcat-head"><span>门控日志</span><span>live</span></div><div class="logcat-body" id="g2log"></div></div></div>
+      <div class="lab-foot"><span class="hint">权限门拦 201；开关门拦 2900003</span></div>
+    </div>
+    <div class="key"><span class="tag">看懂这两场演练</span>先查权限再查开关，STATE_ON 才扫描；运行中任一条件变化都要走清理/恢复分支。</div>
   </section>
 
   <section id="quiz">
-    <h2><span class="no">自测</span>三个问题</h2>
+    <h2><span class="no">自测</span>六个问题</h2>
     <div class="card" id="quiz-box"></div>
     <p id="quiz-done" style="display:none;font-weight:700;color:#1E7268;">全对。下一课讲扫描与过滤。</p>
   </section>
 
   <section id="map">
-    <h2><span class="no">回顾</span>速查</h2>
-    <table><tr><th>项</th><th>API</th></tr><tr><td>权限</td><td>ACCESS_BLUETOOTH</td></tr><tr><td>状态</td><td>access.getState</td></tr></table>
-    <div class="note"><span class="tag">说明</span>本页为教学简化，工程细节以正文与官方规范为准；演练为模拟，非真实设备通信。</div>
+    <h2><span class="no">回顾</span>速查表</h2>
+    <table>
+      <tr><th>项</th><th>记住</th></tr>
+      <tr><td>权限</td><td>ACCESS_BLUETOOTH（API 10，user_grant）；声明+弹窗缺一不可</td></tr>
+      <tr><td>权限组</td><td>API 13 起「设备发现和连接」统一授权</td></tr>
+      <tr><td>状态查询</td><td>access.getState()；七态，ON(2)/BLE_ON(5) 可操作</td></tr>
+      <tr><td>状态监听</td><td>access.on('stateChange')；OFF 先清理</td></tr>
+      <tr><td>错误码</td><td>201 无权限；2900003 蓝牙未开</td></tr>
+      <tr><td>位置权限</td><td>鸿蒙 BLE 扫描不需要（对照 Android）</td></tr>
+    </table>
+    <div class="note"><span class="tag">说明</span>本页为教学整理，权限与枚举值对照华为官方文档核实；演练为模拟，非真实系统弹窗。</div>
+  </section>
+
+  <section id="refs">
+    <h2><span class="no">依据</span>参考链接</h2>
+    <div class="card refs">
+      <h3 style="margin-top:0;">华为官方文档</h3>
+      <ul>
+        <li><a href="https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/permissions-for-all-user" target="_blank" rel="noopener">开放权限（用户授权）列表</a> <span class="src">— ACCESS_BLUETOOTH：normal / user_grant / 起始 10</span></li>
+        <li><a href="https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/app-permission-group-list" target="_blank" rel="noopener">应用权限组列表</a> <span class="src">— API 13 起「设备发现和连接」权限组</span></li>
+        <li><a href="https://developer.huawei.com/consumer/en/doc/harmonyos-references-V5/js-apis-bluetooth-access-V5" target="_blank" rel="noopener">@ohos.bluetooth.access API 参考</a> <span class="src">— BluetoothState 七态枚举值</span></li>
+      </ul>
+      <h3>实测与深入</h3>
+      <ul>
+        <li><a href="https://developer.huawei.com/consumer/en/doc/best-practices/bpta-bluetooth-low-energy" target="_blank" rel="noopener">Best Practices · Bluetooth Low Energy</a> <span class="src">— 先开蓝牙再扫描的工程流程</span></li>
+      </ul>
+    </div>
+    <div class="next-links">
+      <a href="01-overview.html">← D1 BLE 总览</a>
+      <a href="03-scan-filter.html">D3 扫描与过滤 →</a>
+    </div>
     <footer>青竹蓝牙学堂 · 蓝牙小课堂鸿蒙第二课 · D2 · <a href="../index.html">回到学堂</a></footer>
   </section>
 </main>
 <aside class="toc" id="toc">
   <div class="toc-title">本课目录</div>
   <a href="#a">权限声明与申请</a>
-  <a href="#b">适配器状态</a>
-  <a href="#lab">动手演练</a>
+  <a href="#b">七态门控</a>
+  <a href="#lab">两场演练</a>
   <a href="#quiz">本课自测</a>
-  <a href="#map">回顾与速查</a>
+  <a href="#map">速查表</a>
+  <a href="#refs">参考链接</a>
 </aside>
 </div>
 <script>
-(function(){var API="点按钮看写法。";var CMP="access.getState()\naccess.on('stateChange', cb)\n// STATE_ON 才 startBLEScan";var NT="Android: BluetoothAdapter.isEnabled + ACTION_STATE_CHANGED";function show(k){document.getElementById("d2code").textContent=(k==="api"?API:CMP);document.getElementById("d2log").innerHTML="<div><span class=\"ok\">"+(k==="api"?"本平台写法":"Android 对照")+"</span></div><div><span class=\"c\">// "+(k==="api"?NT:"概念相同，API 名不同")+"</span></div>";}document.querySelectorAll("#d2 button").forEach(function(b){b.addEventListener("click",function(){document.querySelectorAll("#d2 button").forEach(function(x){x.classList.remove("on");});b.classList.add("on");show(b.getAttribute("data-k"));});});show("api");})();
+(function(){
+  var API="// module.json5 声明 ACCESS_BLUETOOTH（reason + usedScene）\nlet at = abilityAccessCtrl.createAtManager();\nat.requestPermissionsFromUser(ctx, ['ohos.permission.ACCESS_BLUETOOTH']);\n\naccess.getState();            // 七态枚举\naccess.on('stateChange', cb); // 用户开关蓝牙\n// STATE_ON(2) / STATE_BLE_ON(5) 才 startBLEScan";
+  var CMP="Android: BluetoothAdapter.isEnabled\n         + ACTION_STATE_CHANGED 广播\n         + BLUETOOTH_SCAN/CONNECT 运行时授权\niOS:     CBCentralManager.state（六态）\n         + Info.plist 两键，首次使用自动弹窗\n\n鸿蒙差异：一个权限管全部；不需要位置权限";
+  function show(k){
+    document.getElementById("d2code").textContent=(k==="api"?API:CMP);
+    document.getElementById("d2log").innerHTML="<div><span class=\"ok\">"+(k==="api"?"鸿蒙写法":"三平台对照")+"</span></div><div><span class=\"c\">// "+(k==="api"?"两道门：权限门(201) × 开关门(2900003)":"概念相同，机制不同")+"</span></div>";
+  }
+  document.querySelectorAll("#d2 button").forEach(function(b){b.addEventListener("click",function(){document.querySelectorAll("#d2 button").forEach(function(x){x.classList.remove("on");});b.classList.add("on");show(b.getAttribute("data-k"));});});
+  show("api");
+})();
+
+// 演练二：权限×开关走查
+(function(){
+  var G={
+    ok:{perm:'已授权',bt:'STATE_ON',pass:true,hint:'两道门都过，正常扫描。',
+      log:['<span class="ok">权限门：authResults[0] === 0 ✓</span>','<span class="ok">开关门：getState() === STATE_ON ✓</span>','<span class="api">ble.startBLEScan([filter])</span>','<span class="ok">BLEDeviceFind 回调到达</span>']},
+    off:{perm:'已授权',bt:'STATE_OFF',pass:false,hint:'权限过了但蓝牙没开：引导开蓝牙（enableBluetooth 或跳设置），别重试扫描。',
+      log:['<span class="ok">权限门 ✓</span>','<span class="err">开关门：STATE_OFF ✗</span>','<span class="warn">startBLEScan → 2900003 Bluetooth disabled</span>','<span class="c">// 监听 stateChange，ON 后自动恢复</span>']},
+    deny:{perm:'未授权',bt:'STATE_ON',pass:false,hint:'权限门拦截：弹窗被拒。给「去设置」引导，别死循环弹。',
+      log:['<span class="err">权限门：authResults[0] === -1 ✗</span>','<span class="warn">任何蓝牙 API → 201 Permission denied</span>','<span class="c">// startAbility 跳应用设置页</span>']},
+    revoke:{perm:'扫描中撤销',bt:'STATE_ON',pass:false,hint:'运行中撤销授权：后续调用报 201，停扫描清会话，回权限引导页。',
+      log:['<span class="ok">扫描进行中…</span>','<span class="warn">用户在设置撤销授权</span>','<span class="err">下一次 API → 201</span>','<span class="api">stopBLEScan + 清理 + 引导重新授权</span>']},
+    btoff:{perm:'已授权',bt:'扫描中关闭',pass:false,hint:'运行中关蓝牙：stateChange 到 OFF，连接全断；先清理，ON 后重连重订。',
+      log:['<span class="ok">扫描/连接进行中…</span>','<span class="warn">stateChange → STATE_TURNING_OFF → STATE_OFF</span>','<span class="api">停扫描 / disconnect / close / 清队列</span>','<span class="c">// stateChange → STATE_ON 后恢复</span>']}
+  };
+  function show(k){
+    var g=G[k];
+    document.getElementById('g2chips').innerHTML=
+      '<span class="chip '+(g.perm==='已授权'?'on':'bad')+'">权限: '+g.perm+'</span>'+
+      '<span class="chip '+(g.bt==='STATE_ON'?'on':'bad')+'">开关: '+g.bt+'</span>'+
+      '<span class="chip '+(g.pass?'on':'bad')+'">'+(g.pass?'放行扫描':'拦截')+'</span>';
+    document.getElementById('g2hint').innerHTML='<span class="tag">处理</span>'+g.hint;
+    document.getElementById('g2log').innerHTML=g.log.map(function(l){return '<div>'+l+'</div>';}).join('');
+  }
+  document.querySelectorAll('#g2 button').forEach(function(b){b.addEventListener('click',function(){
+    document.querySelectorAll('#g2 button').forEach(function(x){x.classList.remove('on');});
+    b.classList.add('on'); show(b.getAttribute('data-g'));
+  });});
+  show('ok');
+})();
 
 const tocLinks=[...document.querySelectorAll('.toc a')];
 const secs=tocLinks.map(a=>document.getElementById(a.getAttribute('href').slice(1)));
 const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){tocLinks.forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+e.target.id));}});},{rootMargin:'-20% 0px -70% 0px'});
 secs.forEach(s=>s&&io.observe(s));
-const QUIZ=[{"q":"1. 鸿蒙蓝牙权限？","opts":[["ACCESS_BLUETOOTH",true,"对。"],["BLUETOOTH_SCAN",false,"Android。"],["NSBluetoothAlways",false,"iOS。"]]},{"q":"2. 何时扫描？","opts":[["STATE_ON",true,"对。"],["任何时候",false,"要开蓝牙。"],["授权后不管状态",false,"还要 ON。"]]},{"q":"3. 关蓝牙事件靠？","opts":[["access.on stateChange",true,"对。"],["轮询",false,"用监听。"],["无",false,"有监听。"]]}];
+const QUIZ=[{"q":"1. 鸿蒙蓝牙权限？","opts":[["ACCESS_BLUETOOTH",true,"对。"],["BLUETOOTH_SCAN",false,"Android。"],["NSBluetoothAlways",false,"iOS。"]]},{"q":"2. 何时扫描？","opts":[["STATE_ON（或 BLE_ON）",true,"对。"],["任何时候",false,"要开蓝牙。"],["授权后不管状态",false,"还要 ON。"]]},{"q":"3. 关蓝牙事件靠？","opts":[["access.on stateChange",true,"对。"],["轮询",false,"用监听。"],["无",false,"有监听。"]]},{"q":"4. ACCESS_BLUETOOTH 的授权方式？","opts":[["user_grant：声明+运行时弹窗",true,"对。normal 级别，API 10 起。"],["system_grant：安装即授",false,"那是旧的 USE/DISCOVER_BLUETOOTH。"],["只声明不弹窗",false,"user_grant 必须弹窗。"]]},{"q":"5. STATE_BLE_ON（值 5）是什么？","opts":[["LE-only 模式，BLE 操作可用",true,"对。七态里的仅 BLE 分支。"],["蓝牙完全关闭",false,"那是 STATE_OFF(0)。"],["经典蓝牙已连接",false,"与连接无关。"]]},{"q":"6. API 13 起蓝牙权限归入哪个权限组？","opts":[["设备发现和连接",true,"对。与星闪、多设备协同统一授权。"],["位置信息",false,"鸿蒙 BLE 不要位置权限。"],["蓝牙独立组",false,"API 13 起旧组不再使用。"]]}];
 let solved=0; const box=document.getElementById('quiz-box');
 QUIZ.forEach((item,qi)=>{
   const h=document.createElement('div'); h.className='quiz-q'; h.textContent=item.q; box.appendChild(h);

@@ -172,6 +172,10 @@
   .ctl-row label{display:inline-flex;align-items:center;gap:10px;}
   .ctl-row input[type=range]{accent-color:var(--coral);width:160px;}
   .ctl-row .chk input{accent-color:var(--coral);}
+  .api-lv{display:inline-block;font-family:ui-monospace,Consolas,monospace;font-size:11.5px;font-weight:800;color:#2F58A8;background:var(--blue-soft);border:1px solid var(--blue-line);border-radius:999px;padding:0 8px;white-space:nowrap;}
+  .refs{font-size:14px;}
+  .refs li{margin:7px 0;}
+  .refs .src{font-size:12px;color:var(--faint);}
 </style>
 </head>
 <body style="--coral:#E8590C;--coral-soft:#FBEADF;--coral-line:#F2C4A4">
@@ -198,66 +202,210 @@
 <main>
   <div class="crumb">蓝牙小课堂 / 鸿蒙第六课 · D6</div>
   <h1>订阅与通知：<em>setCharacteristicChangeNotification</em></h1>
-  <p class="lead">setCharacteristicChangeNotification 启用通知，on('BLECharacteristicChange') 收值。这一课讲订阅两步与值回调。</p>
-  <div class="meta"><span>约 10 分钟</span><span>含交互演练</span><span>跨端对照</span></div>
+  <p class="lead">setCharacteristicChangeNotification 一步启用通知——系统自动写 CCCD（像 iOS，不像 Android 两步）；on('BLECharacteristicChange') 收值。这一课讲订阅机制、通知 vs 指示与验证排障。</p>
+  <div class="meta"><span>平台：HarmonyOS/ArkTS</span><span>约 22 分钟</span><span>API 10</span><span>含两场交互演练</span><span>跨端对照</span></div>
   <div class="journey">
-    <div class="j-step"><span class="n">1</span><span class="t">订阅</span><span class="s">setNotification</span></div>
-    <div class="j-step"><span class="n">2</span><span class="t">值</span><span class="s">BLECharacteristicChange</span></div>
+    <div class="j-step"><span class="n">1</span><span class="t">订阅</span><span class="s">一步完成</span></div>
+    <div class="j-step"><span class="n">2</span><span class="t">值</span><span class="s">Change 回调</span></div>
+    <div class="j-step"><span class="n">3</span><span class="t">验证</span><span class="s">触发读数</span></div>
+    <div class="j-step"><span class="n">4</span><span class="t">动手</span><span class="s">订阅沙盒</span></div>
+    <div class="j-step"><span class="n">5</span><span class="t">自测</span><span class="s">六个问题</span></div>
   </div>
 
   <section id="a">
-    <h2><span class="no">第 1 步</span>订阅</h2>
+    <h2><span class="no">第 1 步</span>订阅：一步完成，系统代写 CCCD</h2>
     <pre>dev.setCharacteristicChangeNotification(characteristic, true)
-// 另写 CCCD 描述符开启（同通用两步）</pre><div class="recap"><b>收束：</b>本地+CCCD 两步。</div>
+// 系统自动写 CCCD，不用再手动 writeDescriptorValue</pre>
+    <table>
+      <tr><th>API</th><th>版本</th><th>说明</th></tr>
+      <tr><td>setCharacteristicChangeNotification(ch, enable)</td><td><span class="api-lv">API 10</span></td><td>通知开关，<b>一步</b>：本地标记 + 系统写 CCCD=0x0001</td></tr>
+      <tr><td>setCharacteristicChangeIndication(ch, enable)</td><td><span class="api-lv">API 10</span></td><td>指示开关：CCCD=0x0002，对端逐包确认，慢但可靠</td></tr>
+      <tr><td>on('BLECharacteristicChange')</td><td><span class="api-lv">API 10</span></td><td>值到达回调，通知/指示都走这里</td></tr>
+    </table>
+    <table>
+      <tr><th>平台</th><th>订阅步骤</th></tr>
+      <tr><td>Android</td><td><b>两步</b>：setCharacteristicNotification(true) + 手动写 CCCD 描述符</td></tr>
+      <tr><td>iOS</td><td><b>一步</b>：setNotifyValue(true, for:)，系统写 CCCD</td></tr>
+      <tr><td>鸿蒙</td><td><b>一步</b>：setCharacteristicChangeNotification(ch, true)，系统写 CCCD</td></tr>
+    </table>
+    <ul>
+      <li><b>前提</b>：服务端特征必须带 <code>0x2902</code>（CCCD）描述符且 properties 含 notify/indicate 位，否则订阅失败。</li>
+      <li><b>事件先行</b>：先 on('BLECharacteristicChange') 再开订阅，避免漏掉第一帧。</li>
+      <li><b>串行</b>：订阅也是 GATT 操作，等上一步回调（2900011）。</li>
+      <li><b>通知 vs 指示</b>：通知无确认、快；指示逐包确认、慢。传感器流用通知，关键指令回执用指示。</li>
+    </ul>
+    <div class="recap"><b>收束：</b>鸿蒙一步订阅（系统代写 CCCD）；前提是对端有 0x2902。</div>
   </section>
 
   <section id="b">
-    <h2><span class="no">第 2 步</span>值回调</h2>
-    <pre>dev.on('BLECharacteristicChange', (ch)=>{ /* ch.characteristicValue */ })</pre><div class="key"><span class="tag">重点</span>订阅后触发新读数验证；重连重新订阅。</div>
+    <h2><span class="no">第 2 步</span>值回调与数据流</h2>
+    <pre>dev.on('BLECharacteristicChange', (ch)=>{ /* ch.characteristicValue */ })</pre>
+    <figure>
+      <svg viewBox="0 0 760 210" role="img" aria-label="通知数据流">
+        <defs><marker id="arh6" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#A39B8E"/></marker></defs>
+        <rect x="30" y="30" width="200" height="150" rx="12" fill="#FBF3E4" stroke="#EDD9B4"/>
+        <text x="130" y="56" text-anchor="middle" font-size="13" font-weight="bold" fill="#8A5510">传感器（Server）</text>
+        <text x="130" y="82" text-anchor="middle" font-size="10.5" fill="#A8762A">特征 + CCCD(0x2902)</text>
+        <text x="130" y="104" text-anchor="middle" font-size="10.5" fill="#A8762A">新读数 → notify</text>
+        <text x="130" y="126" text-anchor="middle" font-family="Consolas,monospace" font-size="10.5" fill="#A8762A">40 02 C4 09 03 BF 13</text>
+        <rect x="530" y="30" width="200" height="150" rx="12" fill="#E9F4F2" stroke="#BFE0DB"/>
+        <text x="630" y="56" text-anchor="middle" font-size="13" font-weight="bold" fill="#1E7268">手机（Client）</text>
+        <text x="630" y="82" text-anchor="middle" font-size="10.5" fill="#4E8A80">setCharacteristicChange</text>
+        <text x="630" y="98" text-anchor="middle" font-size="10.5" fill="#4E8A80">Notification(ch, true)</text>
+        <text x="630" y="126" text-anchor="middle" font-size="10.5" fill="#4E8A80">on('BLECharacteristicChange')</text>
+        <line x1="230" y1="70" x2="528" y2="70" stroke="#2A9D8F" stroke-width="2" marker-end="url(#arh6)"/>
+        <text x="380" y="62" text-anchor="middle" font-size="11" fill="#1E7268">① 订阅：系统写 CCCD=0x0001</text>
+        <line x1="528" y1="120" x2="232" y2="120" stroke="#A39B8E" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#arh6)"/>
+        <text x="380" y="112" text-anchor="middle" font-size="11" fill="#A39B8E">② ATT Handle Value Notification（无确认）</text>
+        <text x="380" y="152" text-anchor="middle" font-size="11" fill="#A39B8E">指示（Indication）则多一步逐包确认</text>
+        <text x="380" y="198" text-anchor="middle" font-size="11.5" fill="#A39B8E">没订阅时设备照样测，但 ATT 层不会推——回调永远不来</text>
+      </svg>
+      <figcaption>订阅是「告诉对端推给我」；CCCD 是对端特征上的开关位。</figcaption>
+    </figure>
+    <pre>dev.on('BLECharacteristicChange', (ch: ble.BLECharacteristic) =&gt; {
+  let dv = new DataView(ch.characteristicValue);
+  <span class="cm">// 按 D5 对象表解析：小端 + 符号 + 分辨率</span>
+});</pre>
+    <div class="key"><span class="tag">重点</span>订阅后触发新读数验证；重连重新订阅（CCCD 状态随会话消失）。</div>
+    <div class="recap"><b>收束：</b>值走 BLECharacteristicChange，ArrayBuffer 进 D5 解码器。</div>
+  </section>
+
+  <section id="c">
+    <h2><span class="no">第 3 步</span>验证与排障</h2>
+    <ul>
+      <li><b>验证订阅</b>：让设备产生新读数（教学设备写 0x01 触发），看回调是否到达。「写成功」只证明 ATT 通了，不证明订阅生效。</li>
+      <li><b>回调不来</b>：①对端特征没有 0x2902？②properties 没有 notify 位？③订阅调用报错被吞了？④重连后没重订？按序排查。</li>
+      <li><b>只收到一帧</b>：设备是触发式广播/通知，不是定时推送；每次都要触发。</li>
+      <li><b>丢帧</b>：通知无确认，射频拥塞会丢；关键数据用指示或应用层序号（BTHome 0x00 对象）补洞。</li>
+    </ul>
+    <div class="recap"><b>收束：</b>订阅生效的唯一证据是「新读数到达回调」。</div>
   </section>
 
   <section id="lab">
-    <h2><span class="no">动手</span>订阅 / 值</h2>
-    <p>点按钮切换本平台写法与 Android 对照，概念一一对应。</p>
+    <h2><span class="no">动手</span>两场演练：API 对照、订阅沙盒</h2>
+    <p>演练一切换写法对照。演练二模拟一台会推送的设备：开/关订阅、触发读数、断线重连，看回调来不来。</p>
     <div class="lab">
-      <div class="lab-head"><b>订阅 / 值</b><span class="hint">点按钮看 API</span></div>
-      <div class="controls"><div class="seg" id="d6"><button data-k="api" class="on">本平台 API</button><button data-k="cmp">对照 Android</button></div></div>
+      <div class="lab-head"><b>演练一 · 订阅 / 值 API</b><span class="hint">点按钮看 API</span></div>
+      <div class="controls"><div class="seg" id="d6"><button data-k="api" class="on">鸿蒙写法</button><button data-k="cmp">对照 Android / iOS</button></div></div>
       <div class="lab-body"><div><pre id="d6code" style="margin:0;"></pre></div><div class="logcat"><div class="logcat-head"><span>说明</span><span>live</span></div><div class="logcat-body" id="d6log"></div></div></div>
-      <div class="lab-foot"><span class="hint">Android: setCharacteristicNotification + onCharacteristicChanged</span></div>
+      <div class="lab-foot"><span class="hint">Android 两步 / iOS 一步 / 鸿蒙一步</span></div>
     </div>
-    <div class="key"><span class="tag">看懂这场演练</span>两步订阅；值走 BLECharacteristicChange。</div>
+    <div class="lab">
+      <div class="lab-head"><b>演练二 · 订阅沙盒</b><span class="hint">订阅决定回调来不来</span></div>
+      <div class="controls">
+        <button class="btn" id="sub6" type="button">开启订阅</button>
+        <button class="btn" id="push6" type="button">设备产生新读数</button>
+        <button class="btn" id="reconn6" type="button">断线重连</button>
+      </div>
+      <div class="lab-body"><div><div class="chips" id="s6chips"></div><div class="key" id="s6hint"></div></div><div class="logcat"><div class="logcat-head"><span>事件流</span><span>live</span></div><div class="logcat-body" id="s6log"></div></div></div>
+      <div class="lab-foot"><span class="hint">重连后订阅标记清零——要重订</span></div>
+    </div>
+    <div class="key"><span class="tag">看懂这两场演练</span>一步订阅；值走 BLECharacteristicChange；重连后必须重订，否则设备推了你也收不到。</div>
   </section>
 
   <section id="quiz">
-    <h2><span class="no">自测</span>三个问题</h2>
+    <h2><span class="no">自测</span>六个问题</h2>
     <div class="card" id="quiz-box"></div>
     <p id="quiz-done" style="display:none;font-weight:700;color:#1E7268;">全对。下一课讲外设角色。</p>
   </section>
 
   <section id="map">
-    <h2><span class="no">回顾</span>速查</h2>
-    <table><tr><th>项</th><th>API</th></tr><tr><td>订阅</td><td>setCharacteristicChangeNotification</td></tr><tr><td>值</td><td>BLECharacteristicChange</td></tr></table>
-    <div class="note"><span class="tag">说明</span>本页为教学简化，工程细节以正文与官方规范为准；演练为模拟，非真实设备通信。</div>
+    <h2><span class="no">回顾</span>速查表</h2>
+    <table>
+      <tr><th>项</th><th>记住</th></tr>
+      <tr><td>订阅</td><td>setCharacteristicChangeNotification 一步，系统写 CCCD</td></tr>
+      <tr><td>指示</td><td>setCharacteristicChangeIndication，逐包确认</td></tr>
+      <tr><td>值</td><td>on('BLECharacteristicChange')，先订阅事件再开通知</td></tr>
+      <tr><td>前提</td><td>对端特征带 0x2902 且 properties 含 notify 位</td></tr>
+      <tr><td>验证</td><td>触发新读数看回调；写成功≠订阅生效</td></tr>
+      <tr><td>重连</td><td>新会话必须重订</td></tr>
+    </table>
+    <div class="note"><span class="tag">说明</span>本页为教学整理，订阅机制对照华为官方文档核实（一步，系统代写 CCCD）；演练为模拟。</div>
+  </section>
+
+  <section id="refs">
+    <h2><span class="no">依据</span>参考链接</h2>
+    <div class="card refs">
+      <h3 style="margin-top:0;">华为官方文档</h3>
+      <ul>
+        <li><a href="https://developer.huawei.com/consumer/cn/doc/harmonyos-references/js-apis-bluetooth-ble" target="_blank" rel="noopener">@ohos.bluetooth.ble API 参考</a> <span class="src">— setCharacteristicChangeNotification：系统自动写 CCCD</span></li>
+        <li><a href="https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/gatt-development-guide-V14" target="_blank" rel="noopener">GATT 开发指南</a> <span class="src">— 订阅流程与 0x2902 前提</span></li>
+      </ul>
+      <h3>实测与深入</h3>
+      <ul>
+        <li><a href="https://developer.huawei.com/consumer/en/doc/best-practices/bpta-bluetooth-low-energy" target="_blank" rel="noopener">Best Practices · Bluetooth Low Energy</a> <span class="src">— 通知/指示选择与可靠性</span></li>
+      </ul>
+    </div>
+    <div class="next-links">
+      <a href="05-read-write.html">← D5 读写与解析</a>
+      <a href="07-peripheral.html">D7 外设角色 →</a>
+    </div>
     <footer>青竹蓝牙学堂 · 蓝牙小课堂鸿蒙第六课 · D6 · <a href="../index.html">回到学堂</a></footer>
   </section>
 </main>
 <aside class="toc" id="toc">
   <div class="toc-title">本课目录</div>
-  <a href="#a">订阅</a>
-  <a href="#b">值回调</a>
-  <a href="#lab">动手演练</a>
+  <a href="#a">一步订阅</a>
+  <a href="#b">值回调与数据流</a>
+  <a href="#c">验证与排障</a>
+  <a href="#lab">两场演练</a>
   <a href="#quiz">本课自测</a>
-  <a href="#map">回顾与速查</a>
+  <a href="#map">速查表</a>
+  <a href="#refs">参考链接</a>
 </aside>
 </div>
 <script>
-(function(){var API="点按钮看写法。";var CMP="dev.setCharacteristicChangeNotification(ch, true)\ndev.on('BLECharacteristicChange', cb)";var NT="Android: setCharacteristicNotification + onCharacteristicChanged";function show(k){document.getElementById("d6code").textContent=(k==="api"?API:CMP);document.getElementById("d6log").innerHTML="<div><span class=\"ok\">"+(k==="api"?"本平台写法":"Android 对照")+"</span></div><div><span class=\"c\">// "+(k==="api"?NT:"概念相同，API 名不同")+"</span></div>";}document.querySelectorAll("#d6 button").forEach(function(b){b.addEventListener("click",function(){document.querySelectorAll("#d6 button").forEach(function(x){x.classList.remove("on");});b.classList.add("on");show(b.getAttribute("data-k"));});});show("api");})();
+(function(){
+  var API="// 事件先行\ndev.on('BLECharacteristicChange', (ch) => {\n  let dv = new DataView(ch.characteristicValue);\n});\n// 一步订阅：系统自动写 CCCD=0x0001\ndev.setCharacteristicChangeNotification(ch, true);\n// 指示（逐包确认）：\ndev.setCharacteristicChangeIndication(ch, true);";
+  var CMP="Android（两步）:\n  gatt.setCharacteristicNotification(ch, true)\n  cccd.setValue(ENABLE_NOTIFICATION_VALUE)\n  gatt.writeDescriptor(cccd)\niOS（一步）:\n  peripheral.setNotifyValue(true, for: ch)\n\n鸿蒙像 iOS：一步，系统代写 CCCD\n前提相同：对端特征要有 0x2902 描述符";
+  function show(k){
+    document.getElementById("d6code").textContent=(k==="api"?API:CMP);
+    document.getElementById("d6log").innerHTML="<div><span class=\"ok\">"+(k==="api"?"鸿蒙写法":"三平台对照")+"</span></div><div><span class=\"c\">// "+(k==="api"?"一步订阅；重连要重订":"Android 两步 / iOS 一步 / 鸿蒙一步")+"</span></div>";
+  }
+  document.querySelectorAll("#d6 button").forEach(function(b){b.addEventListener("click",function(){document.querySelectorAll("#d6 button").forEach(function(x){x.classList.remove("on");});b.classList.add("on");show(b.getAttribute("data-k"));});});
+  show("api");
+})();
+
+// 演练二：订阅沙盒
+(function(){
+  var subscribed=false, seq=0;
+  var log=document.getElementById('s6log');
+  function L(cls,t){var d=document.createElement('div');d.innerHTML='<span class="'+cls+'">'+t+'</span>';log.appendChild(d);log.scrollTop=log.scrollHeight;}
+  function render(msg){
+    document.getElementById('s6chips').innerHTML=
+      '<span class="chip '+(subscribed?'on':'bad')+'">'+(subscribed?'已订阅 CCCD=0x0001':'未订阅')+'</span>'+
+      '<span class="chip on">已收 '+seq+' 帧</span>';
+    document.getElementById('s6hint').innerHTML='<span class="tag">状态</span>'+(msg||(subscribed?'订阅生效：设备新读数会进回调。':'未订阅：设备照样测量，但 ATT 不推送，回调不来。'));
+    document.getElementById('sub6').textContent=subscribed?'关闭订阅':'开启订阅';
+  }
+  document.getElementById('sub6').addEventListener('click',function(){
+    subscribed=!subscribed;
+    if(subscribed){L('api','setCharacteristicChangeNotification(ch, true)');L('ok','系统写 CCCD=0x0001 ✓');}
+    else{L('api','setCharacteristicChangeNotification(ch, false)');L('warn','CCCD=0x0000，停止推送');}
+    render();
+  });
+  document.getElementById('push6').addEventListener('click',function(){
+    var t=(2400+Math.floor(Math.random()*200));
+    var hex='40 02 '+('0'+(t&255).toString(16)).slice(-2)+' '+('0'+(t>>8).toString(16)).slice(-2)+' 03 BF 13';
+    L('c','设备notify: '+hex.toUpperCase());
+    if(subscribed){seq++;L('ok','BLECharacteristicChange → '+(t*0.01).toFixed(2)+'°C / 50.55%');}
+    else{L('warn','未订阅，ATT 层不推送——回调没来');}
+    render();
+  });
+  document.getElementById('reconn6').addEventListener('click',function(){
+    L('warn','STATE_DISCONNECTED → 重连 → STATE_CONNECTED');
+    subscribed=false;
+    L('err','新会话：CCCD 状态清零，必须重新订阅！');
+    render('重连完成但订阅丢了：再点「开启订阅」，然后触发读数验证。');
+  });
+  render();
+})();
 
 const tocLinks=[...document.querySelectorAll('.toc a')];
 const secs=tocLinks.map(a=>document.getElementById(a.getAttribute('href').slice(1)));
 const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){tocLinks.forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+e.target.id));}});},{rootMargin:'-20% 0px -70% 0px'});
 secs.forEach(s=>s&&io.observe(s));
-const QUIZ=[{"q":"1. 值回调？","opts":[["BLECharacteristicChange",true,"对。"],["onCharacteristicChanged",false,"Android。"],["didUpdateValueFor",false,"iOS。"]]},{"q":"2. 订阅要几步？","opts":[["本地+CCCD",true,"对。"],["一步",false,"两步。"],["不用 CCCD",false,"要。"]]},{"q":"3. 验证靠？","opts":[["触发新读数",true,"对。"],["写成功即通",false,"只 ATT。"],["重启",false,"不必。"]]}];
+const QUIZ=[{"q":"1. 值回调？","opts":[["BLECharacteristicChange",true,"对。"],["onCharacteristicChanged",false,"Android。"],["didUpdateValueFor",false,"iOS。"]]},{"q":"2. 鸿蒙订阅要几步？","opts":[["一步：系统自动写 CCCD",true,"对。像 iOS；Android 才要手动两步。"],["两步：本地+手写 CCCD",false,"那是 Android 的做法。"],["三步",false,"没有三步。"]]},{"q":"3. 验证靠？","opts":[["触发新读数",true,"对。"],["写成功即通",false,"只 ATT。"],["重启",false,"不必。"]]},{"q":"4. 服务端特征必须带哪个描述符才能被订阅？","opts":[["0x2902（CCCD）",true,"对。没有它订阅失败。"],["0x2901（用户描述）",false,"那是可读名称。"],["0x2900（扩展属性）",false,"不是订阅开关。"]]},{"q":"5. 要逐包确认的可靠推送用？","opts":[["setCharacteristicChangeIndication",true,"对。指示：CCCD=0x0002，慢但可靠。"],["Notification",false,"通知无确认。"],["writeDescriptor",false,"那是写描述符。"]]},{"q":"6. 断线重连后订阅还在吗？","opts":[["不在，必须重订",true,"对。CCCD 状态随会话消失。"],["还在",false,"新会话清零。"],["系统自动恢复",false,"要自己重订。"]]}];
 let solved=0; const box=document.getElementById('quiz-box');
 QUIZ.forEach((item,qi)=>{
   const h=document.createElement('div'); h.className='quiz-q'; h.textContent=item.q; box.appendChild(h);

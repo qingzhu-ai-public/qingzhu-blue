@@ -172,6 +172,10 @@
   .ctl-row label{display:inline-flex;align-items:center;gap:10px;}
   .ctl-row input[type=range]{accent-color:var(--coral);width:160px;}
   .ctl-row .chk input{accent-color:var(--coral);}
+  .api-lv{display:inline-block;font-family:ui-monospace,Consolas,monospace;font-size:11.5px;font-weight:800;color:#2F58A8;background:var(--blue-soft);border:1px solid var(--blue-line);border-radius:999px;padding:0 8px;white-space:nowrap;}
+  .refs{font-size:14px;}
+  .refs li{margin:7px 0;}
+  .refs .src{font-size:12px;color:var(--faint);}
 </style>
 </head>
 <body style="--coral:#E8590C;--coral-soft:#FBEADF;--coral-line:#F2C4A4">
@@ -198,66 +202,227 @@
 <main>
   <div class="crumb">蓝牙小课堂 / 鸿蒙第三课 · D3</div>
   <h1>扫描与过滤：<em>startBLEScan</em> 与 BLEDeviceFind</h1>
-  <p class="lead">startBLEScan(filters,options) 后 on('BLEDeviceFind') 收结果。过滤字段必须真实在广播里。这一课讲扫描与过滤。</p>
-  <div class="meta"><span>约 10 分钟</span><span>含交互演练</span><span>跨端对照</span></div>
+  <p class="lead">startBLEScan(filters,options) 后 on('BLEDeviceFind') 收结果。这一课讲清 ScanResult 每个字段的版本（serviceDataMap 要 API 22+）、虚拟 MAC 的坑、过滤字段与旧版本手解 AD 结构的兜底。</p>
+  <div class="meta"><span>平台：HarmonyOS/ArkTS</span><span>约 25 分钟</span><span>API 10 → 23</span><span>含两场交互演练</span><span>跨端对照</span></div>
   <div class="journey">
-    <div class="j-step"><span class="n">1</span><span class="t">扫描</span><span class="s">startBLEScan</span></div>
-    <div class="j-step"><span class="n">2</span><span class="t">过滤</span><span class="s">filters</span></div>
+    <div class="j-step"><span class="n">1</span><span class="t">扫描</span><span class="s">单路/多路</span></div>
+    <div class="j-step"><span class="n">2</span><span class="t">结果</span><span class="s">字段版本</span></div>
+    <div class="j-step"><span class="n">3</span><span class="t">过滤</span><span class="s">虚拟MAC</span></div>
+    <div class="j-step"><span class="n">4</span><span class="t">动手</span><span class="s">过滤沙盒</span></div>
+    <div class="j-step"><span class="n">5</span><span class="t">自测</span><span class="s">六个问题</span></div>
   </div>
 
   <section id="a">
-    <h2><span class="no">第 1 步</span>扫描回调</h2>
+    <h2><span class="no">第 1 步</span>扫描回调与结果字段</h2>
     <pre>ble.on('BLEDeviceFind', (devices)=>{ /* deviceId, rssi, data */ })
-ble.startBLEScan([{ serviceUuid: '00001809-…' }], { interval:0 })</pre><div class="recap"><b>收束：</b>on BLEDeviceFind 收结果。</div>
+ble.startBLEScan([{ serviceUuid: '00001809-…' }], { interval:0 })</pre>
+    <table>
+      <tr><th>ScanResult 字段</th><th>版本</th><th>说明</th></tr>
+      <tr><td>deviceId</td><td><span class="api-lv">API 10</span></td><td>设备地址（<b>默认虚拟 MAC</b>，见第 3 步）</td></tr>
+      <tr><td>rssi</td><td><span class="api-lv">API 10</span></td><td>信号强度 dBm，只配排序</td></tr>
+      <tr><td>data</td><td><span class="api-lv">API 10</span></td><td><b>原始广播 ArrayBuffer</b>（AD 结构），永远可用</td></tr>
+      <tr><td>deviceName / connectable</td><td><span class="api-lv">API 10</span></td><td>广播名（0x09）/ 可连接标志</td></tr>
+      <tr><td>serviceUuids / manufacturerDataMap / <b>serviceDataMap</b> / advertiseFlags</td><td><span class="api-lv">API 22</span></td><td>系统解析好的结构化字段</td></tr>
+      <tr><td>address</td><td><span class="api-lv">API 23</span></td><td>真实 MAC（配合过滤条件）</td></tr>
+    </table>
+    <div class="key"><span class="tag">重点 · 版本兜底</span>要读 BTHome 服务数据，API 22+ 直接用 <code>serviceDataMap</code>；<b>API 10–21 只有原始 data</b>，要自己按 AD 结构（长度/类型/值）解析出 0x16 服务数据段。D9 实战的解码器两条路都实现了。</div>
+    <ul>
+      <li><b>单路扫描</b>：startBLEScan 全局一路，重复开报 <code>2902050</code>；换过滤要先 stopBLEScan。</li>
+      <li><b>多路扫描</b>：BleScanner（<span class="api-lv">API 15</span>）可多实例并行；过滤器硬件资源全局共享，单应用建议 ≤3 个，占满报 <code>2900009</code>。</li>
+      <li><b>filters=null 全扫</b>：能跑但不建议——费电、结果杂，生产环境总是带过滤。</li>
+    </ul>
+    <div class="recap"><b>收束：</b>on BLEDeviceFind 收结果；data 永远在，结构化字段看版本。</div>
   </section>
 
   <section id="b">
-    <h2><span class="no">第 2 步</span>过滤与去重</h2>
-    <p>filters 筛广播声明的服务；deviceId 去重。筛不到先去掉过滤看原始 data。RSSI 只配排序。</p><div class="key"><span class="tag">重点</span>过滤字段必须真实在广播里，同 A2/B3。</div>
+    <h2><span class="no">第 2 步</span>旧版本兜底：手解 AD 结构</h2>
+    <figure>
+      <svg viewBox="0 0 760 210" role="img" aria-label="广播 AD 结构解析">
+        <rect x="20" y="14" width="720" height="40" rx="9" fill="#1F2A24"/>
+        <text x="36" y="40" font-family="Consolas,monospace" font-size="14" fill="#7CE0C3">02 01 06 | 03 03 D2 FC | 08 16 D2 FC 40 02 C4 09 03 BF 13</text>
+        <rect x="20" y="80" width="130" height="66" rx="10" fill="#FBF3E4" stroke="#EDD9B4"/>
+        <text x="85" y="104" text-anchor="middle" font-size="12" font-weight="bold" fill="#8A5510">02 01 06</text>
+        <text x="85" y="122" text-anchor="middle" font-size="10.5" fill="#A8762A">len=2 type=0x01</text>
+        <text x="85" y="137" text-anchor="middle" font-size="10.5" fill="#A8762A">Flags</text>
+        <rect x="170" y="80" width="150" height="66" rx="10" fill="#ECF1FB" stroke="#C9D8F2"/>
+        <text x="245" y="104" text-anchor="middle" font-size="12" font-weight="bold" fill="#2F58A8">03 03 D2 FC</text>
+        <text x="245" y="122" text-anchor="middle" font-size="10.5" fill="#5F7FB5">len=3 type=0x03</text>
+        <text x="245" y="137" text-anchor="middle" font-size="10.5" fill="#5F7FB5">16bit UUID 列表 FCD2</text>
+        <rect x="340" y="80" width="400" height="66" rx="10" fill="#E9F4F2" stroke="#BFE0DB"/>
+        <text x="540" y="104" text-anchor="middle" font-size="12" font-weight="bold" fill="#1E7268">08 16 D2 FC 40 02 C4 09 03 BF 13</text>
+        <text x="540" y="122" text-anchor="middle" font-size="10.5" fill="#4E8A80">len=8 type=0x16（16bit UUID 服务数据）</text>
+        <text x="540" y="137" text-anchor="middle" font-size="10.5" fill="#4E8A80">UUID FCD2 + BTHome 载荷 40 02 C409 03 BF13</text>
+        <text x="380" y="180" text-anchor="middle" font-size="12" fill="#A39B8E">每段 = [长度1字节][类型1字节][值...]；循环切段，找 0x16 且 UUID=FCD2 的段</text>
+        <text x="380" y="200" text-anchor="middle" font-size="11.5" fill="#A39B8E">API 22+ 的 serviceDataMap 就是系统替你做完了这一步</text>
+      </svg>
+      <figcaption>原始 data 的 AD 结构：长度/类型/值三段式；BTHome 载荷在 type=0x16 段里。</figcaption>
+    </figure>
+    <pre><span class="cm">// 手解 AD 结构（API 10–21 兜底；ArkTS）</span>
+function extractServiceData(raw: ArrayBuffer, uuid16: number): Uint8Array | null {
+  let bytes = new Uint8Array(raw);
+  let i = 0;
+  while (i &lt; bytes.length) {
+    let len = bytes[i];
+    if (len === 0) break;
+    let type = bytes[i + 1];
+    if (type === 0x16 &amp;&amp; len &gt;= 3) {
+      let u = bytes[i + 2] | (bytes[i + 3] &lt;&lt; 8); <span class="cm">// 小端 UUID</span>
+      if (u === uuid16) return bytes.slice(i + 4, i + 1 + len);
+    }
+    i += len + 1;
+  }
+  return null;
+}</pre>
+    <div class="recap"><b>收束：</b>AD 三段式循环切；0x16 段头两字节是小端 UUID，剩下是载荷。</div>
+  </section>
+
+  <section id="c">
+    <h2><span class="no">第 3 步</span>过滤、虚拟 MAC 与扫描参数</h2>
+    <p>filters 筛广播声明的服务；deviceId 去重。筛不到先去掉过滤看原始 data。RSSI 只配排序。</p>
+    <table>
+      <tr><th>ScanFilter 字段</th><th>版本</th><th>匹配对象</th></tr>
+      <tr><td>serviceUuid + serviceUuidMask</td><td><span class="api-lv">API 10</span></td><td>广播里的服务 UUID 列表（BTHome 用 FCD2）</td></tr>
+      <tr><td>name</td><td><span class="api-lv">API 10</span></td><td>广播名（0x09/0x08）</td></tr>
+      <tr><td>serviceData + serviceDataMask</td><td><span class="api-lv">API 10</span></td><td>服务数据段（ArrayBuffer 前缀匹配）</td></tr>
+      <tr><td>manufactureId / manufactureData(+Mask)</td><td><span class="api-lv">API 10</span></td><td>厂商数据（0xFF）</td></tr>
+      <tr><td>deviceId</td><td><span class="api-lv">API 10</span></td><td>地址（虚拟 MAC 语义）</td></tr>
+      <tr><td>address</td><td><span class="api-lv">API 23</span></td><td>真实 MAC</td></tr>
+    </table>
+    <div class="key"><span class="tag">重点 · 虚拟 MAC</span>鸿蒙隐私保护：扫描结果的 deviceId 默认是<b>虚拟 MAC</b>——蓝牙开关重启后立即变化；配对后保持稳定。所以<b>别把 deviceId 当持久标识存库</b>；跨会话认设备用广播里的稳定字段（名字/服务数据/序列号），或用 access 的持久化设备地址能力。</div>
+    <table>
+      <tr><th>ScanOptions</th><th>版本</th><th>说明</th></tr>
+      <tr><td>interval</td><td><span class="api-lv">API 10</span></td><td>批量上报延迟 ms，默认 0（立即上报）</td></tr>
+      <tr><td>dutyMode</td><td><span class="api-lv">API 10</span></td><td>默认 SCAN_MODE_LOW_POWER（省电）</td></tr>
+      <tr><td>matchMode</td><td><span class="api-lv">API 10</span></td><td>默认 MATCH_MODE_AGGRESSIVE（弱信号也报）</td></tr>
+      <tr><td>phyType</td><td><span class="api-lv">API 12</span></td><td>默认 PHY_LE_1M； coded PHY 用于远距</td></tr>
+      <tr><td>reportMode</td><td><span class="api-lv">API 15</span></td><td>普通/围栏/批量上报</td></tr>
+    </table>
+    <div class="key"><span class="tag">重点</span>过滤字段必须真实在广播里，同 A2/B3：BTHome 传感器广播里没有名字时，name 过滤永远筛不到。</div>
+    <div class="recap"><b>收束：</b>过滤对准广播真实字段；deviceId 去重可以、持久化不行。</div>
   </section>
 
   <section id="lab">
-    <h2><span class="no">动手</span>扫描 / 过滤</h2>
-    <p>点按钮切换本平台写法与 Android 对照，概念一一对应。</p>
+    <h2><span class="no">动手</span>两场演练：API 对照、过滤沙盒</h2>
+    <p>演练一切换写法对照。演练二选一台「广播设备」和一种过滤，看命中/漏掉与原因。</p>
     <div class="lab">
-      <div class="lab-head"><b>扫描 / 过滤</b><span class="hint">点按钮看 API</span></div>
-      <div class="controls"><div class="seg" id="d3"><button data-k="api" class="on">本平台 API</button><button data-k="cmp">对照 Android</button></div></div>
+      <div class="lab-head"><b>演练一 · 扫描 / 过滤 API</b><span class="hint">点按钮看 API</span></div>
+      <div class="controls"><div class="seg" id="d3"><button data-k="api" class="on">鸿蒙写法</button><button data-k="cmp">对照 Android / iOS</button></div></div>
       <div class="lab-body"><div><pre id="d3code" style="margin:0;"></pre></div><div class="logcat"><div class="logcat-head"><span>说明</span><span>live</span></div><div class="logcat-body" id="d3log"></div></div></div>
-      <div class="lab-foot"><span class="hint">Android: startScan(filters,settings,cb)</span></div>
+      <div class="lab-foot"><span class="hint">Android: startScan(filters,settings,cb) · iOS: scanForPeripherals(withServices:)</span></div>
     </div>
-    <div class="key"><span class="tag">看懂这场演练</span>过滤筛广播声明；deviceId 去重；筛不到去掉过滤看 RAW。</div>
+    <div class="lab">
+      <div class="lab-head"><b>演练二 · 过滤沙盒</b><span class="hint">过滤必须对准广播真实字段</span></div>
+      <div class="controls">
+        <div class="seg" id="dev3"><button data-d="bthome" class="on">BTHome 传感器</button><button data-d="named">带名温度计</button><button data-d="mfg">仅厂商数据</button></div>
+        <div class="seg" id="flt3"><button data-f="uuid" class="on">serviceUuid FCD2</button><button data-f="name">name 过滤</button><button data-f="sdata">serviceData 前缀</button><button data-f="none">无过滤</button></div>
+      </div>
+      <div class="lab-body"><div><div class="chips" id="f3chips"></div><div class="key" id="f3hint"></div></div><div class="logcat"><div class="logcat-head"><span>匹配日志</span><span>live</span></div><div class="logcat-body" id="f3log"></div></div></div>
+      <div class="lab-foot"><span class="hint">漏掉时先看 RAW，再改过滤字段</span></div>
+    </div>
+    <div class="key"><span class="tag">看懂这两场演练</span>过滤筛广播声明；deviceId 去重；筛不到去掉过滤看 RAW——三平台同一条排障路径。</div>
   </section>
 
   <section id="quiz">
-    <h2><span class="no">自测</span>三个问题</h2>
+    <h2><span class="no">自测</span>六个问题</h2>
     <div class="card" id="quiz-box"></div>
     <p id="quiz-done" style="display:none;font-weight:700;color:#1E7268;">全对。下一课讲连接与服务发现。</p>
   </section>
 
   <section id="map">
-    <h2><span class="no">回顾</span>速查</h2>
-    <table><tr><th>项</th><th>API</th></tr><tr><td>扫描</td><td>startBLEScan</td></tr><tr><td>回调</td><td>BLEDeviceFind</td></tr></table>
-    <div class="note"><span class="tag">说明</span>本页为教学简化，工程细节以正文与官方规范为准；演练为模拟，非真实设备通信。</div>
+    <h2><span class="no">回顾</span>速查表</h2>
+    <table>
+      <tr><th>项</th><th>记住</th></tr>
+      <tr><td>扫描</td><td>startBLEScan 单路；先 on('BLEDeviceFind')；重复开 2902050</td></tr>
+      <tr><td>多路</td><td>BleScanner API 15+；过滤器 ≤3，占满 2900009</td></tr>
+      <tr><td>结果</td><td>data 永远在（API 10）；serviceDataMap 要 API 22+</td></tr>
+      <tr><td>兜底</td><td>旧版本手解 AD：len/type/value，0x16 段小端 UUID</td></tr>
+      <tr><td>虚拟 MAC</td><td>deviceId 蓝牙重启就变，别持久化</td></tr>
+      <tr><td>过滤</td><td>字段必须真实在广播里；漏掉先看 RAW</td></tr>
+    </table>
+    <div class="note"><span class="tag">说明</span>本页为教学整理，字段版本对照华为官方 API 文档核实；演练为模拟，非真实设备通信。</div>
+  </section>
+
+  <section id="refs">
+    <h2><span class="no">依据</span>参考链接</h2>
+    <div class="card refs">
+      <h3 style="margin-top:0;">华为官方文档</h3>
+      <ul>
+        <li><a href="https://developer.huawei.com/consumer/cn/doc/harmonyos-references/js-apis-bluetooth-ble" target="_blank" rel="noopener">@ohos.bluetooth.ble API 参考</a> <span class="src">— ScanResult / ScanFilter / ScanOptions / BleScanner 字段与版本</span></li>
+        <li><a href="https://developer.huawei.com/consumer/en/doc/best-practices/bpta-bluetooth-low-energy" target="_blank" rel="noopener">Best Practices · Bluetooth Low Energy</a> <span class="src">— 扫描过滤与功耗建议</span></li>
+      </ul>
+      <h3>实测与深入</h3>
+      <ul>
+        <li><a href="https://bthome.io/format/" target="_blank" rel="noopener">BTHome v2 格式规范</a> <span class="src">— 0x16 服务数据段与 FCD2</span></li>
+      </ul>
+    </div>
+    <div class="next-links">
+      <a href="02-permission-adapter.html">← D2 权限与 adapter</a>
+      <a href="04-connect-discovery.html">D4 连接与发现 →</a>
+    </div>
     <footer>青竹蓝牙学堂 · 蓝牙小课堂鸿蒙第三课 · D3 · <a href="../index.html">回到学堂</a></footer>
   </section>
 </main>
 <aside class="toc" id="toc">
   <div class="toc-title">本课目录</div>
-  <a href="#a">扫描回调</a>
-  <a href="#b">过滤与去重</a>
-  <a href="#lab">动手演练</a>
+  <a href="#a">扫描与字段版本</a>
+  <a href="#b">手解 AD 结构</a>
+  <a href="#c">过滤与虚拟MAC</a>
+  <a href="#lab">两场演练</a>
   <a href="#quiz">本课自测</a>
-  <a href="#map">回顾与速查</a>
+  <a href="#map">速查表</a>
+  <a href="#refs">参考链接</a>
 </aside>
 </div>
 <script>
-(function(){var API="点按钮看写法。";var CMP="ble.startBLEScan([{serviceUuid:'1809'}], opts)\nble.on('BLEDeviceFind', cb)\nble.stopBLEScan()";var NT="Android: startScan(filters,settings,cb)";function show(k){document.getElementById("d3code").textContent=(k==="api"?API:CMP);document.getElementById("d3log").innerHTML="<div><span class=\"ok\">"+(k==="api"?"本平台写法":"Android 对照")+"</span></div><div><span class=\"c\">// "+(k==="api"?NT:"概念相同，API 名不同")+"</span></div>";}document.querySelectorAll("#d3 button").forEach(function(b){b.addEventListener("click",function(){document.querySelectorAll("#d3 button").forEach(function(x){x.classList.remove("on");});b.classList.add("on");show(b.getAttribute("data-k"));});});show("api");})();
+(function(){
+  var API="ble.on('BLEDeviceFind', (results) => {\n  // results[0]: deviceId / rssi / data(ArrayBuffer)\n  // API 22+ 还有 serviceDataMap / serviceUuids\n});\nble.startBLEScan([{ serviceUuid: '0000fcd2-...' }], { interval: 0 });\nble.stopBLEScan();\n// 多路：BleScanner（API 15+），过滤器建议 ≤3";
+  var CMP="Android: startScan(filters, settings, callback)\n         ScanResult.getScanRecord() 解析好\niOS:     scanForPeripherals(withServices: [CBUUID])\n         advertisementData 字典解析好\n\n鸿蒙差异：API 22 前只有原始 data，要手解 AD";
+  function show(k){
+    document.getElementById("d3code").textContent=(k==="api"?API:CMP);
+    document.getElementById("d3log").innerHTML="<div><span class=\"ok\">"+(k==="api"?"鸿蒙写法":"三平台对照")+"</span></div><div><span class=\"c\">// "+(k==="api"?"先订阅再 start；单路，重复开 2902050":"过滤字段必须真实在广播里")+"</span></div>";
+  }
+  document.querySelectorAll("#d3 button").forEach(function(b){b.addEventListener("click",function(){document.querySelectorAll("#d3 button").forEach(function(x){x.classList.remove("on");});b.classList.add("on");show(b.getAttribute("data-k"));});});
+  show("api");
+})();
+
+// 演练二：过滤沙盒
+(function(){
+  var dev='bthome', flt='uuid';
+  var D={
+    bthome:{name:'BTHome 传感器',raw:'020106 0303D2FC 0816D2FC4002C40903BF13',hasUuid:true,hasName:false,hasSdata:true},
+    named:{name:'带名温度计',raw:'020106 0709ThermoX 0303181A',hasUuid:true,hasName:true,hasSdata:false,uuid:'181A'},
+    mfg:{name:'仅厂商数据',raw:'020106 0BFF59000102030405060708',hasUuid:false,hasName:false,hasSdata:false}
+  };
+  function evalMatch(){
+    var d=D[dev], hit, why;
+    if(flt==='none'){hit=true;why='无过滤全扫：都能收到（费电，生产不建议）';}
+    else if(flt==='uuid'){hit=d.hasUuid&&dev==='bthome';why=hit?'广播 0x03 段声明了 FCD2 ✓':(d.hasUuid?'广播里是 '+(d.uuid||'别的 UUID')+'，不是 FCD2 ✗':'广播里根本没有服务 UUID 列表 ✗');}
+    else if(flt==='name'){hit=d.hasName;why=hit?'广播 0x09 段有名字 ✓':'这台设备广播里没有名字段，name 过滤永远漏掉 ✗';}
+    else {hit=d.hasSdata;why=hit?'0x16 段 FCD2 + 前缀 40 匹配 ✓':'广播里没有服务数据段 ✗';}
+    document.getElementById('f3chips').innerHTML=
+      '<span class="chip on">'+d.name+'</span><span class="chip '+(hit?'on':'bad')+'">'+(hit?'命中':'漏掉')+'</span>';
+    document.getElementById('f3hint').innerHTML='<span class="tag">原因</span>'+why+'；漏掉时先去掉过滤看 RAW。';
+    document.getElementById('f3log').innerHTML=
+      '<div><span class="c">RAW: '+d.raw+'</span></div>'+
+      '<div><span class="api">filter: '+(flt==='none'?'null':flt)+'</span></div>'+
+      '<div><span class="'+(hit?'ok':'warn')+'">'+(hit?'BLEDeviceFind 上报该设备':'该设备被过滤，回调里看不到')+'</span></div>';
+  }
+  document.querySelectorAll('#dev3 button').forEach(function(b){b.addEventListener('click',function(){
+    document.querySelectorAll('#dev3 button').forEach(function(x){x.classList.remove('on');});
+    b.classList.add('on'); dev=b.getAttribute('data-d'); evalMatch();
+  });});
+  document.querySelectorAll('#flt3 button').forEach(function(b){b.addEventListener('click',function(){
+    document.querySelectorAll('#flt3 button').forEach(function(x){x.classList.remove('on');});
+    b.classList.add('on'); flt=b.getAttribute('data-f'); evalMatch();
+  });});
+  evalMatch();
+})();
 
 const tocLinks=[...document.querySelectorAll('.toc a')];
 const secs=tocLinks.map(a=>document.getElementById(a.getAttribute('href').slice(1)));
 const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){tocLinks.forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+e.target.id));}});},{rootMargin:'-20% 0px -70% 0px'});
 secs.forEach(s=>s&&io.observe(s));
-const QUIZ=[{"q":"1. 扫描结果回调？","opts":[["BLEDeviceFind",true,"对。"],["onScanResult",false,"Android。"],["didDiscover",false,"iOS。"]]},{"q":"2. 过滤失效先？","opts":[["去掉过滤看原始广播",true,"对。"],["重启",false,"先取证。"],["换设备",false,"先看 RAW。"]]},{"q":"3. 去重用？","opts":[["deviceId",true,"对。"],["RSSI",false,"波动大。"],["名字",false,"可重复。"]]}];
+const QUIZ=[{"q":"1. 扫描结果回调？","opts":[["BLEDeviceFind",true,"对。"],["onScanResult",false,"Android。"],["didDiscover",false,"iOS。"]]},{"q":"2. 过滤失效先？","opts":[["去掉过滤看原始广播",true,"对。"],["重启",false,"先取证。"],["换设备",false,"先看 RAW。"]]},{"q":"3. 去重用？","opts":[["deviceId",true,"对（会话内去重可以）。"],["RSSI",false,"波动大。"],["名字",false,"可重复。"]]},{"q":"4. serviceDataMap 最低 API 版本？","opts":[["API 22",true,"对。之前只有原始 data，要手解 AD。"],["API 10",false,"10 只有 deviceId/rssi/data。"],["API 15",false,"15 是 BleScanner 多路扫描。"]]},{"q":"5. 把 deviceId 存库当持久标识，会怎样？","opts":[["蓝牙开关重启后对不上",true,"对。默认虚拟 MAC，重启就变。"],["永远稳定",false,"那是配对后或真实 MAC 的语义。"],["存不进去",false,"能存，但会失效。"]]},{"q":"6. startBLEScan 重复开启报什么？","opts":[["2902050 扫描已开启",true,"对。单路扫描，换过滤先 stop。"],["2900003",false,"那是蓝牙未开。"],["静默覆盖",false,"会报错。"]]}];
 let solved=0; const box=document.getElementById('quiz-box');
 QUIZ.forEach((item,qi)=>{
   const h=document.createElement('div'); h.className='quiz-q'; h.textContent=item.q; box.appendChild(h);

@@ -172,6 +172,10 @@
   .ctl-row label{display:inline-flex;align-items:center;gap:10px;}
   .ctl-row input[type=range]{accent-color:var(--coral);width:160px;}
   .ctl-row .chk input{accent-color:var(--coral);}
+  .api-lv{display:inline-block;font-family:ui-monospace,Consolas,monospace;font-size:11.5px;font-weight:800;color:#2F58A8;background:var(--blue-soft);border:1px solid var(--blue-line);border-radius:999px;padding:0 8px;white-space:nowrap;}
+  .refs{font-size:14px;}
+  .refs li{margin:7px 0;}
+  .refs .src{font-size:12px;color:var(--faint);}
 </style>
 </head>
 <body style="--coral:#E8590C;--coral-soft:#FBEADF;--coral-line:#F2C4A4">
@@ -198,68 +202,233 @@
 <main>
   <div class="crumb">蓝牙小课堂 / 鸿蒙第一课 · D1</div>
   <h1>鸿蒙 BLE 全景：<em>ConnectivityKit</em> 中心与外设</h1>
-  <p class="lead">鸿蒙用 @ohos.bluetooth.ble（ConnectivityKit）做 BLE。中心扫描连接、外设 GattServer。这一课摆清 API 与角色，对照 Android。</p>
-  <div class="meta"><span>约 10 分钟</span><span>含交互演练</span><span>跨端对照</span></div>
+  <p class="lead">鸿蒙用 @ohos.bluetooth.ble（ConnectivityKit）做 BLE：中心扫描连接、外设 GattServer 广播，首批接口 API 10。这一课摆清模块地图、对象模型与三平台 API 对照，并给出最小可跑骨架。</p>
+  <div class="meta"><span>平台：HarmonyOS/ArkTS</span><span>约 22 分钟</span><span>API 10 → 22</span><span>含两场交互演练</span><span>跨端对照</span></div>
   <div class="journey">
-    <div class="j-step"><span class="n">1</span><span class="t">API</span><span class="s">ble 模块</span></div>
-    <div class="j-step"><span class="n">2</span><span class="t">角色</span><span class="s">中心/外设</span></div>
+    <div class="j-step"><span class="n">1</span><span class="t">模块</span><span class="s">access / ble</span></div>
+    <div class="j-step"><span class="n">2</span><span class="t">对象</span><span class="s">Client / Server</span></div>
+    <div class="j-step"><span class="n">3</span><span class="t">对照</span><span class="s">三平台映射</span></div>
+    <div class="j-step"><span class="n">4</span><span class="t">动手</span><span class="s">两场演练</span></div>
+    <div class="j-step"><span class="n">5</span><span class="t">自测</span><span class="s">六个问题</span></div>
   </div>
 
   <section id="a">
-    <h2><span class="no">第 1 步</span>ble 模块与对象</h2>
+    <h2><span class="no">第 1 步</span>模块地图：access 管开关，ble 管收发</h2>
     <pre>import { ble } from '@kit.ConnectivityKit';
 ble.startBLEScan(filters, options)      // 扫描
 ble.createGattClientDevice(deviceId)   // 中心客户端
-ble.createGattServerDevice()           // 外设服务端</pre><div class="recap"><b>收束：</b>中心 createGattClientDevice，外设 createGattServerDevice。</div>
+ble.createGattServer()           // 外设服务端</pre>
+    <table>
+      <tr><th>模块</th><th>职责</th><th>首批版本</th></tr>
+      <tr><td><code>@ohos.bluetooth.access</code></td><td>蓝牙开关、状态查询与订阅、设备地址持久化</td><td><span class="api-lv">API 10</span></td></tr>
+      <tr><td><code>@ohos.bluetooth.ble</code></td><td>BLE 扫描、广播、GATT 客户端/服务端</td><td><span class="api-lv">API 10</span></td></tr>
+      <tr><td><code>@ohos.bluetooth.connection</code></td><td>经典蓝牙连接、配对、本机名称</td><td><span class="api-lv">API 10</span></td></tr>
+    </table>
+    <p>NEXT 统一从 <code>@kit.ConnectivityKit</code> 导入（旧写法 <code>import ble from '@ohos.bluetooth.ble'</code> 仍可用）。所有蓝牙接口都要 <code>ohos.permission.ACCESS_BLUETOOTH</code>（D2 讲申请流程）。新增接口用上角标标版本，本课徽章均对照官方文档核实。</p>
+    <figure>
+      <svg viewBox="0 0 760 240" role="img" aria-label="鸿蒙 BLE 对象模型">
+        <defs><marker id="arh1" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#A39B8E"/></marker></defs>
+        <rect x="280" y="14" width="200" height="46" rx="11" fill="#ECF1FB" stroke="#C9D8F2"/>
+        <text x="380" y="42" text-anchor="middle" font-size="14" font-weight="bold" fill="#2F58A8">@kit.ConnectivityKit</text>
+        <rect x="30" y="100" width="150" height="60" rx="11" fill="#FBF3E4" stroke="#EDD9B4"/>
+        <text x="105" y="125" text-anchor="middle" font-size="13" font-weight="bold" fill="#8A5510">access</text>
+        <text x="105" y="145" text-anchor="middle" font-size="10.5" fill="#A8762A">开关 / getState / stateChange</text>
+        <rect x="220" y="100" width="150" height="60" rx="11" fill="#E9F4F2" stroke="#BFE0DB"/>
+        <text x="295" y="125" text-anchor="middle" font-size="13" font-weight="bold" fill="#1E7268">ble 扫描/广播</text>
+        <text x="295" y="145" text-anchor="middle" font-size="10.5" fill="#4E8A80">startBLEScan / startAdvertising</text>
+        <rect x="410" y="100" width="160" height="60" rx="11" fill="#E9F4F2" stroke="#BFE0DB"/>
+        <text x="490" y="125" text-anchor="middle" font-size="13" font-weight="bold" fill="#1E7268">GattClientDevice</text>
+        <text x="490" y="145" text-anchor="middle" font-size="10.5" fill="#4E8A80">connect / getServices / 读写订阅</text>
+        <rect x="600" y="100" width="150" height="60" rx="11" fill="#E9F4F2" stroke="#BFE0DB"/>
+        <text x="675" y="125" text-anchor="middle" font-size="13" font-weight="bold" fill="#1E7268">GattServer</text>
+        <text x="675" y="145" text-anchor="middle" font-size="10.5" fill="#4E8A80">addService / 响应 / 通知</text>
+        <line x1="330" y1="60" x2="105" y2="98" stroke="#A39B8E" stroke-width="1.8" marker-end="url(#arh1)"/>
+        <line x1="360" y1="60" x2="295" y2="98" stroke="#A39B8E" stroke-width="1.8" marker-end="url(#arh1)"/>
+        <line x1="400" y1="60" x2="490" y2="98" stroke="#A39B8E" stroke-width="1.8" marker-end="url(#arh1)"/>
+        <line x1="430" y1="60" x2="675" y2="98" stroke="#A39B8E" stroke-width="1.8" marker-end="url(#arh1)"/>
+        <text x="295" y="195" text-anchor="middle" font-size="11.5" fill="#A39B8E">createGattClientDevice(deviceId)</text>
+        <text x="675" y="195" text-anchor="middle" font-size="11.5" fill="#A39B8E">createGattServer()</text>
+        <text x="380" y="225" text-anchor="middle" font-size="12" fill="#A39B8E">中心 = 扫描 + Client；外设 = 广播 + Server。一台手机可以同时扮演两个角色。</text>
+      </svg>
+      <figcaption>对象模型：access 管状态，ble 管扫描/广播，两个 GATT 对象管连接后的数据。</figcaption>
+    </figure>
+    <div class="recap"><b>收束：</b>中心 createGattClientDevice，外设 createGattServer；开关状态找 access。</div>
   </section>
 
   <section id="b">
-    <h2><span class="no">第 2 步</span>角色与对照</h2>
-    <p>手机默认中心+Client；鸿蒙也支持外设+Server（D7）。概念与 Android 一致：扫描→连接→发现→读写→订阅。</p><div class="key"><span class="tag">对照</span>Android BluetoothLeScanner ≈ ble.startBLEScan；BluetoothGatt ≈ GattClientDevice。</div>
+    <h2><span class="no">第 2 步</span>角色与三平台对照</h2>
+    <p>手机默认中心+Client；鸿蒙也支持外设+Server（D7）。概念与 Android 一致：扫描→连接→发现→读写→订阅。</p>
+    <table>
+      <tr><th>环节</th><th>Android</th><th>iOS</th><th>鸿蒙</th></tr>
+      <tr><td>扫描</td><td>BluetoothLeScanner.startScan</td><td>scanForPeripherals</td><td>ble.startBLEScan <span class="api-lv">API 10</span></td></tr>
+      <tr><td>连接</td><td>connectGatt</td><td>connect(_:options:)</td><td>GattClientDevice.connect <span class="api-lv">API 10</span></td></tr>
+      <tr><td>发现</td><td>discoverServices</td><td>discoverServices</td><td>getServices（Promise）<span class="api-lv">API 10</span></td></tr>
+      <tr><td>订阅</td><td>setCharacteristicNotification + 写 CCCD 两步</td><td>setNotifyValue 一步</td><td>setCharacteristicChangeNotification 一步（系统自动写 CCCD）<span class="api-lv">API 10</span></td></tr>
+      <tr><td>外设广播</td><td>BluetoothLeAdvertiser</td><td>CBPeripheralManager（仅名字+UUID）</td><td>ble.startAdvertising（<b>可带 serviceData</b>）<span class="api-lv">API 10</span></td></tr>
+      <tr><td>设备标识</td><td>MAC</td><td>identifier（本机 UUID）</td><td>deviceId（<b>虚拟 MAC</b>，D3 细讲）</td></tr>
+    </table>
+    <div class="key"><span class="tag">对照</span>Android BluetoothLeScanner ≈ ble.startBLEScan；BluetoothGatt ≈ GattClientDevice。鸿蒙订阅像 iOS 一步完成，广播能力像 Android 能带服务数据——两边的好处都占了。</div>
+    <div class="recap"><b>收束：</b>概念三平台一致，API 名与细节不同；先认映射再写代码。</div>
+  </section>
+
+  <section id="c">
+    <h2><span class="no">第 3 步</span>最小骨架与串行规则</h2>
+    <pre><span class="cm">// 中心侧最小流程（权限与状态门控见 D2）</span>
+import { ble, access, constant } from '@kit.ConnectivityKit';
+
+ble.on('BLEDeviceFind', (results: Array&lt;ble.ScanResult&gt;) =&gt; {
+  <span class="cm">// results[0].deviceId / rssi / data（原始广播 ArrayBuffer）</span>
+});
+ble.startBLEScan([{ serviceUuid: '00001809-0000-1000-8000-00805f9b34fb' }]);
+
+let client: ble.GattClientDevice = ble.createGattClientDevice(deviceId);
+client.on('BLEConnectionStateChange', (state: ble.BLEConnectionChangeState) =&gt; {
+  if (state.state === constant.ProfileConnectionState.STATE_CONNECTED) {
+    client.getServices().then((services: Array&lt;ble.GattService&gt;) =&gt; {
+      <span class="cm">// 拿到 services 再读写/订阅</span>
+    });
+  }
+});
+client.connect();</pre>
+    <div class="key"><span class="tag">重点 · 串行规则</span>鸿蒙 GATT 操作是<b>串行</b>的：读、写、订阅、MTU 协商，都要等上一步的异步回调返回再发下一步，否则报 <code>2900011</code>（operation busy）。官方文档在每个读写接口下都写了这条。把操作排成队列（Promise 链）是最稳的写法。</div>
+    <ul>
+      <li><b>事件先订阅再发起</b>：on('BLEDeviceFind') 要在 startBLEScan 前；on('BLEConnectionStateChange') 要在 connect 前。</li>
+      <li><b>单路扫描</b>：startBLEScan 同时只能一路，重复开报 2902050；多路用 BleScanner（API 15+）。</li>
+      <li><b>close 释放</b>：不用时 disconnect + close，避免句柄泄漏。</li>
+    </ul>
+    <div class="recap"><b>收束：</b>事件先行、操作串行、用完 close；这三条贯穿后面所有课。</div>
   </section>
 
   <section id="lab">
-    <h2><span class="no">动手</span>中心 / 外设 API</h2>
-    <p>点按钮切换本平台写法与 Android 对照，概念一一对应。</p>
+    <h2><span class="no">动手</span>两场演练：API 对照、角色链路走查</h2>
+    <p>演练一切换本平台写法与 Android/iOS 对照。演练二选一条角色链路，逐步看 API 调用顺序与事件。</p>
     <div class="lab">
-      <div class="lab-head"><b>中心 / 外设 API</b><span class="hint">点按钮看 API</span></div>
-      <div class="controls"><div class="seg" id="d1"><button data-k="api" class="on">本平台 API</button><button data-k="cmp">对照 Android</button></div></div>
+      <div class="lab-head"><b>演练一 · 三平台 API 对照</b><span class="hint">点按钮看 API</span></div>
+      <div class="controls"><div class="seg" id="d1"><button data-k="api" class="on">鸿蒙写法</button><button data-k="cmp">对照 Android / iOS</button></div></div>
       <div class="lab-body"><div><pre id="d1code" style="margin:0;"></pre></div><div class="logcat"><div class="logcat-head"><span>说明</span><span>live</span></div><div class="logcat-body" id="d1log"></div></div></div>
-      <div class="lab-foot"><span class="hint">Android: startScan / connectGatt / discoverServices</span></div>
+      <div class="lab-foot"><span class="hint">概念一一对应，API 名不同</span></div>
     </div>
-    <div class="key"><span class="tag">看懂这场演练</span>鸿蒙与 Android 概念一一对应，API 名不同；先认映射再写代码。</div>
+    <div class="lab">
+      <div class="lab-head"><b>演练二 · 角色链路走查</b><span class="hint">事件先行 · 操作串行</span></div>
+      <div class="controls"><div class="seg" id="role1"><button data-r="scan" class="on">中心扫描</button><button data-r="rw">中心读写</button><button data-r="adv">外设广播</button></div><button class="btn" id="roleRun" type="button">走一遍</button></div>
+      <div class="lab-body"><div><div class="chips" id="roleChips"></div><div class="key" id="roleHint"></div></div><div class="logcat"><div class="logcat-head"><span>调用链</span><span>live</span></div><div class="logcat-body" id="roleLog"></div></div></div>
+      <div class="lab-foot"><span class="hint">每条链路的第一个调用都是 on(...) 订阅事件</span></div>
+    </div>
+    <div class="key"><span class="tag">看懂这两场演练</span>鸿蒙与 Android/iOS 概念一一对应；任何链路都是「先订阅事件 → 发起动作 → 等回调 → 下一步」，GATT 操作串行。</div>
   </section>
 
   <section id="quiz">
-    <h2><span class="no">自测</span>三个问题</h2>
+    <h2><span class="no">自测</span>六个问题</h2>
     <div class="card" id="quiz-box"></div>
     <p id="quiz-done" style="display:none;font-weight:700;color:#1E7268;">全对。下一课讲权限与适配器状态。</p>
   </section>
 
   <section id="map">
-    <h2><span class="no">回顾</span>速查</h2>
-    <table><tr><th>鸿蒙</th><th>Android</th></tr><tr><td>startBLEScan</td><td>startScan</td></tr><tr><td>createGattClientDevice</td><td>connectGatt</td></tr><tr><td>getServices</td><td>discoverServices</td></tr></table>
-    <div class="note"><span class="tag">说明</span>本页为教学简化，工程细节以正文与官方规范为准；演练为模拟，非真实设备通信。</div>
+    <h2><span class="no">回顾</span>速查表</h2>
+    <table>
+      <tr><th>项</th><th>记住</th></tr>
+      <tr><td>模块</td><td>access 开关状态；ble 扫描广播 GATT；首批 API 10</td></tr>
+      <tr><td>中心</td><td>createGattClientDevice(deviceId) → connect → getServices</td></tr>
+      <tr><td>外设</td><td>createGattServer → addService → startAdvertising</td></tr>
+      <tr><td>订阅</td><td>setCharacteristicChangeNotification 一步，系统自动写 CCCD</td></tr>
+      <tr><td>串行</td><td>等上一步回调再发下一步，否则 2900011</td></tr>
+      <tr><td>扫描</td><td>单路；先 on('BLEDeviceFind') 再 startBLEScan</td></tr>
+      <tr><td>标识</td><td>deviceId 是虚拟 MAC（D3）</td></tr>
+    </table>
+    <div class="note"><span class="tag">说明</span>本页为教学整理，版本徽章对照华为官方 API 文档核实；演练为模拟，非真实设备通信。</div>
+  </section>
+
+  <section id="refs">
+    <h2><span class="no">依据</span>参考链接</h2>
+    <div class="card refs">
+      <h3 style="margin-top:0;">华为官方文档</h3>
+      <ul>
+        <li><a href="https://developer.huawei.com/consumer/cn/doc/harmonyos-references/js-apis-bluetooth-ble" target="_blank" rel="noopener">@ohos.bluetooth.ble API 参考</a> <span class="src">— 首批 API 10；新增接口上角标标版本</span></li>
+        <li><a href="https://developer.huawei.com/consumer/en/doc/harmonyos-references-V5/js-apis-bluetooth-access-V5" target="_blank" rel="noopener">@ohos.bluetooth.access API 参考</a> <span class="src">— 开关 / 状态 / BluetoothState 枚举</span></li>
+        <li><a href="https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/gatt-development-guide-V14" target="_blank" rel="noopener">GATT 开发指南</a> <span class="src">— 客户端/服务端完整流程</span></li>
+      </ul>
+      <h3>实测与深入</h3>
+      <ul>
+        <li><a href="https://developer.huawei.com/consumer/en/doc/best-practices/bpta-bluetooth-low-energy" target="_blank" rel="noopener">Best Practices · Bluetooth Low Energy</a> <span class="src">— 扫描/广播/连接/订阅的工程建议</span></li>
+      </ul>
+    </div>
+    <div class="next-links">
+      <a href="02-permission-adapter.html">D2 权限与 adapter →</a>
+    </div>
     <footer>青竹蓝牙学堂 · 蓝牙小课堂鸿蒙第一课 · D1 · <a href="../index.html">回到学堂</a></footer>
   </section>
 </main>
 <aside class="toc" id="toc">
   <div class="toc-title">本课目录</div>
-  <a href="#a">ble 模块与对象</a>
-  <a href="#b">角色与对照</a>
-  <a href="#lab">动手演练</a>
+  <a href="#a">模块地图</a>
+  <a href="#b">三平台对照</a>
+  <a href="#c">最小骨架</a>
+  <a href="#lab">两场演练</a>
   <a href="#quiz">本课自测</a>
-  <a href="#map">回顾与速查</a>
+  <a href="#map">速查表</a>
+  <a href="#refs">参考链接</a>
 </aside>
 </div>
 <script>
-(function(){var API="点按钮看鸿蒙写法与 Android 对照。";var CMP="ble.startBLEScan(filters, options)\nlet dev = ble.createGattClientDevice(deviceId)\ndev.connect()\ndev.getServices()";var NT="Android: startScan / connectGatt / discoverServices";function show(k){document.getElementById("d1code").textContent=(k==="api"?API:CMP);document.getElementById("d1log").innerHTML="<div><span class=\"ok\">"+(k==="api"?"本平台写法":"Android 对照")+"</span></div><div><span class=\"c\">// "+(k==="api"?NT:"概念相同，API 名不同")+"</span></div>";}document.querySelectorAll("#d1 button").forEach(function(b){b.addEventListener("click",function(){document.querySelectorAll("#d1 button").forEach(function(x){x.classList.remove("on");});b.classList.add("on");show(b.getAttribute("data-k"));});});show("api");})();
+(function(){
+  var API="import { ble } from '@kit.ConnectivityKit';\nble.on('BLEDeviceFind', onFind);\nble.startBLEScan(filters, options);\nlet dev = ble.createGattClientDevice(deviceId);\ndev.on('BLEConnectionStateChange', onState);\ndev.connect();\ndev.getServices().then(services => { /* 读写订阅 */ });";
+  var CMP="Android: startScan / connectGatt / discoverServices\niOS:     scanForPeripherals / connect / discoverServices\n\n订阅对照：\nAndroid 两步: setCharacteristicNotification + writeDescriptor(CCCD)\niOS 一步:     setNotifyValue(true, for:)\n鸿蒙一步:     setCharacteristicChangeNotification(ch, true)\n              （系统自动写 CCCD）";
+  function show(k){
+    document.getElementById("d1code").textContent=(k==="api"?API:CMP);
+    document.getElementById("d1log").innerHTML="<div><span class=\"ok\">"+(k==="api"?"鸿蒙写法（API 10 起）":"三平台对照")+"</span></div><div><span class=\"c\">// "+(k==="api"?"事件先订阅，GATT 操作串行":"概念相同，API 名与细节不同")+"</span></div>";
+  }
+  document.querySelectorAll("#d1 button").forEach(function(b){b.addEventListener("click",function(){document.querySelectorAll("#d1 button").forEach(function(x){x.classList.remove("on");});b.classList.add("on");show(b.getAttribute("data-k"));});});
+  show("api");
+})();
+
+// 演练二：角色链路走查
+(function(){
+  var role='scan';
+  var R={
+    scan:{name:'中心扫描',steps:[
+      '<span class="api">ble.on(\'BLEDeviceFind\', cb)</span> <span class="c">// 先订阅</span>',
+      '<span class="api">ble.startBLEScan([filter], options)</span>',
+      '<span class="ok">回调：ScanResult[]（deviceId/rssi/data）</span>',
+      '<span class="api">ble.stopBLEScan()</span> <span class="c">// 找到目标就停</span>'],
+      hint:'单路扫描；重复 start 报 2902050；多路用 BleScanner（API 15+）'},
+    rw:{name:'中心读写',steps:[
+      '<span class="api">client.on(\'BLEConnectionStateChange\', cb)</span>',
+      '<span class="api">client.connect()</span> → <span class="ok">STATE_CONNECTED</span>',
+      '<span class="api">client.getServices()</span> <span class="c">// Promise</span>',
+      '<span class="api">client.readCharacteristicValue(ch)</span> → <span class="ok">等回调</span>',
+      '<span class="api">client.writeCharacteristicValue(ch, WRITE)</span> <span class="c">// 串行！</span>'],
+      hint:'每步等异步回调再发下一步，否则 2900011 busy'},
+    adv:{name:'外设广播',steps:[
+      '<span class="api">server.on(\'characteristicRead\' / \'characteristicWrite\', cb)</span>',
+      '<span class="api">server.addService(service)</span>',
+      '<span class="api">ble.startAdvertising(setting, advData, scanResponse)</span>',
+      '<span class="ok">收到读请求 → sendResponse 回数据</span>',
+      '<span class="api">server.notifyCharacteristicChanged(...)</span> <span class="c">// 推通知</span>'],
+      hint:'advData 可带 serviceData（不像 iOS 只有两键）；收到请求必须 sendResponse'}
+  };
+  function render(){
+    var r=R[role];
+    document.getElementById('roleChips').innerHTML='<span class="chip on">'+r.name+'</span><span class="chip on">事件先行</span><span class="chip on">操作串行</span>';
+    document.getElementById('roleHint').innerHTML='<span class="tag">提示</span>'+r.hint;
+  }
+  document.querySelectorAll('#role1 button').forEach(function(b){b.addEventListener('click',function(){
+    document.querySelectorAll('#role1 button').forEach(function(x){x.classList.remove('on');});
+    b.classList.add('on'); role=b.getAttribute('data-r');
+    document.getElementById('roleLog').innerHTML=''; render();
+  });});
+  document.getElementById('roleRun').addEventListener('click',function(){
+    var log=document.getElementById('roleLog'); log.innerHTML='';
+    R[role].steps.forEach(function(s){var d=document.createElement('div');d.innerHTML=s;log.appendChild(d);});
+    log.scrollTop=log.scrollHeight;
+  });
+  render();
+})();
 
 const tocLinks=[...document.querySelectorAll('.toc a')];
 const secs=tocLinks.map(a=>document.getElementById(a.getAttribute('href').slice(1)));
 const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){tocLinks.forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+e.target.id));}});},{rootMargin:'-20% 0px -70% 0px'});
 secs.forEach(s=>s&&io.observe(s));
-const QUIZ=[{"q":"1. 鸿蒙中心客户端用？","opts":[["createGattClientDevice",true,"对。"],["createGattServerDevice",false,"那是外设。"],["BluetoothGatt",false,"Android。"]]},{"q":"2. 扫描用？","opts":[["ble.startBLEScan",true,"对。"],["startScan",false,"Android 名。"],["scanForPeripherals",false,"iOS。"]]},{"q":"3. 外设服务端用？","opts":[["createGattServerDevice",true,"对。"],["client",false,"中心。"],["CBCentralManager",false,"iOS。"]]}];
+const QUIZ=[{"q":"1. 鸿蒙中心客户端用？","opts":[["createGattClientDevice",true,"对。"],["createGattServer",false,"那是外设。"],["BluetoothGatt",false,"Android。"]]},{"q":"2. 扫描用？","opts":[["ble.startBLEScan",true,"对。"],["startScan",false,"Android 名（鸿蒙 BleScanner.startScan 是 API 15+ 的多路扫描）。"],["scanForPeripherals",false,"iOS。"]]},{"q":"3. 外设服务端用？","opts":[["createGattServer",true,"对。"],["client",false,"中心。"],["CBCentralManager",false,"iOS。"]]},{"q":"4. 蓝牙开关与状态查询在哪个模块？","opts":[["access",true,"对。ble 管扫描广播 GATT。"],["ble",false,"ble 不管开关。"],["connection",false,"那是经典蓝牙连接配对。"]]},{"q":"5. ble 模块首批接口从哪个 API 版本开始？","opts":[["API 10",true,"对。官方文档写明首批 API 10，新增接口上角标标记。"],["API 7",false,"那是旧 @ohos.bluetooth 时代。"],["API 12",false,"12 是元服务支持起点。"]]},{"q":"6. 连续发两个 GATT 读写不等回调，会怎样？","opts":[["报 2900011 operation busy",true,"对。鸿蒙 GATT 操作串行，等上一步回调。"],["自动排队",false,"系统不替你排队。"],["静默丢弃",false,"会报错。"]]}];
 let solved=0; const box=document.getElementById('quiz-box');
 QUIZ.forEach((item,qi)=>{
   const h=document.createElement('div'); h.className='quiz-q'; h.textContent=item.q; box.appendChild(h);
