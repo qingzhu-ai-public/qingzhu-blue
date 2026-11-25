@@ -370,8 +370,18 @@ h1{font-weight:900;}
   </section>
 
   <!-- ===== 自测 ===== -->
+  <section id="lab2">
+    <h2><span class="no">动手</span>演练二 · AD 结构解码</h2>
+    <p>选一个 AD Type，看它在广播包里的含义。</p>
+    <div class="lab">
+      <div class="lab-head"><b>AD Type</b><span class="hint">长度 / 类型 / 数据</span></div>
+      <div class="controls"><div class="seg" id="ad2"><button data-k="01" class="on">0x01 Flags</button><button data-k="09">0x09 Name</button><button data-k="16">0x16 SvcData</button><button data-k="ff">0xFF 厂商</button></div></div>
+      <div class="lab-body single"><div id="adOut2" class="card" style="margin:0;"></div></div>
+    </div>
+  </section>
+
   <section id="quiz">
-    <h2><span class="no">自测</span>三个问题</h2>
+    <h2><span class="no">自测</span>六个问题</h2>
     <div class="card" id="quiz-box"></div>
     <p id="quiz-done" style="display:none;font-weight:700;color:#1E7268;">全对。广播这件事你已经清楚了，下一课讲<b>连接与参数</b>——看见之后，怎么建立专属通道。</p>
   </section>
@@ -411,6 +421,24 @@ h1{font-weight:900;}
     <div class="note"><span class="tag">说明</span>本页为教学简化，工程细节以正文与官方规范为准；演练为模拟时序，非真实设备通信。技术底稿对照《GAP 广播、扫描与设备发现》。</div>
     <footer>青竹蓝牙学堂 · 蓝牙小课堂第二课 · A2 · <a href="../index.html">回到学堂</a></footer>
   </section>
+  <section id="refs">
+    <h2><span class="no">依据</span>参考链接</h2>
+    <div class="card">
+      <h3 style="margin-top:0;">规范</h3>
+      <ul>
+        <li><a href="https://www.bluetooth.com/specifications/specs/" target="_blank" rel="noopener">Core Spec · GAP / Advertising</a> — 广播类型、间隔、扫描窗口</li>
+        <li><a href="https://www.bluetooth.com/specifications/assigned-numbers/" target="_blank" rel="noopener">Assigned Numbers · AD Type</a> — 0x01/0x09/0x16/0xFF</li>
+      </ul>
+      <h3>平台入口</h3>
+      <ul>
+        <li><a href="https://developer.android.com/develop/connectivity/bluetooth/ble/find-ble-devices" target="_blank" rel="noopener">Android Find BLE devices</a> — 扫描与过滤</li>
+      </ul>
+      <h3>实测深入</h3>
+      <ul>
+        <li><a href="https://punchthrough.com/android-ble-scan-filter/" target="_blank" rel="noopener">Punch Through · Scan Filter</a> — 过滤与漏扫</li>
+      </ul>
+    </div>
+  </section>
 </main>
 <aside class="toc" id="toc">
   <div class="toc-title">本课目录</div>
@@ -422,10 +450,13 @@ h1{font-weight:900;}
   <a href="#lab">第 5 步 · 动手调节奏</a>
   <a href="#quiz">本课自测</a>
   <a href="#map">全程回顾与速查</a>
+  <a href="#lab2">动手演练二</a>
+  <a href="#refs">参考链接</a>
 </aside>
 </div>
 
 <script>
+(function(){var D={"01":["Flags","广播能力标志，常见 02 01 06"],09:["Complete Local Name","完整设备名"],16:["Service Data (16-bit UUID)","按 UUID 携带服务数据，BTHome 在此"],ff:["Manufacturer Specific Data","厂商自定义，前 2 字节公司 ID"]};function s(k){var d=D[k];document.getElementById("adOut2").innerHTML='<p style="margin:0 0 6px;font-weight:700;">0x'+k.toUpperCase()+' · '+d[0]+'</p><div class="chips"><span class="chip on">'+d[1]+'</span></div>';}document.querySelectorAll("#ad2 button").forEach(function(b){b.addEventListener("click",function(){document.querySelectorAll("#ad2 button").forEach(function(x){x.classList.remove("on");});b.classList.add("on");s(b.getAttribute("data-k"));});});s("01");})();
 const tocLinks=[...document.querySelectorAll('.toc a')];
 const secs=tocLinks.map(a=>document.querySelector(a.getAttribute('href')));
 const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){tocLinks.forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+e.target.id));}});},{rootMargin:'-20% 0px -70% 0px'});
@@ -505,6 +536,18 @@ const QUIZ=[
       ['RSSI 受遮挡/姿态/环境影响大，硬阈值会随机漏扫',true,'对。RSSI 适合排序参考，不适合硬性过滤。'],
       ['RSSI 永远不变，过滤很稳定',false,'恰恰相反，同一设备转个方向能差 20 dBm。'],
       ['RSSI 越大设备越远',false,'RSSI 越接近 0 表示越近，且波动大。']]},
+  { q:'4. 广播间隔（advInterval）的规范范围约是？', opts:[
+      ['20 ms – 10.24 s',true,'对。越短越易被发现但越费电。'],
+      ['7.5 ms – 4 s',false,'那是连接 interval。'],
+      ['固定 100 ms',false,'可配置。']]},
+  { q:'5. 主动扫描（Active Scanning）比被动扫描多做什么？', opts:[
+      ['发 SCAN_REQ 索要 Scan Response 补充数据',true,'对。可拿到额外 31 字节。'],
+      ['发起连接',false,'那是连接不是扫描。'],
+      ['写 CCCD',false,'那是连上后。']]},
+  { q:'6. 扫描窗口 window 与间隔 interval 的关系决定什么？', opts:[
+      ['占空比，window=interval 时持续扫描最费电',true,'对。window≤interval。'],
+      ['广播内容',false,'那是设备侧。'],
+      ['MTU',false,'无关。']]},
 ];
 let solved=0; const box=document.getElementById('quiz-box');
 QUIZ.forEach((item,qi)=>{

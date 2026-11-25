@@ -259,8 +259,10 @@ ATT PDU    一条通知最多 MTU-3 字节值  MTU 交换决定
     <div class="key"><span class="tag">看懂这场演练</span>有效 MTU 取双方较小者（外设 185 封顶）。只提 MTU 不开 DLE，一条大通知仍被拆成多个 27 字节空口包；开 DLE 后每包 251 字节，空口包数骤降。MTU 与 DLE 配合才有吞吐数量级提升。</div>
   </section>
 
+<section id="lab2"><h2><span class="no">动手</span>演练二 · 有效 MTU 与通知值计算</h2><p>拖手机通告 MTU，外设固定 185，看有效值与单条通知值空间。</p><div class="lab"><div class="lab-head"><b>MTU 协商</b><span class="hint">有效 = min(两端)</span></div><div class="controls"><div class="ctl"><label>手机 MTU</label><input type="range" id="mt7" min="23" max="517" value="23"><span class="val" id="mt7v">23</span></div></div><div class="lab-body"><div><div class="stats"><div class="stat-box"><b id="eff7">–</b><small>有效 MTU</small></div><div class="stat-box good"><b id="val7">–</b><small>通知值空间</small></div></div></div><div class="logcat"><div class="logcat-head"><span>计算</span><span>live</span></div><div class="logcat-body" id="log7"></div></div></div></div></section>
+
   <section id="quiz">
-    <h2><span class="no">自测</span>三个问题</h2>
+    <h2><span class="no">自测</span>六个问题</h2>
     <div class="card" id="quiz-box"></div>
     <p id="quiz-done" style="display:none;font-weight:700;color:#1E7268;">全对。下一课讲配对、绑定与加密——安全状态怎么分。</p>
   </section>
@@ -271,6 +273,7 @@ ATT PDU    一条通知最多 MTU-3 字节值  MTU 交换决定
     <div class="note"><span class="tag">说明</span>本页为教学简化，工程细节以正文与官方规范为准；演练为模拟，非真实设备通信。</div>
     <footer>青竹蓝牙学堂 · 蓝牙小课堂第七课 · A7 · <a href="../index.html">回到学堂</a></footer>
   </section>
+<section id="refs"><h2><span class="no">依据</span>参考链接</h2><div class="card"><h3 style="margin-top:0;">规范</h3><ul><li><a href="https://www.bluetooth.com/specifications/specs/" target="_blank" rel="noopener">Core Spec · ATT / Link Layer</a> — ATT_MTU、DLE、分包</li></ul><h3>平台入口</h3><ul><li><a href="https://developer.android.com/reference/android/bluetooth/BluetoothGatt#requestMtu(int)" target="_blank" rel="noopener">Android requestMtu</a> — 请求，onMtuChanged 给有效值</li></ul><h3>实测深入</h3><ul><li><a href="https://punchthrough.com/android-ble-guide/" target="_blank" rel="noopener">Punch Through · Android BLE Guide</a> — MTU/DLE 吞吐</li></ul></div></section>
 </main>
 <aside class="toc" id="toc">
   <div class="toc-title">本课目录</div>
@@ -280,6 +283,8 @@ ATT PDU    一条通知最多 MTU-3 字节值  MTU 交换决定
   <a href="#lab">动手演练</a>
   <a href="#quiz">本课自测</a>
   <a href="#map">回顾与速查</a>
+  <a href="#lab2">动手演练二</a>
+  <a href="#refs">参考链接</a>
 </aside>
 </div>
 <script>
@@ -309,11 +314,12 @@ ATT PDU    一条通知最多 MTU-3 字节值  MTU 交换决定
 })();
 
 
+(function(){var m=document.getElementById("mt7");function c(){var v=+m.value,eff=Math.min(v,185);document.getElementById("mt7v").textContent=v;document.getElementById("eff7").textContent=eff;document.getElementById("val7").textContent=(eff-3)+"B";document.getElementById("log7").innerHTML='<div>有效=min('+v+',185)='+eff+'</div><div>通知值='+eff+'-3=<span class="ok">'+(eff-3)+'B</span></div><div><span class="c">// 默认 23 → 值 20B；要提速需配 DLE</span></div>';}m.addEventListener("input",c);c();})();
 const tocLinks=[...document.querySelectorAll('.toc a')];
 const secs=tocLinks.map(a=>document.getElementById(a.getAttribute('href').slice(1)));
 const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){tocLinks.forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+e.target.id));}});},{rootMargin:'-20% 0px -70% 0px'});
 secs.forEach(s=>s&&io.observe(s));
-const QUIZ=[{"q":"1. 手机通告 517、外设通告 185，一条通知最多带多少字节值？","opts":[["182（185-3）",true,"对。有效取小者 185，值空间 185-3。"],["514",false,"没取小者。"],["185",false,"还要扣 3 字节操作码+句柄。"]]},{"q":"2. 只提 MTU 到 247 不开 DLE，吞吐为什么上不去？","opts":[["链路层默认 27B，大 ATT 包被拆成多小包，空口效率低",true,"对。MTU 与 DLE 要配合。"],["MTU 没用",false,"MTU 有用但要配合 DLE。"],["外设不支持",false,"与外设无关，是链路层分段。"]]},{"q":"3. 写配置命令超时，重试为什么沿用同一编号？","opts":[["命令可能已执行只是回执丢，同编号让外设去重",true,"对。保证幂等。"],["编号随便",false,"会重复执行。"],["必须换新编号",false,"换新编号就无法去重。"]]}];
+const QUIZ=[{"q":"1. 手机通告 517、外设通告 185，一条通知最多带多少字节值？","opts":[["182（185-3）",true,"对。有效取小者 185，值空间 185-3。"],["514",false,"没取小者。"],["185",false,"还要扣 3 字节操作码+句柄。"]]},{"q":"2. 只提 MTU 到 247 不开 DLE，吞吐为什么上不去？","opts":[["链路层默认 27B，大 ATT 包被拆成多小包，空口效率低",true,"对。MTU 与 DLE 要配合。"],["MTU 没用",false,"MTU 有用但要配合 DLE。"],["外设不支持",false,"与外设无关，是链路层分段。"]]},{"q":"3. 写配置命令超时，重试为什么沿用同一编号？","opts":[["命令可能已执行只是回执丢，同编号让外设去重",true,"对。保证幂等。"],["编号随便",false,"会重复执行。"],["必须换新编号",false,"换新编号就无法去重。"]]},{"q":"4. 默认 ATT_MTU 是多少？","opts":[["23",true,"对。值空间 20。"],["517",false,"那是最大。"],["247",false,"那是常见请求值。"]]},{"q":"5. ATT_MTU 规范最大？","opts":[["517",true,"对。"],["247",false,"常见但非上限。"],["23",false,"那是默认。"]]},{"q":"6. DLE 把链路层单包载荷提到最大？","opts":[["251 字节",true,"对。"],["27",false,"那是默认。"],["517",false,"那是 ATT MTU。"]]}];
 let solved=0; const box=document.getElementById('quiz-box');
 QUIZ.forEach((item,qi)=>{
   const h=document.createElement('div'); h.className='quiz-q'; h.textContent=item.q; box.appendChild(h);

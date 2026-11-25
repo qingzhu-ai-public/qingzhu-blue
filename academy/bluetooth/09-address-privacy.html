@@ -246,8 +246,10 @@
     <div class="key"><span class="tag">看懂这场演练</span>没有 IRK，地址一轮换就「认不出」，设备列表会重复出现「新设备」；有 IRK 就能解析出同一身份。但跨手机/长期归属仍要靠产品 stableId，地址和名字都不可靠。</div>
   </section>
 
+<section id="lab2"><h2><span class="no">动手</span>演练二 · 地址类型解码</h2><p>选地址类型，看是否轮换与如何识别。</p><div class="lab"><div class="lab-head"><b>地址类型</b><span class="hint">隐私 vs 可追踪</span></div><div class="controls"><div class="seg" id="at9"><button data-k="pub" class="on">Public</button><button data-k="static">Static Random</button><button data-k="rpa">RPA</button><button data-k="nrpa">Non-resolvable</button></div></div><div class="lab-body single"><div id="atOut9" class="card" style="margin:0;"></div></div></div></section>
+
   <section id="quiz">
-    <h2><span class="no">自测</span>三个问题</h2>
+    <h2><span class="no">自测</span>六个问题</h2>
     <div class="card" id="quiz-box"></div>
     <p id="quiz-done" style="display:none;font-weight:700;color:#1E7268;">全对。下一课讲按阶段排障——把故障钉在一个阶段里。</p>
   </section>
@@ -258,6 +260,7 @@
     <div class="note"><span class="tag">说明</span>本页为教学简化，工程细节以正文与官方规范为准；演练为模拟，非真实设备通信。</div>
     <footer>青竹蓝牙学堂 · 蓝牙小课堂第九课 · A9 · <a href="../index.html">回到学堂</a></footer>
   </section>
+<section id="refs"><h2><span class="no">依据</span>参考链接</h2><div class="card"><h3 style="margin-top:0;">规范</h3><ul><li><a href="https://www.bluetooth.com/specifications/specs/" target="_blank" rel="noopener">Core Spec · Privacy / IRK</a> — 地址类型、RPA 生成与解析</li></ul><h3>平台入口</h3><ul><li><a href="https://developer.apple.com/documentation/corebluetooth/cbperipheral/identifier" target="_blank" rel="noopener">iOS CBPeripheral.identifier</a> — per-device 标识，非 MAC</li><li><a href="https://developer.android.com/reference/android/bluetooth/BluetoothDevice#getAddress()" target="_blank" rel="noopener">Android BluetoothDevice.getAddress</a></li></ul></div></section>
 </main>
 <aside class="toc" id="toc">
   <div class="toc-title">本课目录</div>
@@ -267,6 +270,8 @@
   <a href="#lab">动手演练</a>
   <a href="#quiz">本课自测</a>
   <a href="#map">回顾与速查</a>
+  <a href="#lab2">动手演练二</a>
+  <a href="#refs">参考链接</a>
 </aside>
 </div>
 <script>
@@ -294,11 +299,12 @@
 })();
 
 
+(function(){var D={pub:["Public","全球唯一，不轮换","可追踪，厂商申请"],static:["Static Random","上电周期内固定","随机但周期内稳定"],rpa:["Resolvable Private","定期轮换","IRK 可解析认设备"],nrpa:["Non-resolvable Private","轮换","谁都无法解析，纯隐私"]};function s(k){var d=D[k];document.getElementById("atOut9").innerHTML='<p style="margin:0 0 6px;font-weight:700;">'+d[0]+'</p><div class="chips"><span class="chip on">'+d[1]+'</span></div><p style="margin:8px 0 0;color:var(--muted);font-size:14px;">'+d[2]+'</p>';}document.querySelectorAll("#at9 button").forEach(function(b){b.addEventListener("click",function(){document.querySelectorAll("#at9 button").forEach(function(x){x.classList.remove("on");});b.classList.add("on");s(b.getAttribute("data-k"));});});s("pub");})();
 const tocLinks=[...document.querySelectorAll('.toc a')];
 const secs=tocLinks.map(a=>document.getElementById(a.getAttribute('href').slice(1)));
 const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){tocLinks.forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+e.target.id));}});},{rootMargin:'-20% 0px -70% 0px'});
 secs.forEach(s=>s&&io.observe(s));
-const QUIZ=[{"q":"1. 同一台 BLE 外设在两台 iPhone 上标识不同，是 bug 吗？","opts":[["不是，iOS 给系统生成的 per-device 标识",true,"对。跨手机关联用产品 stableId。"],["是",false,"是平台隐私策略。"],["设备坏了",false,"与设备无关。"]]},{"q":"2. 地址轮换后靠什么认出是同一台设备？","opts":[["IRK 解析",true,"对。绑定时交换了 IRK。"],["地址字面值",false,"地址会变。"],["设备名",false,"名字可变且可重复。"]]},{"q":"3. 长期关联设备列表/历史数据，应该用？","opts":[["产品定义的稳定标识 stableId",true,"对。可信连接后读序列号建映射。"],["RSSI",false,"RSSI 波动大。"],["广播明文地址",false,"会轮换且涉及追踪。"]]}];
+const QUIZ=[{"q":"1. 同一台 BLE 外设在两台 iPhone 上标识不同，是 bug 吗？","opts":[["不是，iOS 给系统生成的 per-device 标识",true,"对。跨手机关联用产品 stableId。"],["是",false,"是平台隐私策略。"],["设备坏了",false,"与设备无关。"]]},{"q":"2. 地址轮换后靠什么认出是同一台设备？","opts":[["IRK 解析",true,"对。绑定时交换了 IRK。"],["地址字面值",false,"地址会变。"],["设备名",false,"名字可变且可重复。"]]},{"q":"3. 长期关联设备列表/历史数据，应该用？","opts":[["产品定义的稳定标识 stableId",true,"对。可信连接后读序列号建映射。"],["RSSI",false,"RSSI 波动大。"],["广播明文地址",false,"会轮换且涉及追踪。"]]},{"q":"4. 可解析私有地址 RPA 靠什么解析？","opts":[["IRK",true,"对。绑定时交换。"],["LTK",false,"那是加密。"],["CSRK",false,"那是签名。"]]},{"q":"5. Static Random 地址的特点是？","opts":[["上电周期内不变，可跨周期变",true,"对。"],["每次广播变",false,"那是 RPA。"],["全球唯一",false,"那是 public。"]]},{"q":"6. 长期设备列表/历史数据该用什么标识？","opts":[["产品稳定标识 stableId",true,"对。可信连接后读序列号建映射。"],["广播地址",false,"会轮换。"],["RSSI",false,"波动大。"]]}];
 let solved=0; const box=document.getElementById('quiz-box');
 QUIZ.forEach((item,qi)=>{
   const h=document.createElement('div'); h.className='quiz-q'; h.textContent=item.q; box.appendChild(h);

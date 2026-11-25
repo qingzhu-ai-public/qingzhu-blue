@@ -253,8 +253,10 @@
     <div class="key"><span class="tag">看懂这场演练</span>nRF Connect 把广播、连接、服务、CCCD、日志全变成可见的实物。先走通链路，后面读代码章节会顺很多；LOG 页的时间戳就是排障「时间线」的现成样板。</div>
   </section>
 
+<section id="lab2"><h2><span class="no">动手</span>演练二 · nRF 图标操作映射</h2><p>选图标，看它实际发起的 ATT 操作。</p><div class="lab"><div class="lab-head"><b>nRF Connect</b><span class="hint">图标 → ATT 操作</span></div><div class="controls"><div class="seg" id="ic11"><button data-k="down" class="on">向下箭头</button><button data-k="up">向上箭头</button><button data-k="tri">三箭头</button></div></div><div class="lab-body single"><div id="icOut11" class="card" style="margin:0;"></div></div></div></section>
+
   <section id="quiz">
-    <h2><span class="no">自测</span>三个问题</h2>
+    <h2><span class="no">自测</span>六个问题</h2>
     <div class="card" id="quiz-box"></div>
     <p id="quiz-done" style="display:none;font-weight:700;color:#1E7268;">全对。最后一课：版本演进与经典/BLE 选型。</p>
   </section>
@@ -265,6 +267,7 @@
     <div class="note"><span class="tag">说明</span>本页为教学简化，工程细节以正文与官方规范为准；演练为模拟，非真实设备通信。</div>
     <footer>青竹蓝牙学堂 · 蓝牙小课堂第十一课 · A11 · <a href="../index.html">回到学堂</a></footer>
   </section>
+<section id="refs"><h2><span class="no">依据</span>参考链接</h2><div class="card"><h3 style="margin-top:0;">工具</h3><ul><li><a href="https://www.nordicsemi.com/Products/Development-tools/nRF-Connect-for-Mobile" target="_blank" rel="noopener">nRF Connect for Mobile</a> — 扫描/连接/读写/订阅</li><li><a href="https://www.nordicsemi.com/Products/Development-tools/nRF-Connect-for-Desktop" target="_blank" rel="noopener">nRF Connect for Desktop</a></li></ul><h3>规范</h3><ul><li><a href="https://www.bluetooth.com/specifications/specs/" target="_blank" rel="noopener">Core Spec · ATT/GATT</a> — 图标背后的操作</li></ul></div></section>
 </main>
 <aside class="toc" id="toc">
   <div class="toc-title">本课目录</div>
@@ -275,6 +278,8 @@
   <a href="#lab">动手演练</a>
   <a href="#quiz">本课自测</a>
   <a href="#map">回顾与速查</a>
+  <a href="#lab2">动手演练二</a>
+  <a href="#refs">参考链接</a>
 </aside>
 </div>
 <script>
@@ -304,11 +309,12 @@
 })();
 
 
+(function(){var D={down:["Read","读特征值，发 Read Request"],up:["Write","写特征值，发 Write Request/Command"],tri:["Subscribe","写 CCCD 01 00 开 Notify"]};function s(k){var d=D[k];document.getElementById("icOut11").innerHTML='<p style="margin:0 0 6px;font-weight:700;">'+d[0]+'</p><div class="chips"><span class="chip on">'+d[1]+'</span></div>';}document.querySelectorAll("#ic11 button").forEach(function(b){b.addEventListener("click",function(){document.querySelectorAll("#ic11 button").forEach(function(x){x.classList.remove("on");});b.classList.add("on");s(b.getAttribute("data-k"));});});s("down");})();
 const tocLinks=[...document.querySelectorAll('.toc a')];
 const secs=tocLinks.map(a=>document.getElementById(a.getAttribute('href').slice(1)));
 const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){tocLinks.forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+e.target.id));}});},{rootMargin:'-20% 0px -70% 0px'});
 secs.forEach(s=>s&&io.observe(s));
-const QUIZ=[{"q":"1. 不可连接设备在 nRF 里没有 CONNECT 按钮，对应广播什么性质？","opts":[["发不可连接广播（如 ADV_NONCONN_IND）",true,"对。只发数据不接受连接。"],["蓝牙坏了",false,"是广播类型。"],["距离远",false,"距离远会扫不到。"]]},{"q":"2. 三箭头图标按下后，App 实际写了什么？","opts":[["向 CCCD 写开启值（Notify 01 00）",true,"对。"],["读特征",false,"那是向下箭头。"],["写特征值",false,"那是向上箭头。"]]},{"q":"3. 想验证「RSSI 不可靠」，实验里怎么做？","opts":[["固定位置记录后遮挡/换姿态/挪动看波动",true,"对。同一设备波动可达几十 dBm。"],["只看一次数值",false,"看不出波动。"],["换设备名",false,"与 RSSI 无关。"]]}];
+const QUIZ=[{"q":"1. 不可连接设备在 nRF 里没有 CONNECT 按钮，对应广播什么性质？","opts":[["发不可连接广播（如 ADV_NONCONN_IND）",true,"对。只发数据不接受连接。"],["蓝牙坏了",false,"是广播类型。"],["距离远",false,"距离远会扫不到。"]]},{"q":"2. 三箭头图标按下后，App 实际写了什么？","opts":[["向 CCCD 写开启值（Notify 01 00）",true,"对。"],["读特征",false,"那是向下箭头。"],["写特征值",false,"那是向上箭头。"]]},{"q":"3. 想验证「RSSI 不可靠」，实验里怎么做？","opts":[["固定位置记录后遮挡/换姿态/挪动看波动",true,"对。同一设备波动可达几十 dBm。"],["只看一次数值",false,"看不出波动。"],["换设备名",false,"与 RSSI 无关。"]]},{"q":"4. nRF 里向下箭头图标代表？","opts":[["读特征值（Read）",true,"对。"],["写",false,"那是向上箭头。"],["订阅",false,"那是三箭头。"]]},{"q":"5. 向上箭头代表？","opts":[["写特征值（Write）",true,"对。"],["读",false,"向下。"],["订阅",false,"三箭头。"]]},{"q":"6. 验证 RSSI 不可靠的实验？","opts":[["固定位置记录后遮挡/换姿态看波动",true,"对。"],["看一次",false,"看不出。"],["换名字",false,"无关。"]]}];
 let solved=0; const box=document.getElementById('quiz-box');
 QUIZ.forEach((item,qi)=>{
   const h=document.createElement('div'); h.className='quiz-q'; h.textContent=item.q; box.appendChild(h);

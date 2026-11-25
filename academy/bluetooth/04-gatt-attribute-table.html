@@ -257,8 +257,10 @@
     <div class="key"><span class="tag">看懂这场演练</span>0x0011 是「声明」（说明有个什么特征），0x0012 才是「值」（真正读写的地方），0x0013 是 CCCD 配置。读温度要操作 0x0012，订阅要写 0x0013——句柄不同，别搞混。</div>
   </section>
 
+<section id="lab2"><h2><span class="no">动手</span>演练二 · 属性声明 UUID 解码</h2><p>选一个 16 位 UUID，看它在属性表里的角色。</p><div class="lab"><div class="lab-head"><b>声明类型</b><span class="hint">UUID 认类型，句柄认位置</span></div><div class="controls"><div class="seg" id="uuid4"><button data-k="2800" class="on">0x2800</button><button data-k="2803">0x2803</button><button data-k="2902">0x2902</button><button data-k="2a6e">0x2A6E</button></div></div><div class="lab-body single"><div id="uuidOut4" class="card" style="margin:0;"></div></div></div></section>
+
   <section id="quiz">
-    <h2><span class="no">自测</span>三个问题</h2>
+    <h2><span class="no">自测</span>六个问题</h2>
     <div class="card" id="quiz-box"></div>
     <p id="quiz-done" style="display:none;font-weight:700;color:#1E7268;">全对。下一课讲读、写、通知三种操作怎么往来。</p>
   </section>
@@ -269,6 +271,7 @@
     <div class="note"><span class="tag">说明</span>本页为教学简化，工程细节以正文与官方规范为准；演练为模拟，非真实设备通信。</div>
     <footer>青竹蓝牙学堂 · 蓝牙小课堂第四课 · A4 · <a href="../index.html">回到学堂</a></footer>
   </section>
+<section id="refs"><h2><span class="no">依据</span>参考链接</h2><div class="card"><h3 style="margin-top:0;">规范</h3><ul><li><a href="https://www.bluetooth.com/specifications/specs/" target="_blank" rel="noopener">Core Spec · GATT / ATT</a> — 属性表、句柄、声明类型</li><li><a href="https://www.bluetooth.com/specifications/assigned-numbers/" target="_blank" rel="noopener">Bluetooth Assigned Numbers</a> — 标准 UUID（0x2800/0x2803/0x2902/0x2A6E）</li></ul><h3>平台入口</h3><ul><li><a href="https://developer.android.com/reference/android/bluetooth/BluetoothGattService" target="_blank" rel="noopener">Android BluetoothGattService / Characteristic</a> — 服务发现结果</li></ul><h3>实测深入</h3><ul><li><a href="https://punchthrough.com/android-ble-guide/" target="_blank" rel="noopener">Punch Through · Android BLE Guide</a> — GATT 实践</li></ul></div></section>
 </main>
 <aside class="toc" id="toc">
   <div class="toc-title">本课目录</div>
@@ -278,6 +281,8 @@
   <a href="#lab">动手演练</a>
   <a href="#quiz">本课自测</a>
   <a href="#map">回顾与速查</a>
+  <a href="#lab2">动手演练二</a>
+  <a href="#refs">参考链接</a>
 </aside>
 </div>
 <script>
@@ -296,11 +301,12 @@
 })();
 
 
+(function(){var D={"2800":["Primary/Secondary Service 声明","属性表的服务边界"],2803:["Characteristic 声明","含 properties + 值句柄 + 特征 UUID"],2902:["CCCD 客户端特征配置","写 01 00 开 Notify"], "2a6e":["Temperature 特征（标准）","sint16，倍率 0.01"]};function s(k){var d=D[k];document.getElementById("uuidOut4").innerHTML='<p style="margin:0 0 6px;font-weight:700;">0x'+k.toUpperCase()+' · '+d[0]+'</p><p style="margin:0;color:var(--muted);font-size:14px;">'+d[1]+'</p>';}document.querySelectorAll("#uuid4 button").forEach(function(b){b.addEventListener("click",function(){document.querySelectorAll("#uuid4 button").forEach(function(x){x.classList.remove("on");});b.classList.add("on");s(b.getAttribute("data-k"));});});s("2800");})();
 const tocLinks=[...document.querySelectorAll('.toc a')];
 const secs=tocLinks.map(a=>document.getElementById(a.getAttribute('href').slice(1)));
 const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){tocLinks.forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+e.target.id));}});},{rootMargin:'-20% 0px -70% 0px'});
 secs.forEach(s=>s&&io.observe(s));
-const QUIZ=[{"q":"1. 一台设备有两路温度特征，UUID 相同，客户端怎么区分？","opts":[["靠句柄",true,"对。UUID 认类型，句柄认位置。"],["靠名字",false,"名字不可靠且可能相同。"],["无法区分",false,"服务发现返回每个实例的句柄。"]]},{"q":"2. 为什么不要把句柄写死在代码里？","opts":[["固件升级可能改变句柄",true,"对。应按服务发现结果动态取句柄。"],["句柄太长",false,"句柄是 16 位，很短。"],["句柄会随机变",false,"是固件升级可能改，不是随机。"]]},{"q":"3. 支持 Notify 的特征，靠哪个描述符开关上报？","opts":[["CCCD（0x2902）",true,"对。写 01 00 开 Notify。"],["0x2800",false,"那是 Service 声明。"],["0x2803",false,"那是 Characteristic 声明。"]]}];
+const QUIZ=[{"q":"1. 一台设备有两路温度特征，UUID 相同，客户端怎么区分？","opts":[["靠句柄",true,"对。UUID 认类型，句柄认位置。"],["靠名字",false,"名字不可靠且可能相同。"],["无法区分",false,"服务发现返回每个实例的句柄。"]]},{"q":"2. 为什么不要把句柄写死在代码里？","opts":[["固件升级可能改变句柄",true,"对。应按服务发现结果动态取句柄。"],["句柄太长",false,"句柄是 16 位，很短。"],["句柄会随机变",false,"是固件升级可能改，不是随机。"]]},{"q":"3. 支持 Notify 的特征，靠哪个描述符开关上报？","opts":[["CCCD（0x2902）",true,"对。写 01 00 开 Notify。"],["0x2800",false,"那是 Service 声明。"],["0x2803",false,"那是 Characteristic 声明。"]]},{"q":"4. Characteristic 声明的 UUID 是？","opts":[["0x2803",true,"对。"],["0x2800",false,"那是 Service 声明。"],["0x2902",false,"那是 CCCD。"]]},{"q":"5. 16 位 UUID 0x2A6E 展开成 128 位是？","opts":[["00002A6E-0000-1000-8000-00805F9B34FB",true,"对。蓝牙基础 UUID 套模板。"],["随便补零",false,"有固定基础 UUID。"],["无法展开",false,"可展开。"]]},{"q":"6. PRIMARY 与 SECONDARY 服务的区别？","opts":[["PRIMARY 可被独立发现，SECONDARY 被 INCLUDE 引用",true,"对。"],["一样",false,"有区别。"],["SECONDARY 更高级",false,"只是引用关系。"]]}];
 let solved=0; const box=document.getElementById('quiz-box');
 QUIZ.forEach((item,qi)=>{
   const h=document.createElement('div'); h.className='quiz-q'; h.textContent=item.q; box.appendChild(h);

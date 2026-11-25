@@ -267,8 +267,10 @@
     <div class="key"><span class="tag">看懂这场演练</span>latency 越大外设越省电，但「最长可沉默」随之变长，超时必须跟着放大，否则合法休眠会被误判成断线（0x08）。省电和稳定是一对此消彼长的旋钮。</div>
   </section>
 
+<section id="lab2"><h2><span class="no">动手</span>演练二 · 断线原因码解码</h2><p>选一个 HCI 断开原因码，看含义与排查方向。</p><div class="lab"><div class="lab-head"><b>原因码解码</b><span class="hint">先分「没建立」还是「活着后丢」</span></div><div class="controls"><div class="seg" id="rc3"><button data-k="08" class="on">0x08</button><button data-k="13">0x13</button><button data-k="16">0x16</button><button data-k="3e">0x3E</button></div></div><div class="lab-body single"><div id="rcOut3" class="card" style="margin:0;"></div></div></div></section>
+
   <section id="quiz">
-    <h2><span class="no">自测</span>三个问题</h2>
+    <h2><span class="no">自测</span>六个问题</h2>
     <div class="card" id="quiz-box"></div>
     <p id="quiz-done" style="display:none;font-weight:700;color:#1E7268;">全对。下一课讲 GATT——连上之后，设备的数据是怎么组织的。</p>
   </section>
@@ -279,6 +281,7 @@
     <div class="note"><span class="tag">说明</span>本页为教学简化，工程细节以正文与官方规范为准；演练为模拟，非真实设备通信。</div>
     <footer>青竹蓝牙学堂 · 蓝牙小课堂第三课 · A3 · <a href="../index.html">回到学堂</a></footer>
   </section>
+<section id="refs"><h2><span class="no">依据</span>参考链接</h2><div class="card"><h3 style="margin-top:0;">规范</h3><ul><li><a href="https://www.bluetooth.com/specifications/specs/" target="_blank" rel="noopener">Bluetooth Core Spec · Link Layer</a> — 连接事件、interval/latency/timeout、HCI 断开原因码</li></ul><h3>平台入口</h3><ul><li><a href="https://developer.android.com/reference/android/bluetooth/BluetoothGatt#requestConnectionPriority(int)" target="_blank" rel="noopener">Android requestConnectionPriority</a> — 表达偏好，系统拍板</li><li><a href="https://developer.apple.com/accessories/Accessory-Design-Guidelines.pdf" target="_blank" rel="noopener">Apple Accessory Design Guidelines</a> — iOS 连接参数约束</li></ul><h3>实测深入</h3><ul><li><a href="https://punchthrough.com/android-ble-guide/" target="_blank" rel="noopener">Punch Through · Android BLE Guide</a> — 参数与吞吐实测</li></ul></div></section>
 </main>
 <aside class="toc" id="toc">
   <div class="toc-title">本课目录</div>
@@ -288,6 +291,8 @@
   <a href="#lab">动手演练</a>
   <a href="#quiz">本课自测</a>
   <a href="#map">回顾与速查</a>
+  <a href="#lab2">动手演练二</a>
+  <a href="#refs">参考链接</a>
 </aside>
 </div>
 <script>
@@ -317,11 +322,12 @@
 })();
 
 
+(function(){var D={"08":["Connection Timeout","链路曾活着后丢了","查距离/干扰/外设休眠过度"],13:["Remote User Terminated","对端主动断","查固件断链/关机"],16:["Terminated by Local Host","本机断","查 App 是否调了 disconnect"],"3e":["Failed to be Established","根本没建立","查广播/被别的手机连走"]};function s(k){var d=D[k];document.getElementById("rcOut3").innerHTML='<p style="margin:0 0 6px;font-weight:700;">0x'+k.toUpperCase()+' · '+d[0]+'</p><div class="chips"><span class="chip on">'+d[1]+'</span></div><p style="margin:8px 0 0;color:var(--muted);font-size:14px;">'+d[2]+'</p>';}document.querySelectorAll("#rc3 button").forEach(function(b){b.addEventListener("click",function(){document.querySelectorAll("#rc3 button").forEach(function(x){x.classList.remove("on");});b.classList.add("on");s(b.getAttribute("data-k"));});});s("08");})();
 const tocLinks=[...document.querySelectorAll('.toc a')];
 const secs=tocLinks.map(a=>document.getElementById(a.getAttribute('href').slice(1)));
 const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){tocLinks.forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+e.target.id));}});},{rootMargin:'-20% 0px -70% 0px'});
 secs.forEach(s=>s&&io.observe(s));
-const QUIZ=[{"q":"1. interval 100 ms、latency 9，外设最长多久不出现仍合法？超时至少设多少？","opts":[["最长 1000 ms，超时需 > 2000 ms",true,"对。(1+9)×100=1000，超时>2×1000=2000，实践留更大余量。"],["最长 100 ms，超时 100 ms",false,"没算 latency 跳过的 9 个事件。"],["最长 900 ms，超时 900 ms",false,"公式是 (1+latency)×interval×2。"]]},{"q":"2. 外设请求 interval 15 ms，两台手机实测 15 和 50 ms，是故障吗？","opts":[["不是，参数决定权在 Central，各系统策略不同",true,"对。这是策略差异，不是 bug。"],["是，固件坏了",false,"固件请求只是偏好，手机可调整。"],["是，蓝牙版本不同",false,"与版本无关，是系统接受策略。"]]},{"q":"3. 断开原因 0x08 和 0x3E 分别指向？","opts":[["0x08 链路曾活着后丢了；0x3E 根本没建立",true,"对。前者查距离/干扰/休眠，后者查广播/连接竞争。"],["两者一样",false,"排查方向完全不同。"],["0x08 没建立；0x3E 后来丢了",false,"说反了。"]]}];
+const QUIZ=[{"q":"1. interval 100 ms、latency 9，外设最长多久不出现仍合法？超时至少设多少？","opts":[["最长 1000 ms，超时需 > 2000 ms",true,"对。(1+9)×100=1000，超时>2×1000=2000，实践留更大余量。"],["最长 100 ms，超时 100 ms",false,"没算 latency 跳过的 9 个事件。"],["最长 900 ms，超时 900 ms",false,"公式是 (1+latency)×interval×2。"]]},{"q":"2. 外设请求 interval 15 ms，两台手机实测 15 和 50 ms，是故障吗？","opts":[["不是，参数决定权在 Central，各系统策略不同",true,"对。这是策略差异，不是 bug。"],["是，固件坏了",false,"固件请求只是偏好，手机可调整。"],["是，蓝牙版本不同",false,"与版本无关，是系统接受策略。"]]},{"q":"3. 断开原因 0x08 和 0x3E 分别指向？","opts":[["0x08 链路曾活着后丢了；0x3E 根本没建立",true,"对。前者查距离/干扰/休眠，后者查广播/连接竞争。"],["两者一样",false,"排查方向完全不同。"],["0x08 没建立；0x3E 后来丢了",false,"说反了。"]]},{"q":"4. Peripheral Latency 的规范上限是？","opts":[["499",true,"对。0–499。"],["9",false,"那是举例值。"],["无上限",false,"规范上限 499。"]]},{"q":"5. Supervision Timeout 的规范范围？","opts":[["100 ms – 32 s",true,"对。"],["7.5 ms – 4 s",false,"那是 interval。"],["0 – 499",false,"那是 latency。"]]},{"q":"6. 外设想改连接参数，能自己拍板吗？","opts":[["不能，发 L2CAP 参数更新请求，Central 决定",true,"对。决定权在 Central。"],["能",false,"只是请求。"],["重启连接",false,"用参数更新请求。"]]}];
 let solved=0; const box=document.getElementById('quiz-box');
 QUIZ.forEach((item,qi)=>{
   const h=document.createElement('div'); h.className='quiz-q'; h.textContent=item.q; box.appendChild(h);
