@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>蓝牙小课堂 · C11 综合实战温湿度计 · 青竹蓝牙学堂</title>
+<title>蓝牙小课堂 · C11 综合实战 BTHome · 青竹蓝牙学堂</title>
 <style>
   :root{
     --bg:#F7F6F2; --card:#FFFFFF; --ink:#2B2620; --muted:#7A7267; --faint:#A39B8E;
@@ -182,7 +182,7 @@
 <div class="topbar"><div class="topbar-in">
   <a class="logo" href="../index.html">青竹<span>蓝牙学堂</span></a>
   <nav class="topnav">
-    <a href="https://github.com/qingzhu-ai-public/qingzhu-ble-android" target="_blank" rel="noopener" class="gh"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8"/></svg>GitHub 项目</a>
+    <a href="https://github.com/qingzhu-ai-public/qingzhu-blue/tree/main/examples/ios/bthome-mvp" target="_blank" rel="noopener" class="gh"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8"/></svg>配套源码</a>
     <a href="../index.html">学堂首页</a>
   </nav>
 </div></div>
@@ -199,198 +199,374 @@
   <a href="08-chunk-flowcontrol.html"><span class="c">C8</span>分包与流控</a>
   <a href="09-background-restoration.html"><span class="c">C9</span>后台与恢复</a>
   <a href="10-pairing-security.html"><span class="c">C10</span>配对与安全</a>
-  <a href="11-project-temp.html" class="cur"><span class="c">C11</span>实战温度 App</a>
+  <a href="11-project-temp.html" class="cur"><span class="c">C11</span>BTHome 实战</a>
 </aside>
 <main>
   <div class="crumb">蓝牙小课堂 / iOS 第十一课 · C11</div>
-  <h1>综合实战：<em>温湿度计</em> App 与双机验收</h1>
-  <p class="lead">把 C1–C10 串成完整 App：扫描→连接→发现→订阅→解析温度湿度→后台恢复。这一课给逐 API 流程清单、两种温度字节格式（sint16 与 IEEE-11073 FLOAT）的解码、工程收束清单与双机验收方法。</p>
-  <div class="meta"><span>平台：iOS/Swift</span><span>约 25 分钟</span><span>iOS 5 → 13</span><span>含两场交互演练</span><span>前置：C1–C10</span></div>
+  <h1>综合实战：<em>BTHome</em> 温湿度计完整 App</h1>
+  <p class="lead">与 Android 板 B14 同一个项目：iPhone 当接收器扫描解析 BTHome 温湿度广播，扫到即显示、不连接不配对；再用教学 GATT 服务练连接与读写，第二台 iPhone（或 Android 手机）当模拟外设。iOS 发不出 BTHome 广播这条平台边界，这一课讲透。</p>
+  <div class="meta"><span>平台：iOS/Swift</span><span>约 60 分钟 · 完整项目 · 配套源码</span><span>含两场交互演练</span><span>前置：C1–C10</span></div>
   <div class="journey">
-    <div class="j-step"><span class="n">1</span><span class="t">流程</span><span class="s">六步逐 API</span></div>
-    <div class="j-step"><span class="n">2</span><span class="t">解析</span><span class="s">sint16 / FLOAT</span></div>
-    <div class="j-step"><span class="n">3</span><span class="t">收束</span><span class="s">十课清单</span></div>
-    <div class="j-step"><span class="n">4</span><span class="t">验收</span><span class="s">双机</span></div>
-    <div class="j-step"><span class="n">5</span><span class="t">动手</span><span class="s">两场演练</span></div>
+    <div class="j-step"><span class="n">1</span><span class="t">协议</span><span class="s">bthome.io</span></div>
+    <div class="j-step"><span class="n">2</span><span class="t">格式</span><span class="s">FCD2</span></div>
+    <div class="j-step"><span class="n">3</span><span class="t">主端</span><span class="s">扫描解析</span></div>
+    <div class="j-step"><span class="n">4</span><span class="t">从端</span><span class="s">平台边界</span></div>
+    <div class="j-step"><span class="n">5</span><span class="t">连接</span><span class="s">教学 GATT</span></div>
+    <div class="j-step"><span class="n">6</span><span class="t">验收</span><span class="s">双机</span></div>
   </div>
 
-  <section id="flow">
-    <h2><span class="no">第 1 步</span>扫描→连接→发现→订阅→解析→显示</h2>
-      <pre>scanForPeripherals([1809]) → didDiscover
-connect → didConnect → discoverServices → discoverCharacteristics
-setNotifyValue(true) → didUpdateValueFor → 解析 → UI</pre>
-    <table>
-      <tr><th>步</th><th>发起 API</th><th>等哪个回调</th><th>引入</th></tr>
-      <tr><td>① 扫描</td><td><code>scanForPeripherals(withServices:[CBUUID(string:"1809")], options:nil)</code></td><td>didDiscover（拿 peripheral + 广播）</td><td><span class="api-lv">iOS 5</span></td></tr>
-      <tr><td>② 连接</td><td><code>stopScan()</code> → <code>connect(p, options:nil)</code></td><td>didConnect（失败 didFailToConnect）</td><td><span class="api-lv">iOS 5</span></td></tr>
-      <tr><td>③ 发现</td><td><code>discoverServices(["1809"])</code> → <code>discoverCharacteristics(["2A6E"], for:)</code></td><td>didDiscoverServices → didDiscoverCharacteristics</td><td><span class="api-lv">iOS 5</span></td></tr>
-      <tr><td>④ 订阅</td><td><code>setNotifyValue(true, for: ch)</code></td><td>didUpdateNotificationStateFor（确认 isNotifying）</td><td><span class="api-lv">iOS 5</span></td></tr>
-      <tr><td>⑤ 解析</td><td>—（数据驱动）</td><td>didUpdateValueFor（ch.value 字节）</td><td><span class="api-lv">iOS 5</span></td></tr>
-      <tr><td>⑥ 显示</td><td>主线程更新 UI</td><td>—（+ C9 后台恢复兜底）</td><td>—</td></tr>
-    </table>
-    <figure>
-      <svg viewBox="0 0 760 200" role="img" aria-label="温湿度计 App 六步异步链">
-        <defs><marker id="ar11" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#2A9D8F"/></marker></defs>
-        <g font-size="12.5" font-weight="bold" text-anchor="middle">
-          <rect x="8" y="40" width="112" height="58" rx="11" fill="#E9F4F2" stroke="#BFE0DB"/><text x="64" y="64" fill="#1E7268">① 扫描</text><text x="64" y="82" font-size="10.5" font-weight="normal" fill="#4E8A80">didDiscover</text>
-          <rect x="132" y="40" width="112" height="58" rx="11" fill="#E9F4F2" stroke="#BFE0DB"/><text x="188" y="64" fill="#1E7268">② 连接</text><text x="188" y="82" font-size="10.5" font-weight="normal" fill="#4E8A80">didConnect</text>
-          <rect x="256" y="40" width="112" height="58" rx="11" fill="#E9F4F2" stroke="#BFE0DB"/><text x="312" y="64" fill="#1E7268">③ 发现</text><text x="312" y="82" font-size="10.5" font-weight="normal" fill="#4E8A80">两级 discover</text>
-          <rect x="380" y="40" width="112" height="58" rx="11" fill="#E9F4F2" stroke="#BFE0DB"/><text x="436" y="64" fill="#1E7268">④ 订阅</text><text x="436" y="82" font-size="10.5" font-weight="normal" fill="#4E8A80">isNotifying</text>
-          <rect x="504" y="40" width="112" height="58" rx="11" fill="#FBF3E4" stroke="#EDD9B4"/><text x="560" y="64" fill="#8A5510">⑤ 解析</text><text x="560" y="82" font-size="10.5" font-weight="normal" fill="#A8762A">小端+符号/FLOAT</text>
-          <rect x="628" y="40" width="112" height="58" rx="11" fill="#ECF1FB" stroke="#C9D8F2"/><text x="684" y="64" fill="#2F58A8">⑥ 显示</text><text x="684" y="82" font-size="10.5" font-weight="normal" fill="#5F7FB5">主线程 UI</text>
-        </g>
-        <g stroke="#2A9D8F" stroke-width="2" marker-end="url(#ar11)">
-          <line x1="120" y1="69" x2="130" y2="69"/><line x1="244" y1="69" x2="254" y2="69"/><line x1="368" y1="69" x2="378" y2="69"/><line x1="492" y1="69" x2="502" y2="69"/><line x1="616" y1="69" x2="626" y2="69"/>
-        </g>
-        <path d="M560,98 L560,140 L436,140 L436,100" fill="none" stroke="#A39B8E" stroke-width="1.6" marker-end="url(#ar11)"/>
-        <text x="498" y="132" text-anchor="middle" font-size="11" fill="#A39B8E">通知持续到达，⑤⑥ 循环</text>
-        <text x="380" y="180" text-anchor="middle" font-size="12" fill="#A39B8E">每步等回调再走下一步；断连走 C4 重连，后台走 C9 恢复</text>
-      </svg>
-      <figcaption>六步异步链：发起 API → 等回调 → 下一步；⑤⑥ 随通知循环。</figcaption>
-    </figure>
-    <ul>
-      <li><b>强引用 peripheral</b>（C1）：connect 前存进属性，否则对象释放连接即断。</li>
-      <li><b>状态机驱动</b>（C4）：idle→scanning→connecting→discovering→subscribing→streaming，断连回 idle 重连。</li>
-      <li><b>先查 properties</b>（C5）：2A6E 应带 .notify 或 .indicate，没有就降级 readValue 轮询。</li>
-    </ul>
-      <div class="recap"><b>本步收束：</b>六步异步链，每步等回调；状态机+强引用兜底。</div>
+  <section id="what">
+    <h2><span class="no">第 1 步</span>BTHome 是什么、规范在哪</h2>
+      <p>BTHome 是 Home Assistant 主推的<b>开放 BLE 传感器广播标准</b>。设备把读数按固定格式塞进广播包，接收端不用连接、不用配对，扫到就能解析。正因为是开放格式，Shelly、Xiaomi 一大批传感器、HA、ESPHome 都直接支持。</p>
+      <table><tr><th>资源</th><th>地址</th><th>拿什么</th></tr>
+        <tr><td>官网</td><td><code>bthome.io</code></td><td>项目入口、设备列表</td></tr>
+        <tr><td>格式规范</td><td><code>bthome.io/format</code></td><td>广播结构、设备信息字节、全部对象 ID 表</td></tr>
+        <tr><td>加密规范</td><td><code>bthome.io/encryption</code></td><td>AES-CCM 加密、nonce、防重放</td></tr>
+        <tr><td>参考解析器</td><td><code>github.com/Bluetooth-Devices/bthome-ble</code></td><td>Python 解析器，含每种类型的测试样例</td></tr>
+        <tr><td>Android 同项目</td><td><code>academy/android/14-bthome-project.html</code></td><td>同一项目的 Android 版，可跨平台互连</td></tr></table>
+      <div class="key"><span class="tag">配套源码 · 可以直接编译</span>本课的每一行代码都在 <a href="https://github.com/qingzhu-ai-public/qingzhu-blue/tree/main/examples/ios/bthome-mvp" target="_blank" rel="noopener"><b>qingzhu-blue / examples / ios / bthome-mvp</b></a>：Xcode 工程、协议层、扫描、连接、模拟外设、13 项协议自检全在里面。浏览器里也能先走 <a href="https://qingzhu-ai-public.github.io/qingzhu-blue/examples/ios/bthome-mvp/prototype/index.html" target="_blank" rel="noopener">交互原型</a>。教学服务 UUID 与 Android bthome-mvp 完全一致，<b>iPhone 和 Android 手机可以互连</b>。</div>
+      <div class="key"><span class="tag">对接协议的正确姿势</span>不是找 SDK，而是<b>读格式规范</b>：确定 UUID → 确定设备信息字节 → 查对象 ID 表拿「类型 / 长度 / 有无符号 / 倍率」。这张表就是你写解析器需要的全部东西。</div>
+      <div class="recap"><b>本步收束：</b>规范在 bthome.io/format，对象 ID 表是解析的唯一天书。</div>
   </section>
 
-  <section id="parse">
-    <h2><span class="no">第 2 步</span>温度 sint16 小端、湿度 uint16，标准 2A1C 是 FLOAT</h2>
-      <pre>6A 09 → 0x096A=2410 ×0.01 = 24.10°C
-A8 11 → 0x11A8=4520 ×0.01 = 45.20%
-DA FD → sint16 -550 → -5.50°C</pre>
-    <table>
-      <tr><th>特征</th><th>所属标准服务</th><th>格式</th><th>分辨率</th></tr>
-      <tr><td><code>2A6E</code> Temperature</td><td>181A 环境感知</td><td>sint16 小端（带符号）</td><td>0.01 °C</td></tr>
-      <tr><td><code>2A6F</code> Humidity</td><td>181A 环境感知</td><td>uint16 小端</td><td>0.01 %</td></tr>
-      <tr><td><code>2A1C</code> Temperature Measurement</td><td>1809 健康温度计</td><td>IEEE-11073 FLOAT（3 字节尾数 + 1 字节指数）</td><td>10^指数</td></tr>
-    </table>
-    <pre><span class="cm">// sint16（2A6E）：小端拼整数，再补符号</span>
-let raw = Int(bitPattern: UInt(data[0]) | UInt(data[1]) &lt;&lt; 8)
-let signed = raw &gt; 32767 ? raw - 65536 : raw
-let celsius = Double(signed) / 100.0
+  <section id="format">
+    <h2><span class="no">第 2 步</span>从广播包到 BTHome 数据：三层剥开</h2>
+      <p>拿官方示例 <code>020106 0B094449592D73656E736F72 0A16D2FC4002C40903BF13</code> 剥三层。每个 AD 元素都是「长度 / 类型 / 数据」。</p>
+      <pre>第 1 层 · AD 元素
+02 01 06                  Flags: LE 可发现 + 不支持 BR/EDR（固定写 020106）
+0B 09 4449592D73656E736F72  Complete Local Name = "DIY-sensor"
+0A 16 D2FC4002C40903BF13    Service Data(16-bit UUID) ← BTHome 在这里
 
-<span class="cm">// IEEE-11073 FLOAT（2A1C）：前 3 字节有符号尾数，第 4 字节有符号指数</span>
-var mant = Int(data[0]) | Int(data[1]) &lt;&lt; 8 | Int(data[2]) &lt;&lt; 16
-if mant &amp; 0x800000 != 0 { mant -= 0x1000000 }
-var exp = Int(data[3]); if exp &amp; 0x80 != 0 { exp -= 0x100 }
-let value = Double(mant) * pow(10.0, Double(exp))
-<span class="cm">// 6A 09 00 FE → 尾数 2410，指数 -2 → 24.10°C</span></pre>
-    <div class="note"><span class="tag">对表</span>标准配对是 1809→2A1C（FLOAT）、181A→2A6E/2A6F（整数×0.01）。本课演练用「1809 服务 + 2A6E 特征」是自制外设的简化组合，真实标准设备先按 UUID 对表选解码器；两种格式都要会。</div>
-      <div class="recap"><b>本步收束：</b>小端+温度带符号两大坑；2A1C 另走 FLOAT 解码。</div>
+第 2 层 · 服务数据
+D2FC                      UUID，按字节倒读 = 0xFCD2
+40 02C409 03BF13          BTHome 数据
+
+第 3 层 · BTHome 数据
+40          设备信息字节 0100 0000
+            bit0=0 不加密  bit2=0 定时广播  bit5-7=010 → v2
+02 C409     对象 0x02 温度 sint16 LE 0x09C4=2500 ×0.01 = 25.00 °C
+03 BF13     对象 0x03 湿度 uint16 LE 0x13BF=5055 ×0.01 = 50.55 %</pre>
+      <div class="key"><span class="tag">重点 · 硬规则</span><b>对象 ID 必须按数值从小到大排</b>。接收端遇到不认识的 ID 就停止解析后面全部——排序是为了老接收端至少能读到前面认识的字段。v1 用的 UUID 是 0x181C / 0x181E，已废弃，新项目一律 v2 的 0xFCD2。</div>
+      <table><tr><th>本课用到的对象</th><th>ID</th><th>类型</th><th>倍率</th><th>示例 → 结果</th></tr>
+        <tr><td>packet id</td><td>0x00</td><td>uint8</td><td>1</td><td>00 2A → 42</td></tr>
+        <tr><td>电量</td><td>0x01</td><td>uint8</td><td>1</td><td>01 5A → 90 %</td></tr>
+        <tr><td>温度</td><td>0x02</td><td>sint16 LE</td><td>0.01</td><td>02 C409 → 25.00 °C</td></tr>
+        <tr><td>湿度</td><td>0x03</td><td>uint16 LE</td><td>0.01</td><td>03 BF13 → 50.55 %</td></tr>
+        <tr><td>电压</td><td>0x0C</td><td>uint16 LE</td><td>0.001</td><td>0C 020C → 3.074 V</td></tr></table>
+      <p>iOS 侧的好消息：CoreBluetooth 已经替你剥好第 1、2 层——<code>advertisementData[CBAdvertisementDataServiceDataKey]</code> 直接给你 <code>[CBUUID: Data]</code>，FCD2 对应的 Data 就是第 3 层字节，不用自己拆 AD 结构。</p>
+      <div class="recap"><b>本步收束：</b>Flags + Name + Service Data(0xFCD2)；设备信息字节定版本；对象 ID 升序；小端 + 倍率 + 符号。</div>
   </section>
 
-  <section id="eng">
-    <h2><span class="no">第 3 步</span>工程收束：十课清单逐项落进 App</h2>
-    <table>
-      <tr><th>课</th><th>App 里的落点</th><th>不做的后果</th></tr>
-      <tr><td>C2 权限</td><td>Info.plist 两键 + 状态机门控</td><td>崩溃 / 静默失败</td></tr>
-      <tr><td>C3 标识</td><td>identifier 持久化 + retrieve 快连</td><td>每次全量扫描，慢</td></tr>
-      <tr><td>C4 重连</td><td>didDisconnect → pending connect / iOS 17 auto</td><td>断连后失联</td></tr>
-      <tr><td>C5 能力</td><td>按 properties 选订阅/读/写</td><td>对只读特征发写，报错</td></tr>
-      <tr><td>C6 读写</td><td>写走 maximumWriteValueLength 分片</td><td>长包静默截断</td></tr>
-      <tr><td>C7 订阅</td><td>重连后重放订阅清单</td><td>重连成功但没数据</td></tr>
-      <tr><td>C8 流控</td><td>canSendWriteWithoutResponse 阀门</td><td>高速写丢包</td></tr>
-      <tr><td>C9 后台</td><td>bluetooth-central + RestoreIdentifier + 业务持久化</td><td>后台/被杀后失联</td></tr>
-      <tr><td>C10 安全</td><td>安全错误引导配对；失配引导忽略设备</td><td>反复弹窗死循环</td></tr>
-    </table>
-      <div class="recap"><b>本步收束：</b>功能跑通只是起点，十课清单逐项落地才算工程完成。</div>
+  <section id="layout">
+    <h2><span class="no">第 3 步</span>一个 App 两个角色：模块怎么分</h2>
+      <p>只装一个 App，靠入口切换角色。协议层是纯 Swift，不碰 CoreBluetooth 对象，好处是能直接写自检——不连真机也能验证解析器。</p>
+      <pre>examples/ios/bthome-mvp/BTHome/
+├── BthomeProtocol.swift    协议层（纯 Swift）
+│                           对象 ID 表 / parse / encode / 教学 UUID / 13 项自检
+├── BthomeScanner.swift     主端：扫描 FCD2 + 教学服务，按 identifier 合并，10s 标离线
+├── SensorClient.swift      连接路线：connect → 发现 → 写 01 → 读回 BTHome 帧
+├── SensorPeripheral.swift  从端：教学 GATT 服务 + 滑杆/正弦波数据源
+├── BthomeApp.swift         SwiftUI：角色切换、扫描列表、连接面板、从端面板
+└── Info.plist              蓝牙权限两键 + bluetooth-central/peripheral 后台模式</pre>
+      <div class="key"><span class="tag">为什么要分协议层</span>解析是整个项目最容易出错的地方（字节序、符号、截断）。把它做成不依赖 CBPeripheral 的纯函数，就能用官方测试样例当自检，<b>不用两台手机也能验证解析器</b>。源码里 DEBUG 构建启动即跑 13 项自检并打印到控制台。</div>
+      <div class="recap"><b>本步收束：</b>协议层纯净可测；扫描、连接、广播、UI 四块互不依赖。</div>
+  </section>
+
+  <section id="parser">
+    <h2><span class="no">第 4 步</span>先写解析器，再用官方样例测</h2>
+      <pre><span class="cm">// BthomeProtocol.swift · 对象 ID 表：解析器需要的全部信息</span>
+static let objects: [Obj] = [
+    Obj(id: 0x00, label: "序号", len: 1, signed: false, factor: 1,     unit: "",   min: 0,   max: 255),
+    Obj(id: 0x01, label: "电量", len: 1, signed: false, factor: 1,     unit: "%",  min: 0,   max: 100),
+    Obj(id: 0x02, label: "温度", len: 2, signed: true,  factor: 0.01,  unit: "°C", min: -40, max: 85),
+    Obj(id: 0x03, label: "湿度", len: 2, signed: false, factor: 0.01,  unit: "%",  min: 0,   max: 100),
+    Obj(id: 0x0C, label: "电压", len: 2, signed: false, factor: 0.001, unit: "V",  min: 0,   max: 65.535),
+]                               <span class="cm">// min/max：越界只标记，不丢也不直接信</span>
+
+static func parse(_ data: Data) -&gt; Frame? {
+    let bytes = Array(data)
+    guard bytes.count &gt;= 2 else { return nil }
+    let info = bytes[0]
+    let version = Int(info &gt;&gt; 5)
+    guard version == 2 else { return nil }              <span class="cm">// 只处理 v2</span>
+    if info &amp; 0x01 != 0 { return Frame(encrypted: true, …) }  <span class="cm">// 密文不解析</span>
+    var out: [Measurement] = []; var i = 1; var lastId = -1
+    while i &lt; bytes.count {
+        let id = bytes[i]
+        guard let o = obj(id) else { break }            <span class="cm">// 规范：不认识就停</span>
+        if Int(id) &lt; lastId { break }                   <span class="cm">// 规范：必须升序</span>
+        guard i + 1 + o.len &lt;= bytes.count else { break } <span class="cm">// 截断包不越界读</span>
+        let raw = readLE(bytes, i + 1, o.len, o.signed)
+        out.append(Measurement(obj: o, value: Double(raw) * o.factor))
+        lastId = Int(id); i += 1 + o.len
+    }
+    guard !out.isEmpty else { return nil }
+    return Frame(version: 2, encrypted: false, measurements: out, …)
+}</pre>
+      <div class="key"><span class="tag">重点 · 四个坑一次堵死</span>① Swift 的 <code>UInt8</code> 天然无符号，但转 <code>Int</code> 做位运算时别混进有符号类型（Kotlin/Java 才需要 <code>and 0xFF</code>）；② 小端拼完要<b>符号扩展</b>，零下温度才对：<code>if v &amp; 0x8000 != 0 { v -= 0x10000 }</code>；③ 不认识的 ID 立即停，不抛异常也不硬解；④ 边界检查防截断包崩溃。</div>
+      <pre><span class="cm">// 自检：直接抄官方样例（BthomeSelfTest.run，DEBUG 启动即跑）</span>
+check("官方样例 v2",  parse(hex("40 02 C4 09 03 BF 13"))?.version == 2)
+check("温度 25.00",   abs(measurements[0].value - 25.0) &lt; 0.001)
+check("零下 -5.50",   parse(hex("40 02 DA FD")) → -5.50)
+check("未知 ID 即停", parse(hex("40 02 C4 09 53 0C …")) → 只解出 1 个对象)
+check("越界保留标记", parse(hex("40 03 A2 28")) → 104.02%，inRange = false)
+check("编码升序",     encode([湿度, 温度]) == hex("40 02 C4 09 03 BF 13"))</pre>
+      <div class="key"><span class="tag">不用手机也能测</span>源码里一共 13 项自检：官方样例、零下、未知 ID、乱序、截断、v1 拒绝、加密标记、越界、编码升序、负值往返、教学帧兼容。改一行协议表，跑一遍就知道有没有改坏。</div>
+      <div class="recap"><b>本步收束：</b>表驱动解析，小端 + 符号扩展 + 升序 + 未知即停 + 边界检查。</div>
+  </section>
+
+  <section id="scanner">
+    <h2><span class="no">第 5 步</span>扫描：只收 0xFCD2，按 identifier 合并</h2>
+      <pre><span class="cm">// BthomeScanner.swift</span>
+manager.scanForPeripherals(
+    withServices: [CBUUID(string: "FCD2"), DemoProtocol.service],  <span class="cm">// 系统层过滤</span>
+    options: nil)
+
+func centralManager(_ c: CBCentralManager, didDiscover p: CBPeripheral,
+                    advertisementData: [String: Any], rssi RSSI: NSNumber) {
+    let serviceData = advertisementData[CBAdvertisementDataServiceDataKey] as? [CBUUID: Data]
+    let frame = serviceData?[Bthome.uuid].flatMap { Bthome.parse($0) }
+    if let frame, frame.encrypted { return }            <span class="cm">// 本课不处理加密</span>
+    let connectable = (advertisementData[CBAdvertisementDataServiceUUIDsKey] as? [CBUUID])?
+        .contains(DemoProtocol.service) ?? false
+    guard frame != nil || connectable else { return }
+    <span class="cm">// 按 identifier 合并：同一台设备只留最新一条（C3）</span>
+    upsert(Device(peripheral: p, rssi: RSSI.intValue, reading: frame?.display, …))
+}</pre>
+      <div class="key"><span class="tag">重点 · 带 UUID 过滤的两个好处</span>过滤在系统层做，App 不会被无关广播频繁唤醒；同时后台扫描<b>必须</b>带服务 UUID（C9），这里天然满足。取数据不用剥 AD 结构：<code>CBAdvertisementDataServiceDataKey</code> 直接给 UUID 之后的字节。</div>
+      <table><tr><th>环节</th><th>Android（B14）</th><th>iOS（本课）</th></tr>
+        <tr><td>过滤</td><td>ScanFilter.setServiceUuid</td><td>scanForPeripherals(withServices:) <span class="api-lv">iOS 5</span></td></tr>
+        <tr><td>取服务数据</td><td>scanRecord.getServiceData</td><td>advertisementData[ServiceDataKey] <span class="api-lv">iOS 5</span></td></tr>
+        <tr><td>扫描失败回调</td><td>onScanFailed（1/2/5/6 码）</td><td><b>没有</b>；靠 centralManagerDidUpdateState 门控</td></tr>
+        <tr><td>设备标识</td><td>MAC 地址</td><td>identifier（本机 UUID，不是 MAC，C3）</td></tr>
+        <tr><td>重复广播</td><td>默认每条都回调</td><td>默认合并；AllowDuplicates 后台被忽略</td></tr>
+        <tr><td>离线判定</td><td colspan="2">两端一样：10 秒没更新标离线，每秒刷一次（没有新广播也要刷）</td></tr></table>
+      <pre><span class="cm">// 每秒刷在线状态：没有新广播也要跑，才能标离线</span>
+ticker = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
+    devices = devices.map { d in
+        var copy = d
+        copy.online = Date().timeIntervalSince(d.lastSeen) &lt; 10
+        return copy
+    }
+}</pre>
+      <div class="recap"><b>本步收束：</b>带 UUID 过滤；ServiceDataKey 直取字节；按 identifier 保留最新值；10s 离线。</div>
+  </section>
+
+  <section id="advertiser">
+    <h2><span class="no">第 6 步</span>从端边界：iPhone 发不出 BTHome 广播</h2>
+      <div class="key"><span class="tag">平台边界 · Apple 官方</span><code>CBPeripheralManager.startAdvertising</code> <span class="api-lv">iOS 6</span> 的文档写明：<b>只支持两个键</b>——<code>CBAdvertisementDataLocalNameKey</code> 和 <code>CBAdvertisementDataServiceUUIDsKey</code>。没有 Service Data 键，iPhone 就塞不进 BTHome 的 0xFCD2 数据。前台广播预算约 28 字节，扫描响应另有约 10 字节只放名字；后台名字不发、UUID 进 overflow 区。</div>
+      <p>所以 iOS 版项目的角色分工和 Android 不同：</p>
+      <table><tr><th>角色</th><th>Android bthome-mvp</th><th>iOS bthome-mvp</th></tr>
+        <tr><td>接收器（主端）</td><td>扫描解析 BTHome</td><td><b>完全胜任</b>，扫真实设备/Android/ESP32</td></tr>
+        <tr><td>标准 BTHome 广播源</td><td>addServiceData(FCD2, …)</td><td><b>做不到</b>；用 Android 手机/ESP32/Shelly 当源</td></tr>
+        <tr><td>模拟外设（教学）</td><td>教学 GATT 服务</td><td>教学 GATT 服务（同一套 UUID，跨平台互连）</td></tr></table>
+      <p>编码器仍然要会写——教学 GATT 帧用的就是 BTHome 格式，而且读懂编码才懂解析：</p>
+      <pre><span class="cm">// BthomeProtocol.swift · encode：升序 + 小端 + 倍率</span>
+static func encode(_ values: [(id: UInt8, value: Double)]) -&gt; Data? {
+    var out = Data([0x40])                              <span class="cm">// v2，不加密，定时</span>
+    for item in values.sorted(by: { $0.id &lt; $1.id }) {  <span class="cm">// 必须升序</span>
+        guard let o = obj(item.id) else { continue }
+        let raw = Int((item.value / o.factor).rounded())
+        out.append(o.id)
+        for k in 0..&lt;o.len { out.append(UInt8(truncatingIfNeeded: raw &gt;&gt; (8 * k))) }
+    }
+    return out.count &gt; 1 ? out : nil
+}
+
+<span class="cm">// SensorPeripheral.swift · 广播只发名字 + 服务 UUID（iOS 仅支持这两键）</span>
+peripheral.startAdvertising([
+    CBAdvertisementDataLocalNameKey: "QZ-BTHome",
+    CBAdvertisementDataServiceUUIDsKey: [DemoProtocol.service],
+])</pre>
+      <div class="key"><span class="tag">热更新差异</span>Android 有 <code>AdvertisingSet.setAdvertisingData()</code> 中途改数据不停广播；iOS <b>没有对应 API</b>，改广播内容只能 <code>stopAdvertising()</code> 再 <code>startAdvertising()</code>（会闪断）。本课从端走 GATT 路线，读数变化直接体现在下一次读响应里，不需要动广播。</div>
+      <div class="recap"><b>本步收束：</b>iPhone 当不了标准 BTHome 广播源（官方两键限制）；接收器没问题；模拟外设走教学 GATT。</div>
+  </section>
+
+  <section id="fake">
+    <h2><span class="no">第 7 步</span>没有真传感器？三种假数据源</h2>
+      <p>项目调试最缺的是「会变的数」。源码从端内置滑杆和正弦波，剧本用滑杆定点验证：</p>
+      <pre><span class="cm">// SensorPeripheral.swift · 正弦波：看起来最像真房间</span>
+waveTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
+    phase += 0.05
+    temperature = ((23 + 3 * sin(phase)) * 100).rounded() / 100
+}
+<span class="cm">// 手动滑杆：SwiftUI Slider(-40...85, step: 0.01)，拖到负数验证符号扩展</span>
+Slider(value: $peripheral.temperature, in: -40...85, step: 0.01)</pre>
+      <table><tr><th>假数据</th><th>验证什么</th></tr>
+        <tr><td>正弦波</td><td>UI 刷新、RSSI 抖动下读数稳定</td></tr>
+        <tr><td>滑杆拉到 -5.5</td><td>sint16 符号扩展——主端请求后应显示 -5.50 °C</td></tr>
+        <tr><td>滑杆拉到 0</td><td>零值编码、UI 显示 0.00 而非空</td></tr>
+        <tr><td>真实设备越界值</td><td>主端是否标「越界」，而不是直接信（105% 湿度）</td></tr>
+        <tr><td>关掉从端</td><td>主端 10s 后标离线；连接中的请求报断开</td></tr></table>
+      <div class="key"><span class="tag">第三方模拟</span>标准 BTHome 广播源：Android 手机跑 bthome-mvp / nRF Connect（Android 版）Advertiser 粘贴原始 hex；ESP32 刷 ESPHome 一行 <code>bthome:</code>；真实 Shelly BLU 设备直接对照。注意 nRF Connect 的 iOS 版同样受两键限制，发不了自定义服务数据。</div>
+      <div class="recap"><b>本步收束：</b>数据源接口化；正弦波 / 滑杆 / 定点各验一类问题。</div>
+  </section>
+
+  <section id="connect">
+    <h2><span class="no">第 8 步</span>连接和发数据：教学 GATT 路线（跨平台互连）</h2>
+      <p>先把边界说清楚：<b>BTHome 没有连接</b>。规范目标是「用 BLE 发现包共享传感器数据和按键」，不提供控制通道。源码里这条<b>教学扩展</b>路线（<b>不属于 BTHome 标准</b>）与 Android bthome-mvp 用同一套 UUID 和指令，iPhone 与 Android 手机可以互连：</p>
+      <table><tr><th>项</th><th>UUID / 值</th><th>说明</th></tr>
+        <tr><td>服务</td><td><code>476CDF45-6063-43A1-B8E2-8C1FBED00601</code></td><td>128 位随机 UUID，不冒用已登记 16 位 UUID</td></tr>
+        <tr><td>特征</td><td><code>476CDF45-6063-43A1-B8E2-8C1FBED00602</code></td><td>READ + WRITE</td></tr>
+        <tr><td>指令</td><td><code>01</code></td><td>主端写入 → 从端准备新读数 → 主端读回 BTHome 帧</td></tr></table>
+      <pre><span class="cm">// SensorClient.swift · 主端：一步步来</span>
+manager.connect(peripheral, options: nil)               <span class="cm">// ① 连接</span>
+<span class="cm">// didConnect →</span> peripheral.discoverServices([DemoProtocol.service])
+<span class="cm">// didDiscoverServices →</span> discoverCharacteristics([.sample], for: service)
+<span class="cm">// didDiscoverCharacteristicsFor → 检查 properties 含 read+write → 就绪</span>
+peripheral.writeValue(Data([0x01]), for: ch, type: .withResponse)  <span class="cm">// ② 请求</span>
+<span class="cm">// didWriteValueFor →</span> peripheral.readValue(for: ch)              <span class="cm">// ③ 读回</span>
+<span class="cm">// didUpdateValueFor →</span> Bthome.parse(ch.value!)                   <span class="cm">// ④ 同一套解析</span>
+
+<span class="cm">// SensorPeripheral.swift · 从端：CBPeripheralManager（iOS 6）</span>
+let ch = CBMutableCharacteristic(type: .sample, properties: [.read, .write],
+                                 value: nil, permissions: [.readable, .writeable])
+<span class="cm">// didReceiveWrite：value == 01 → respond(.success)，准备新读数</span>
+<span class="cm">// didReceiveRead：request.value = sampleBytes(当前温度) → respond(.success)</span></pre>
+      <div class="key"><span class="tag">重点 · iOS 与 Android 的三个差异</span>① 订阅（如果改用 notify 路线）iOS 一步 <code>setNotifyValue(true, for:)</code> 就完成「本机栈接收 + 设备 CCCD」两件事，Android 要两步（C7）。② iOS 没有 CCCD 写回调，从端用 <code>didReceiveRead/didReceiveWrite</code> 响应 ATT 请求，<b>必须 respond</b>，否则主端卡死。③ 读响应要处理 <code>request.offset</code>（长值分片读），源码用 <code>dropFirst(offset)</code>。</div>
+      <p>实际跑起来：从端启动广播 → 主端列表出现「可连接」设备 → 点进去等「已就绪」→ 点「请求新读数」→ 显示从端滑杆温度 + 50.55% 湿度 + 原始字节。从端拖滑杆到 -5.5 再请求，验证符号扩展。</p>
+      <div class="recap"><b>本步收束：</b>BTHome 本身不连接；教学 GATT 用同一套帧：connect → 发现 → 写 01 → 读回 → parse。跨平台同 UUID。</div>
   </section>
 
   <section id="accept">
-    <h2><span class="no">第 4 步</span>第二部 iPhone 当外设验收</h2>
-      <p>第二部 iPhone 用 CBPeripheralManager 提供 1809 服务+2A6E 特征发通知；主力机连接订阅显示。改值看刷新；锁屏/切后台/终止各测恢复。记录双机日志对时间线。</p>
-    <pre><span class="cm">// 外设机：CBPeripheralManager（iOS 6+）</span>
-let ch = CBMutableCharacteristic(type: CBUUID(string: "2A6E"),
-  properties: [.notify, .read], value: nil, permissions: [.readable])
-let svc = CBMutableService(type: CBUUID(string: "1809"), primary: true)
-svc.characteristics = [ch]
-pm.add(svc)
-pm.startAdvertising([CBAdvertisementDataServiceUUIDsKey: [svc.uuid]])
-<span class="cm">// 改值推送（2410 → 24.10°C，小端 6A 09）</span>
-pm.updateValue(Data([0x6A, 0x09]), for: ch, onSubscribedCentrals: nil)</pre>
+    <h2><span class="no">第 9 步</span>验收清单：两台手机对时间线</h2>
+      <p>A 机开从端（或拿真实 BTHome 设备 / Android bthome-mvp 当广播源），B 机（iPhone）开主端。按清单逐条打勾：</p>
+      <table><tr><th>#</th><th>操作</th><th>期望</th><th>不通过先查</th></tr>
+        <tr><td>1</td><td>B 机进主端页</td><td>3 秒内出现广播源，温湿度跳动</td><td>权限（C2）、蓝牙开关、FCD2 拼写</td></tr>
+        <tr><td>2</td><td>nRF Connect 同时扫</td><td>能看到 <code>D2FC 40 02…</code> 原始服务数据</td><td>广播源根本没发 → 查从端状态</td></tr>
+        <tr><td>3</td><td>从端滑杆拉到 -5.5，主端请求</td><td>显示 -5.50 °C</td><td>显示 650.50 → 符号扩展没做</td></tr>
+        <tr><td>4</td><td>真实 BTHome 设备改值</td><td>1 个广播间隔内列表更新，无需连接</td><td>没更新 → 合并逻辑或解析失败</td></tr>
+        <tr><td>5</td><td>广播源走远 10m</td><td>RSSI 下降，读数不变</td><td>读数乱 → 解析越界或字节序错</td></tr>
+        <tr><td>6</td><td>从端点停止</td><td>B 机约 10s 后标离线</td><td>一直在线 → 没做超时刷新</td></tr>
+        <tr><td>7</td><td>B 机锁屏 1 分钟再亮</td><td>恢复后数据继续（带 UUID 扫描后台可跑）</td><td>停了 → 扫描没带 UUID（C9）</td></tr>
+        <tr><td>8</td><td>B 机切后台 / 被系统终止</td><td>MVP 会停会话；产品级按 C9 恢复</td><td>预期行为，记录在案</td></tr>
+        <tr><td>9</td><td>A 机 Android、B 机 iPhone 互连</td><td>写 01 读回成功，读数一致</td><td>UUID 不一致 → 对照 DemoProtocol</td></tr></table>
+      <div class="key"><span class="tag">对标</span>同一台广播源，拿 Home Assistant 或 ESPHome BLE Gateway 同时收。三方读数一致（误差 ≤0.01），说明你的解析器对了；不一致就把那一帧 hex 抓出来逐字节对。</div>
+      <div class="recap"><b>本步收束：</b>9 条清单覆盖扫描、符号、更新、离线、后台、跨平台；与 HA 对标。</div>
+  </section>
+
+  <section id="more">
+    <h2><span class="no">第 10 步</span>做完之后往哪走</h2>
+      <table><tr><th>方向</th><th>做什么</th><th>关键点</th></tr>
+        <tr><td>加密</td><td>bit0=1，AES-CCM，密钥 16 字节</td><td>nonce = MAC(6) + UUID(2) + 设备信息(1) + counter(4)；接收端<b>必须校验 counter 递增</b>防重放；iOS 侧 MAC 不可得，加密设备对接要另想办法拿地址</td></tr>
+        <tr><td>真传感器</td><td>ESP32-C3 + SHT4x，ESPHome 发 BTHome</td><td>放电量对象 0x01，电池设备把间隔拉到 1s 以上</td></tr>
+        <tr><td>接 HA</td><td>HA 装 Bluetooth 集成即自动发现</td><td>你的设备名会成为 HA 里的实体名</td></tr>
+        <tr><td>标准 GATT 温度计</td><td>1809 健康温度计 / 181A 环境感知</td><td>2A1C 是 IEEE-11073 FLOAT、2A6E 是 sint16×0.01；配套 <a href="https://github.com/qingzhu-ai-public/qingzhu-blue/tree/main/examples/ios/thermometer-mvp">thermometer-mvp</a>；下方解码工坊两种都能练</td></tr>
+        <tr><td>后台常驻</td><td>bluetooth-central + RestoreIdentifier</td><td>回到 C9：后台模式≠常驻，被终止靠状态恢复重启</td></tr>
+        <tr><td>需要双向</td><td>广播不够用，回到 GATT 连接路线</td><td>BTHome 不定义 GATT；正式产品按 C4–C8 自己定服务、特征和指令</td></tr></table>
+      <div class="recap"><b>本步收束：</b>广播路线适合单向遥测；要配置、要历史、要可靠送达就走连接。</div>
+  </section>
+
+  <section id="apimap">
+    <h2><span class="no">第 11 步</span>本项目用到的 iOS API 与版本</h2>
+    <figure>
+      <svg viewBox="0 0 760 210" role="img" aria-label="BTHome 双机数据流（iOS 视角）">
+        <defs><marker id="m11" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 z" fill="#9DB4DC"/></marker><marker id="m11b" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 z" fill="#2A9D8F"/></marker></defs>
+        <rect x="20" y="30" width="200" height="120" rx="10" fill="#FBF3E4" stroke="#EDD9B4"/>
+        <text x="120" y="55" text-anchor="middle" font-size="13" font-weight="bold" fill="#8A5510">广播源</text>
+        <text x="120" y="78" text-anchor="middle" font-size="10" fill="#A8762A">Android bthome-mvp / ESP32 / Shelly</text>
+        <text x="120" y="98" text-anchor="middle" font-size="10" fill="#A8762A">BthomeEncoder（升序+小端）</text>
+        <text x="120" y="118" text-anchor="middle" font-size="10" fill="#A8762A">Service Data 0xFCD2</text>
+        <text x="120" y="138" text-anchor="middle" font-size="10" fill="#B04A35">iPhone 发不了这种广播</text>
+        <rect x="540" y="30" width="200" height="120" rx="10" fill="#ECF1FB" stroke="#C9D8F2"/>
+        <text x="640" y="55" text-anchor="middle" font-size="13" font-weight="bold" fill="#2F58A8">iPhone 主端</text>
+        <text x="640" y="80" text-anchor="middle" font-size="10" fill="#5B7DB1">scanForPeripherals([FCD2])</text>
+        <text x="640" y="100" text-anchor="middle" font-size="10" fill="#5B7DB1">Bthome.parse（协议层）</text>
+        <text x="640" y="120" text-anchor="middle" font-size="10" fill="#5B7DB1">identifier 合并 → SwiftUI</text>
+        <line x1="220" y1="90" x2="540" y2="90" stroke="#9DB4DC" stroke-width="2" marker-end="url(#m11)"/>
+        <text x="380" y="80" text-anchor="middle" font-size="11" fill="#7A7267">BLE 广播 · 不连接、不配对，扫到即解析</text>
+        <rect x="20" y="165" width="720" height="34" rx="10" fill="#E9F4F2" stroke="#BFE0DB"/>
+        <text x="380" y="187" text-anchor="middle" font-size="11.5" fill="#1E7268">教学 GATT 路线：iPhone ↔ iPhone / Android · 476CDF45-…0601 · 写 01 → 读回 BTHome 帧（跨平台互连）</text>
+      </svg>
+      <figcaption>广播路线：iPhone 只当接收器；教学 GATT 路线两端共用纯 Swift 协议层，可自检、可跨平台。</figcaption>
+    </figure>
     <table>
-      <tr><th>验收场景</th><th>预期</th><th>依据课</th></tr>
-      <tr><td>前台改值</td><td>1 秒内 UI 刷新，数值与外设端一致</td><td>C7</td></tr>
-      <tr><td>负温度（DA FD）</td><td>显示 -5.50°C 而非 649.86°C</td><td>本课</td></tr>
-      <tr><td>锁屏 / 切后台</td><td>事件仍交付（本地通知/日志验证）</td><td>C9</td></tr>
-      <tr><td>系统终止后外设发通知</td><td>App 后台重启，willRestoreState 续订</td><td>C9</td></tr>
-      <tr><td>用户强退</td><td>不重启（预期行为，记录在案）</td><td>C9</td></tr>
-      <tr><td>外设关电再开</td><td>didDisconnect → 自动重连 → 重订阅 → 数据恢复</td><td>C4/C7</td></tr>
-      <tr><td>双机日志对时间线</td><td>外设 updateValue 时刻 ≈ 中心 didUpdateValueFor 时刻</td><td>—</td></tr>
+      <tr><th>环节</th><th>API</th><th>引入</th></tr>
+      <tr><td>主端扫描</td><td>scanForPeripherals(withServices:options:)</td><td><span class="api-lv">iOS 5</span></td></tr>
+      <tr><td>取服务数据</td><td>CBAdvertisementDataServiceDataKey</td><td><span class="api-lv">iOS 5</span></td></tr>
+      <tr><td>从端广播</td><td>CBPeripheralManager.startAdvertising（仅两键）</td><td><span class="api-lv">iOS 6</span></td></tr>
+      <tr><td>从端服务</td><td>CBMutableService / CBMutableCharacteristic</td><td><span class="api-lv">iOS 6</span></td></tr>
+      <tr><td>连接路线</td><td>connect / discoverServices / discoverCharacteristics</td><td><span class="api-lv">iOS 5</span></td></tr>
+      <tr><td>读写</td><td>writeValue(_:for:type:) / readValue(for:)</td><td><span class="api-lv">iOS 5</span></td></tr>
+      <tr><td>订阅（notify 路线）</td><td>setNotifyValue(_:for:)（一步完成）</td><td><span class="api-lv">iOS 5</span></td></tr>
+      <tr><td>长写分片</td><td>maximumWriteValueLength(for:)</td><td><span class="api-lv">iOS 9</span></td></tr>
+      <tr><td>后台恢复</td><td>RestoreIdentifierKey + willRestoreState</td><td><span class="api-lv">iOS 7</span></td></tr>
     </table>
-      <div class="recap"><b>本步收束：</b>双机+多场景验收；每行有预期有依据，测完打勾。</div>
+    <div class="recap"><b>本步收束：</b>扫描/读写/订阅都是 iOS 5 老 API；从端 iOS 6；分片 iOS 9；后台恢复 iOS 7。</div>
   </section>
 
   <section id="lab">
-    <h2><span class="no">动手</span>两场演练：六步流程、解码工坊</h2>
-    <p>演练一按顺序勾选六步，右侧累积整条链路日志。勾完即走通一个温湿度计 App。演练二输入十六进制字节、选格式，亲手解码验证。</p>
+    <h2><span class="no">动手</span>两场演练：编码闭环、解码工坊</h2>
+    <p>演练一：你就是广播源（Android/ESP32 视角），拖温湿度看 BTHome 字节，再解回来验证闭环；勾「超长设备名」看 31 字节预算爆掉。演练二：输入任意十六进制字节，选格式亲手解码（BTHome 温度、标准 2A6E、2A1C FLOAT 都练得到）。</p>
     <div class="lab">
-      <div class="lab-head"><b>演练一 · 实战流程演练</b><span class="hint">六步异步链</span></div>
-      
-      <div class="lab-body single"><div><div id="steps11"></div><div class="stats"><div class="stat-box good"><b id="prog11">0 / 6</b><small>完成</small></div></div></div><div class="logcat"><div class="logcat-head"><span>链路日志</span><span>live</span></div><div class="logcat-body" id="log11"><span class="c">// 勾选步骤</span></div></div></div>
-      <div class="lab-foot"><span class="hint">顺序：扫描→连接→发现→订阅→解析→显示</span></div>
+      <div class="lab-head"><b>演练一 · 编码演练</b><span class="hint">31 字节预算（广播源视角）</span></div>
+      <div class="controls"><div class="ctl-row"><label>温度 <b id="lt">25.1</b> °C <input type="range" id="rt" min="-40" max="85" step="0.1" value="25.1"></label><label>湿度 <b id="lh">45.2</b> % <input type="range" id="rh" min="0" max="100" step="0.1" value="45.2"></label><label class="chk"><input type="checkbox" id="cb"> 加入电量 90%</label><label class="chk"><input type="checkbox" id="cn"> 用超长设备名</label></div></div>
+      <div class="lab-body"><div><pre id="bytes11" style="margin:0;"></pre></div><div class="logcat"><div class="logcat-head"><span>主端解析结果</span><span id="bud11">预算 23/31</span></div><div class="logcat-body" id="log11"></div></div></div>
+      <div class="lab-foot"><span class="hint">编码 → 字节 → 解码闭环；iPhone 自己发不了这包，但 Android/ESP32 发得了</span></div>
     </div>
     <div class="lab">
       <div class="lab-head"><b>演练二 · 解码工坊</b><span class="hint">小端 + 符号 + FLOAT</span></div>
       <div class="controls">
-        <div class="seg" id="fmt11"><button data-f="s16" class="on">2A6E sint16</button><button data-f="u16">2A6F uint16</button><button data-f="float">2A1C FLOAT</button></div>
-        <input id="hexIn" type="text" value="6A 09" spellcheck="false" style="font-family:ui-monospace,Consolas,monospace;font-size:13px;padding:6px 10px;border:1px solid #D8D2C6;border-radius:8px;width:150px;">
+        <div class="seg" id="fmt11"><button data-f="s16" class="on">sint16（BTHome 0x02 / 2A6E）</button><button data-f="u16">uint16（0x03 / 2A6F）</button><button data-f="float">2A1C FLOAT</button></div>
+        <input id="hexIn" type="text" value="C4 09" spellcheck="false" style="font-family:ui-monospace,Consolas,monospace;font-size:13px;padding:6px 10px;border:1px solid #D8D2C6;border-radius:8px;width:150px;">
         <button class="btn" id="decBtn" type="button">解码</button>
       </div>
       <div class="lab-body">
         <div>
           <div class="chips" id="decChips"></div>
-          <div class="key" id="decHint"><span class="tag">试试</span>6A 09 / DA FD / A8 11；FLOAT 试 6A 09 00 FE</div>
+          <div class="key" id="decHint"><span class="tag">试试</span>C4 09 / DA FD / BF 13；FLOAT 试 6A 09 00 FE</div>
         </div>
         <div class="logcat"><div class="logcat-head"><span>解码过程</span><span>live</span></div><div class="logcat-body" id="decLog"><span class="c">// 输入字节，点解码</span></div></div>
       </div>
       <div class="lab-foot"><span class="hint">sint16 两字节、FLOAT 四字节；字节数不对会报错</span></div>
     </div>
-    <div class="key"><span class="tag">看懂这两场演练</span>六步异步链每步等回调；解析小端+温度带符号（2A1C 走 FLOAT）；后台恢复靠 bluetooth-central+restoration；双机+多场景验收对时间线。</div>
+    <div class="key"><span class="tag">看懂这两场演练</span>广播源把读数按「对象 ID 升序 + 小端 + 倍率」编码进预算；接收端用同一张对象表反向解回。两端共用协议层，就不会对不上。</div>
   </section>
 
   <section id="quiz">
-    <h2><span class="no">自测</span>六个问题</h2>
+    <h2><span class="no">自测</span>7 个问题</h2>
     <div class="card" id="quiz-box"></div>
-    <p id="quiz-done" style="display:none;font-weight:700;color:#1E7268;">全对。iOS 板十一课完成。接下来鸿蒙 / Flutter / RN 板。</p>
+    <p id="quiz-done" style="display:none;font-weight:700;color:#1E7268;">全对。iOS 板十一课全部完成。拿 Android bthome-mvp 跨平台互连，或去鸿蒙 / Flutter / RN 板做同一件事。</p>
   </section>
 
   <section id="map">
-    <h2><span class="no">回顾</span>实战清单</h2>
-    <table>
-      <tr><th>步</th><th>API / 要点</th></tr>
-      <tr><td>扫描</td><td>scanForPeripherals 带 UUID（iOS 5）</td></tr>
-      <tr><td>连接</td><td>connect + 强引用 + 状态机（iOS 5）</td></tr>
-      <tr><td>发现</td><td>discoverServices → discoverCharacteristics 两级</td></tr>
-      <tr><td>订阅</td><td>setNotifyValue；重连后重放（iOS 5）</td></tr>
-      <tr><td>解析</td><td>2A6E sint16×0.01；2A1C IEEE-11073 FLOAT</td></tr>
-      <tr><td>后台</td><td>bluetooth-central + RestoreIdentifier（iOS 7）</td></tr>
-      <tr><td>验收</td><td>双机七场景，预期+依据逐行打勾</td></tr>
-    </table>
-    <div class="note"><span class="tag">说明</span>本页为教学整理，特征格式对照 Bluetooth SIG GATT Supplement；演练为模拟，非真实设备通信。</div>
+    <h2><span class="no">回顾</span>项目速查</h2>
+    <table><tr><th>环节</th><th>API / 规范</th><th>最容易错</th></tr>
+      <tr><td>规范</td><td>bthome.io/format 对象 ID 表</td><td>拿了 v1 的 UUID</td></tr>
+      <tr><td>识别</td><td>Service Data 0xFCD2</td><td>写成 0x181C</td></tr>
+      <tr><td>设备信息</td><td>bit0 加密 / bit2 触发 / bit5-7 版本</td><td>没判版本就解</td></tr>
+      <tr><td>主端扫描</td><td>scanForPeripherals 带 UUID + ServiceDataKey</td><td>后台 nil 扫描扫不到</td></tr>
+      <tr><td>主端解析</td><td>小端 + 符号扩展 + 未知即停 + 边界检查</td><td>零下温度变 650 °C</td></tr>
+      <tr><td>从端边界</td><td>startAdvertising 仅 LocalName + ServiceUUIDs</td><td>以为 iPhone 能发 BTHome 广播</td></tr>
+      <tr><td>热更新</td><td>iOS 无 setAdvertisingData，stop+start</td><td>照搬 Android 热更新</td></tr>
+      <tr><td>连接路线</td><td>connect → 发现 → 写 01 → 读回 → parse</td><td>从端不 respond，主端卡死</td></tr>
+      <tr><td>验收</td><td>双机 9 条 + 与 HA 对标 + 跨平台互连</td><td>只测了正常值</td></tr>
+      <tr><td>源码</td><td>examples/ios/bthome-mvp（13 项自检）</td><td>只看不编译</td></tr></table>
+    <div class="note"><span class="tag">说明</span>本页为教学整理，平台边界对照 Apple startAdvertising 官方文档；演练为模拟，非真实设备通信。</div>
   </section>
 
   <section id="refs">
     <h2><span class="no">依据</span>参考链接</h2>
     <div class="card refs">
-      <h3 style="margin-top:0;">Apple 官方文档</h3>
+      <h3 style="margin-top:0;">BTHome 规范</h3>
       <ul>
+        <li><a href="https://bthome.io/format/" target="_blank" rel="noopener">bthome.io/format</a> <span class="src">— 广播结构、设备信息字节、对象 ID 表（权威）</span></li>
+        <li><a href="https://bthome.io/encryption/" target="_blank" rel="noopener">bthome.io/encryption</a> <span class="src">— AES-CCM、nonce、防重放</span></li>
+        <li><a href="https://github.com/Bluetooth-Devices/bthome-ble" target="_blank" rel="noopener">bthome-ble 参考解析器</a> <span class="src">— 含各类型测试样例</span></li>
+      </ul>
+      <h3>Apple API 参考</h3>
+      <ul>
+        <li><a href="https://developer.apple.com/documentation/corebluetooth/cbperipheralmanager/startadvertising(_:)" target="_blank" rel="noopener">startAdvertising(_:)</a> <span class="src">— iOS 6；官方写明仅支持 LocalName + ServiceUUIDs 两键（平台边界依据）</span></li>
+        <li><a href="https://developer.apple.com/documentation/corebluetooth/cbperipheralmanager" target="_blank" rel="noopener">CBPeripheralManager</a> <span class="src">— iOS 6；从端角色</span></li>
+        <li><a href="https://developer.apple.com/documentation/corebluetooth/cbperipheral/setnotifyvalue(_:for:)" target="_blank" rel="noopener">setNotifyValue(_:for:)</a> <span class="src">— iOS 5；一步订阅</span></li>
         <li><a href="https://developer.apple.com/documentation/corebluetooth" target="_blank" rel="noopener">Core Bluetooth 框架总览</a> <span class="src">— 中心/外设两条角色线</span></li>
-        <li><a href="https://developer.apple.com/documentation/corebluetooth/cbperipheralmanager" target="_blank" rel="noopener">CBPeripheralManager</a> <span class="src">— iOS 6；第二部 iPhone 当外设</span></li>
-        <li><a href="https://developer.apple.com/documentation/corebluetooth/cbperipheral/setnotifyvalue(_:for:)" target="_blank" rel="noopener">setNotifyValue(_:for:)</a> <span class="src">— iOS 5；订阅入口</span></li>
       </ul>
-      <h3>规范与 UUID</h3>
+      <h3>配套源码与同项目</h3>
       <ul>
-        <li><a href="https://www.bluetooth.com/specifications/specs/gatt-specification-supplement/" target="_blank" rel="noopener">Bluetooth SIG · GATT Specification Supplement</a> <span class="src">— 2A6E/2A6F/2A1C 字段格式与分辨率</span></li>
-        <li><a href="https://developer.apple.com/documentation/corebluetooth/cbuuid" target="_blank" rel="noopener">CBUUID</a> <span class="src">— iOS 5；16 位短 UUID 写法</span></li>
-      </ul>
-      <h3>实测与深入</h3>
-      <ul>
-        <li><a href="https://punchthrough.com/core-bluetooth-guide/" target="_blank" rel="noopener">Punch Through · Core Bluetooth Ultimate Guide</a> <span class="src">— 完整 App 工程经验</span></li>
-        <li><a href="https://developer.apple.com/documentation/technotes/tn3115-bluetooth-state-restoration-app-relaunch-rules" target="_blank" rel="noopener">TN3115 · 状态恢复重启规则</a> <span class="src">— 验收「终止/强退」两行的判定依据</span></li>
+        <li><a href="https://github.com/qingzhu-ai-public/qingzhu-blue/tree/main/examples/ios/bthome-mvp" target="_blank" rel="noopener">qingzhu-blue / examples / ios / bthome-mvp</a> <span class="src">— 可直接编译的 iOS 工程 + 13 项协议自检</span></li>
+        <li><a href="https://qingzhu-ai-public.github.io/qingzhu-blue/examples/ios/bthome-mvp/prototype/index.html" target="_blank" rel="noopener">交互原型</a> <span class="src">— 浏览器里走完扫描/连接/模拟外设</span></li>
+        <li><a href="../android/14-bthome-project.html">Android 板 B14 · 同一项目</a> <span class="src">— 教学服务同 UUID，跨平台互连</span></li>
+        <li><a href="https://github.com/qingzhu-ai-public/qingzhu-blue/tree/main/examples/ios/thermometer-mvp" target="_blank" rel="noopener">thermometer-mvp</a> <span class="src">— 标准 GATT 教学路线的前身工程</span></li>
       </ul>
     </div>
     <div class="next-links">
@@ -402,27 +578,56 @@ pm.updateValue(Data([0x6A, 0x09]), for: ch, onSubscribedCentrals: nil)</pre>
 </main>
 <aside class="toc" id="toc">
   <div class="toc-title">本课目录</div>
-  <a href="#flow">六步流程</a>
-  <a href="#parse">字节解析</a>
-  <a href="#eng">工程收束</a>
+  <a href="#what">协议在哪</a>
+  <a href="#format">广播结构</a>
+  <a href="#layout">工程结构</a>
+  <a href="#parser">解析器</a>
+  <a href="#scanner">主端扫描</a>
+  <a href="#advertiser">从端边界</a>
+  <a href="#fake">模拟数据</a>
+  <a href="#connect">连接路线</a>
   <a href="#accept">双机验收</a>
+  <a href="#more">进阶</a>
+  <a href="#apimap">API 地图</a>
   <a href="#lab">两场演练</a>
   <a href="#quiz">本课自测</a>
-  <a href="#map">实战清单</a>
+  <a href="#map">项目速查</a>
   <a href="#refs">参考链接</a>
 </aside>
 </div>
 <script>
 
+// 演练一：编码闭环（广播源视角）
 (function(){
-  var steps=[['扫描 didDiscover','<div><span class="ok">didDiscover</span> 温度计 1809</div>'],['连接 didConnect','<div><span class="ok">didConnect</span></div>'],['发现服务/特征','<div><span class="ok">didDiscoverServices/Characteristics</span> 2A6E</div>'],['订阅 setNotifyValue','<div><span class="ok">isNotifying=true</span></div>'],['解析字节','<div><span class="ok">6A 09 → 24.10°C</span></div>'],['显示+后台恢复','<div><span class="ok">UI 刷新</span> <span class="c">// bluetooth-central+restoration</span></div>']];
-  var done=[false,false,false,false,false,false];
-  var w=document.getElementById('steps11');
-  steps.forEach(function(s,i){var b=document.createElement('button');b.className='opt';b.style.margin='6px 0';b.textContent=(i+1)+'. '+s[0];
-    b.addEventListener('click',function(){if(i>0&&!done[i-1])return;done[i]=!done[i];b.classList.toggle('right',done[i]);
-      var h='';done.forEach(function(d,j){if(d)h+=steps[j][1];});document.getElementById('log11').innerHTML=h||'<span class="c">// 勾选</span>';
-      document.getElementById('prog11').textContent=done.filter(Boolean).length+' / 6';});
-    w.appendChild(b);});
+  var rt=document.getElementById('rt'),rh=document.getElementById('rh'),cb=document.getElementById('cb'),cn=document.getElementById('cn');
+  function le(v,n){var r=[];for(var k=0;k<n;k++){r.push(('0'+((v>>(8*k))&255).toString(16)).slice(-2).toUpperCase());}return r;}
+  function enc(){
+    var t=Math.round(parseFloat(rt.value)*100), h=Math.round(parseFloat(rh.value)*100), out=[0x40];
+    if(cb.checked){out=out.concat([0x01].concat(le(90,1)));}
+    out=out.concat([0x02].concat(le(t,2)));
+    out=out.concat([0x03].concat(le(h,2)));
+    return out.map(function(b){return ('0'+b.toString(16)).slice(-2).toUpperCase();}).join(' ');
+  }
+  function dec(hex){
+    var b=hex.split(' ').map(function(x){return parseInt(x,16);}), i=1, res=[], names={1:'电量',2:'温度',3:'湿度'}, lens={1:1,2:2,3:2}, fac={1:1,2:0.01,3:0.01};
+    while(i<b.length){var id=b[i]; if(!names[id])break; var v=0; for(var k=0;k<lens[id];k++) v+=(b[i+1+k]*Math.pow(256,k)); if(id===2&&v>32767)v-=65536; res.push(names[id]+' = '+(v*fac[id]).toFixed(2)); i+=1+lens[id];}
+    return res;
+  }
+  function render(){
+    var hex=enc(), name=cn.checked?'Qingzhu-BTHome-Temperature-And-Humidity-Sensor-For-Classroom':'QZ-TH01';
+    var dataLen=hex.split(' ').length, mainOnly=3+4+dataLen, used=mainOnly+2+name.length;
+    document.getElementById('lt').textContent=(+rt.value).toFixed(1);
+    document.getElementById('lh').textContent=(+rh.value).toFixed(1);
+    document.getElementById('bytes11').textContent='D2FC '+hex;
+    var over=used>31;
+    document.getElementById('bud11').textContent=(over?'超预算 ':'预算 ')+used+'/31';
+    document.getElementById('bud11').style.color=over?'#FF7A2F':'#3FB950';
+    var log=over?'<div><span class="err">ADVERTISE_FAILED_DATA_TOO_LARGE（Android 侧错误码）</span></div><div><span class="c">// Flags 3 + 服务数据 '+(4+dataLen)+' + 名字 '+(2+name.length)+'（'+name.length+' 字节）= '+used+'，放不下。</span></div><div><span class="c">// 做法：名字挪到扫描响应，主包只剩 '+mainOnly+'/31。iOS 前台预算更紧（约 28 字节）。</span></div>'
+      :dec(hex).map(function(x){return '<div><span class="ok">'+x+'</span></div>';}).join('')+'<div><span class="c">// 与滑杆一致 → 编解码闭环</span></div>';
+    document.getElementById('log11').innerHTML=log;
+  }
+  [rt,rh,cb,cn].forEach(function(e){e.addEventListener('input',render);});
+  render();
 })();
 
 // 演练二：解码工坊
@@ -430,7 +635,7 @@ pm.updateValue(Data([0x6A, 0x09]), for: ch, onSubscribedCentrals: nil)</pre>
   var fmt='s16';
   var input=document.getElementById('hexIn');
   var log=document.getElementById('decLog');
-  var META={s16:{name:'2A6E sint16',unit:'°C',need:2},u16:{name:'2A6F uint16',unit:'%',need:2},float:{name:'2A1C FLOAT',unit:'°C',need:4}};
+  var META={s16:{name:'sint16 ×0.01',unit:'°C',need:2},u16:{name:'uint16 ×0.01',unit:'%',need:2},float:{name:'2A1C FLOAT',unit:'°C',need:4}};
   function line(html){ var d=document.createElement('div'); d.innerHTML=html; log.appendChild(d); }
   function chips(ok,text){
     document.getElementById('decChips').innerHTML=
@@ -471,7 +676,7 @@ pm.updateValue(Data([0x6A, 0x09]), for: ch, onSubscribedCentrals: nil)</pre>
   document.querySelectorAll('#fmt11 button').forEach(function(b){b.addEventListener('click',function(){
     document.querySelectorAll('#fmt11 button').forEach(function(x){x.classList.remove('on');});
     b.classList.add('on'); fmt=b.getAttribute('data-f');
-    input.value=fmt==='float'?'6A 09 00 FE':(fmt==='u16'?'A8 11':'6A 09');
+    input.value=fmt==='float'?'6A 09 00 FE':(fmt==='u16'?'BF 13':'C4 09');
     decode();
   });});
   document.getElementById('decBtn').addEventListener('click',decode);
@@ -483,7 +688,7 @@ const tocLinks=[...document.querySelectorAll('.toc a')];
 const secs=tocLinks.map(a=>document.getElementById(a.getAttribute('href').slice(1)));
 const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){tocLinks.forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+e.target.id));}});},{rootMargin:'-20% 0px -70% 0px'});
 secs.forEach(s=>s&&io.observe(s));
-const QUIZ=[{"q":"1. 温度 DA FD 解析？","opts":[["sint16 -550 → -5.50°C",true,"对。"],["649.86°C",false,"符号错。"],["5.50°C",false,"是负。"]]},{"q":"2. 订阅用？","opts":[["setNotifyValue(true)",true,"对。"],["writeDescriptor",false,"Android。"],["readValue",false,"那是读。"]]},{"q":"3. 后台收事件靠？","opts":[["bluetooth-central 后台模式",true,"对。"],["常驻定时器",false,"非常驻。"],["前台-only",false,"后台可收。"]]},{"q":"4. 标准 1809 服务的 2A1C 用什么格式？","opts":[["IEEE-11073 FLOAT（尾数+指数）",true,"对。3 字节尾数 + 1 字节指数。"],["sint16 ×0.01",false,"那是 181A 的 2A6E。"],["uint16",false,"湿度 2A6F 才是。"]]},{"q":"5. 2A6E/2A6F 属于哪个标准服务？","opts":[["181A 环境感知",true,"对。1809 健康温度计配的是 2A1C。"],["1809",false,"1809 配 2A1C。"],["180D 心率",false,"那是 2A37。"]]},{"q":"6. FLOAT 字节 6A 09 00 FE 解码？","opts":[["24.10°C",true,"对。尾数 2410 × 10^-2。"],["2410°C",false,"指数 FE=-2 没算。"],["-24.10°C",false,"尾数最高位是 0，为正。"]]}];
+const QUIZ=[{"q":"1. BTHome v2 识别用的是哪个 UUID？","opts":[["0xFCD2（服务数据里写作 D2FC）",true,"对，v1 的 0x181C 已废弃。"],["0x181C",false,"那是 v1。"],["0x2902",false,"那是 CCCD。"]]},{"q":"2. 设备信息字节 0x41 表示？","opts":[["v2 且已加密",true,"bit0=1 加密，bit5-7=010 是 v2。"],["v2 不加密",false,"0x40 才是不加密。"],["v1 且触发式",false,"版本位看 bit5-7。"]]},{"q":"3. 编码时对象 ID 的顺序要求是？","opts":[["必须按 ID 从小到大",true,"否则老接收端会提前停止解析。"],["任意顺序",false,"规范要求升序。"],["必须先湿度后温度",false,"按 ID 数值，不按语义。"]]},{"q":"4. 解析 02 DA FD 得到的温度是？","opts":[["-5.50 °C",true,"0xFDDA=65050，sint16 → -486，×0.01。"],["650.50 °C",false,"没做符号扩展，65050 × 0.01。"],["6505.0 °C",false,"既没扩展也没乘倍率。"]]},{"q":"5. iPhone 能当标准 BTHome 广播源吗？","opts":[["不能：startAdvertising 只支持名字和服务 UUID 两键",true,"对，Apple 官方文档写明。接收器角色没问题。"],["能，用 addServiceData",false,"那是 Android API。"],["能，只要越狱",false,"与越狱无关，API 层就不支持。"]]},{"q":"6. 加密广播的接收端必须额外校验什么？","opts":[["counter 是否递增",true,"否则可被重放攻击。"],["名字是否匹配",false,"名字可伪造。"],["RSSI 是否足够高",false,"与安全无关。"]]},{"q":"7. iOS 主端想让从端发通知，要做几步？","opts":[["一步：setNotifyValue(true, for:)",true,"对。系统同时完成本机栈接收和设备 CCCD 写入；Android 才要两步。"],["两步：先 setNotifyValue 再写 CCCD",false,"iOS 没有手动写 CCCD 的 API，一步完成。"],["三步",false,"一步就够。"]]}];
 let solved=0; const box=document.getElementById('quiz-box');
 QUIZ.forEach((item,qi)=>{
   const h=document.createElement('div'); h.className='quiz-q'; h.textContent=item.q; box.appendChild(h);
