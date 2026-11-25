@@ -204,13 +204,13 @@
   <div class="crumb">蓝牙小课堂 / Android 第十四课 · B14</div>
   <h1>综合实战：<em>BTHome</em> 温湿度计完整 App</h1>
   <p class="lead">这一课做一个真能跑的项目：一台手机当传感器（从端）广播 BTHome 温湿度，另一台手机当接收器（主端）扫描、解析、显示，还能把任意手机模拟成 Home Assistant。协议在哪、怎么对接、两端代码怎么写，全部讲一遍。</p>
-  <div class="meta"><span>平台：Android/Kotlin</span><span>约 45 分钟 · 完整项目</span><span>含交互演练</span><span>前置：B1–B13</span></div>
+  <div class="meta"><span>平台：Android/Kotlin</span><span>约 60 分钟 · 完整项目 · 配套源码</span><span>含交互演练</span><span>前置：B1–B13</span></div>
   <div class="journey">
     <div class="j-step"><span class="n">1</span><span class="t">协议</span><span class="s">bthome.io</span></div>
     <div class="j-step"><span class="n">2</span><span class="t">格式</span><span class="s">FCD2</span></div>
     <div class="j-step"><span class="n">3</span><span class="t">主端</span><span class="s">扫描解析</span></div>
     <div class="j-step"><span class="n">4</span><span class="t">从端</span><span class="s">Advertiser</span></div>
-    <div class="j-step"><span class="n">5</span><span class="t">模拟</span><span class="s">假数据</span></div>
+    <div class="j-step"><span class="n">5</span><span class="t">连接</span><span class="s">GATT</span></div>
     <div class="j-step"><span class="n">6</span><span class="t">验收</span><span class="s">双机</span></div>
   </div>
 
@@ -225,6 +225,7 @@
         <tr><td>源码</td><td><code>github.com/home-assistant/bthome.io</code></td><td>文档源，可追踪更新</td></tr>
         <tr><td>参考解析器</td><td><code>github.com/Bluetooth-Devices/bthome-ble</code></td><td>Python 解析器，含每种类型的测试样例</td></tr>
         <tr><td>Kaitai 格式</td><td><code>github.com/koenvervloesem/BTHome-Kaitai-Struct</code></td><td>结构描述，可生成 11 种语言的解析代码</td></tr></table>
+      <div class="key"><span class="tag">配套源码 · 可以直接编译</span>本课的每一行代码都在 <a href="https://github.com/qingzhu-ai-public/qingzhu-ble-android/tree/main/samples/bthome-thermometer" target="_blank" rel="noopener"><b>qingzhu-ble-android / samples / bthome-thermometer</b></a>。一个 APK 两个角色，主端、从端、连接路线、单元测试全在里面。读课时开着它对照，比只看片段清楚得多。</div>
       <div class="key"><span class="tag">对接协议的正确姿势</span>不是找 SDK，而是<b>读格式规范</b>：确定 UUID → 确定设备信息字节 → 查对象 ID 表拿「类型 / 长度 / 有无符号 / 倍率」。这张表就是你写解析器需要的全部东西。</div>
       <div class="recap"><b>本步收束：</b>规范在 bthome.io/format，对象 ID 表是解析的唯一天书。</div>
   </section>
@@ -252,7 +253,7 @@ D2FC                      UUID，按字节倒读 = 0xFCD2
         <tr><td>packet id</td><td>0x00</td><td>uint8</td><td>1</td><td>00 2A → 42</td></tr>
         <tr><td>温度</td><td>0x02</td><td>sint16 LE</td><td>0.01</td><td>02 CA09 → 25.06 °C</td></tr>
         <tr><td>湿度</td><td>0x03</td><td>uint16 LE</td><td>0.01</td><td>03 BF13 → 50.55 %</td></tr>
-        <tr><td>电压</td><td>0x0C</td><td>uint16 LE</td><td>0.001</td><td>0C 170B → 2.935 V</td></tr>
+        <tr><td>电压</td><td>0x0C</td><td>uint16 LE</td><td>0.001</td><td>0C 020C → 3.074 V</td></tr>
         <tr><td>电量</td><td>0x01</td><td>uint8</td><td>1</td><td>01 5A → 90 %</td></tr></table>
       <div class="recap"><b>本步收束：</b>Flags + Name + Service Data(0xFCD2)；设备信息字节定版本；对象 ID 升序；小端 + 倍率 + 符号。</div>
   </section>
@@ -262,20 +263,23 @@ D2FC                      UUID，按字节倒读 = 0xFCD2
     
       <p>我们只装一个 APK，靠入口切换角色。协议层是纯 Kotlin，不碰 Android API，好处是能直接写单元测试。</p>
       <pre>app/src/main/java/dev/qingzhu/bthome/
-├── protocol/
-│   ├── BthomeObjects.kt     对象 ID 表：id → 长度/符号/倍率
-│   ├── BthomeParser.kt      bytes → List&lt;Measurement&gt;（纯函数）
-│   └── BthomeEncoder.kt     Measurement list → bytes（从端用）
-├── scanner/
+├── protocol/                纯 Kotlin，不碰 Android API
+│   ├── BthomeObjects.kt     对象 ID 表：id → 长度/符号/倍率/范围
+│   ├── BthomeParser.kt      bytes → BthomeFrame（纯函数）
+│   └── BthomeEncoder.kt     Measurement list → bytes + 31 字节预算
+├── scanner/                 主端
 │   ├── BthomeScanner.kt     ScanFilter + ScanCallback 封装
-│   └── BthomeRepository.kt  Flow&lt;SensorReading&gt;，按地址去重合并
-├── advertiser/
-│   ├── BthomeAdvertiser.kt  BluetoothLeAdvertiser 封装
+│   ├── BthomeRepository.kt  Flow&lt;List&lt;SensorReading&gt;&gt;，按地址合并，10s 标离线
+│   └── BthomeGattClient.kt  连接路线：connectGatt → 订阅 → 写入
+├── advertiser/              从端
+│   ├── BthomeAdvertiser.kt  BluetoothLeAdvertiser 封装（热更新、预算）
+│   ├── BthomeGattServer.kt  连接路线：从端 GATT 服务
+│   ├── TeachingGatt.kt      教学服务的三个 UUID
 │   └── FakeSensorSource.kt  模拟温湿度 / 手动滑杆 / 阶梯剧本
 └── ui/
     ├── MainActivity.kt      角色切换
     ├── scanner/ScannerScreen.kt
-    └── advertiser/AdvertiserScreen.kt</pre>
+    └── advertiser/AdvertiserScreen.kt + AdvertiserViewModel.kt</pre>
       <div class="key"><span class="tag">为什么要分 protocol 包</span>解析是整个项目最容易出错的地方（字节序、符号、截断）。把它做成不依赖 Context 的纯函数，就能用官方测试样例当单元测试，<b>不用两台手机也能验证解析器</b>。</div>
       <div class="recap"><b>本步收束：</b>协议层纯净可测；扫描、广播、UI 三块互不依赖。</div>
   </section>
@@ -284,19 +288,20 @@ D2FC                      UUID，按字节倒读 = 0xFCD2
     <h2><span class="no">第 4 步</span>先写解析器，再用官方样例测</h2>
     
       <pre>// protocol/BthomeObjects.kt
-enum class Obj(val id: Int, val len: Int, val signed: Boolean, val factor: Float) {
-    PACKET_ID(0x00, 1, false, 1f),
-    BATTERY(0x01, 1, false, 1f),
-    TEMPERATURE(0x02, 2, true, 0.01f),
-    HUMIDITY(0x03, 2, false, 0.01f),
-    VOLTAGE(0x0C, 2, false, 0.001f);
-}
-private val BY_ID = Obj.entries.associateBy { it.id }
+enum class Obj(val id: Int, val label: String, val len: Int, val signed: Boolean,
+               val factor: Float, val unit: String, val min: Float, val max: Float) {
+    PACKET_ID(0x00, "序号", 1, false, 1f,     "",   0f,    255f),
+    BATTERY(0x01, "电量", 1, false, 1f,     "%",  0f,    100f),
+    TEMPERATURE(0x02, "温度", 2, true,  0.01f,  "°C", -40f,  85f),
+    HUMIDITY(0x03, "湿度", 2, false, 0.01f,  "%",  0f,    100f),
+    VOLTAGE(0x0C, "电压", 2, false, 0.001f, "V",  0f,    65.535f);
+}                               // min / max：越界只标红，不丢也不直接信
+val OBJ_BY_ID = Obj.entries.associateBy { it.id }
 
 // protocol/BthomeParser.kt
 data class Measurement(val obj: Obj, val value: Float)
 data class BthomeFrame(val version: Int, val encrypted: Boolean, val trigger: Boolean,
-                       val measurements: List<Measurement>)
+                       val measurements: List&lt;Measurement&gt;)
 
 fun parse(serviceData: ByteArray): BthomeFrame? {
     if (serviceData.size &lt; 2) return null
@@ -305,21 +310,23 @@ fun parse(serviceData: ByteArray): BthomeFrame? {
     val trigger   = info and 0x04 != 0
     val version   = (info shr 5) and 0x07
     if (version != 2) return null                 // 只处理 v2
+    if (encrypted) return BthomeFrame(version, true, trigger, emptyList())  // 密文不解析
 
     val out = ArrayList&lt;Measurement&gt;()
     var i = 1
     var lastId = -1
     while (i &lt; serviceData.size) {
         val id = serviceData[i].toInt() and 0xFF
-        val o = BY_ID[id] ?: break                // 规范：不认识就停
-        if (id &lt; lastId) break                    // 规范：必须升序
-        if (i + o.len &gt;= serviceData.size + 1 && i + 1 + o.len &gt; serviceData.size) break
+        val o = OBJ_BY_ID[id] ?: break             // 规范：不认识就停
+        if (id &lt; lastId) break                     // 规范：必须升序
+        if (i + 1 + o.len &gt; serviceData.size) break // 截断包，不能越界读
         val raw = readLE(serviceData, i + 1, o.len, o.signed)
         out += Measurement(o, raw * o.factor)
         lastId = id
         i += 1 + o.len
     }
-    return BthomeFrame(version, encrypted, trigger, out)
+    if (out.isEmpty()) return null                 // 一个对象都没解出来 → 无效帧
+    return BthomeFrame(version, false, trigger, out)
 }
 
 private fun readLE(b: ByteArray, off: Int, len: Int, signed: Boolean): Int {
@@ -341,7 +348,17 @@ private fun readLE(b: ByteArray, off: Int, len: Int, signed: Boolean): Int {
 }
 @Test fun negativeTemperature() {
     assertEquals(-5.50f, parse(hex("4002DAFD"))!!.measurements[0].value, 0.001f)
+}
+@Test fun unknownIdStopsParsing() {              // 规范：不认识就停
+    val f = parse(hex("4002C409530C48656C6C6F"))!!
+    assertEquals(1, f.measurements.size)          // 后面的 text 对象(0x53)没登记，不解析
+    assertNull(parse(hex("40530C4869")))          // 第一个就不认识 → 整帧无效
+}
+@Test fun outOfRangeValueIsKeptAndFlagged() {     // 105% 湿度：解出来，但标红
+    val h = parse(hex("4003A228"))!!.measurements.single()
+    assertEquals(104.02f, h.value, 0.001f); assertFalse(h.inRange)
 }</pre>
+      <div class="key"><span class="tag">不用手机也能测</span>源码里一共 23 个用例：官方样例、零下、0 值、未知 ID、乱序、截断、v1/v3、加密标记、触发式、越界，加上编码器的升序 / 小端 / 500 组随机值往返，以及 31 字节预算。命令 <code>./gradlew -p samples/bthome-thermometer :app:testDebugUnitTest</code>，改一行协议表就能知道有没有改坏。</div>
       <div class="recap"><b>本步收束：</b>表驱动解析，and 0xFF + 小端 + 符号扩展 + 升序 + 未知即停。</div>
   </section>
 
@@ -365,8 +382,10 @@ fun start() {
 
 private val callback = object : ScanCallback() {
     override fun onScanResult(type: Int, r: ScanResult) { emit(r) }
-    override fun onScanFailed(code: Int) {        // 必须处理
-        _error.value = "scan failed: $code"       // 1=已启动 2=注册失败 6=太频繁
+    override fun onScanFailed(code: Int) {        // 必须处理，否则界面一直转圈
+        running = false
+        _errorCode.value = code                   // 1=已在跑 2=注册失败 5=资源不足 6=太频繁
+        _error.value = describe(code)             // 界面按码决定：退避重试，还是停下报错
     }
 }
 
@@ -374,7 +393,7 @@ private fun emit(r: ScanResult) {
     val bytes = r.scanRecord?.getServiceData(BTHOME_UUID) ?: return
     val frame = parse(bytes) ?: return             // 版本不对/加密 → 忽略
     if (frame.encrypted) return                    // 本课不处理加密
-    _readings.offer(SensorReading(
+    _readings.tryEmit(SensorReading(
         address = r.device.address, rssi = r.rssi,
         name = r.scanRecord?.deviceName ?: r.device.name,
         measurements = frame.measurements.associate { it.obj to it.value }
@@ -385,12 +404,18 @@ private fun emit(r: ScanResult) {
       <pre>// scanner/BthomeRepository.kt
 val readings: Flow&lt;List&lt;SensorReading&gt;&gt; = callbackFlow {
     val latest = ConcurrentHashMap&lt;String, SensorReading&gt;()
-    val src = BthomeScanner(ctx)
-    src.readings.onEach { latest[it.address] = it; trySend(latest.values.toList()) }
+    scanner.readings.onEach { latest[it.address] = it; trySend(snapshot(latest)) }
         .launchIn(this)
-    src.start()
-    awaitClose { src.stop() }
-}.flowOn(Dispatchers.Default)</pre>
+    // 没有新广播也要每秒刷一次，才能把 10s 没更新的设备标成离线
+    flow { while (true) { emit(Unit); delay(1_000) } }
+        .onEach { trySend(snapshot(latest)) }.launchIn(this)
+    scanner.start()
+    awaitClose { scanner.stop() }                  // 取消收集 = 停扫描
+}.flowOn(Dispatchers.Default)
+
+fun snapshot(latest): List&lt;SensorReading&gt; = latest.values
+    .map { it.copy(online = now - it.timestamp &lt; OFFLINE_AFTER_MS) }   // 10_000
+    .sortedByDescending { it.timestamp }</pre>
       <div class="recap"><b>本步收束：</b>ScanFilter 按 UUID 过滤；onScanFailed 必处理；按地址保留最新值。</div>
   </section>
 
@@ -413,29 +438,34 @@ fun encode(ms: List&lt;Measurement&gt;): ByteArray {
 
 // advertiser/BthomeAdvertiser.kt
 @RequiresPermission(allOf = [BLUETOOTH_ADVERTISE, BLUETOOTH_CONNECT])
-fun start() {
+fun start(connectable: Boolean, listener: BthomeGattServer.Listener?): Boolean {
     val advertiser: BluetoothLeAdvertiser =
         adapter.bluetoothLeAdvertiser ?: return notSupported()
     val params = AdvertisingSetParameters.Builder()
-        .setConnectable(false)                       // 纯广播，不可连
-        .setLegacyMode(true)                         // 兼容 4.x 接收端
+        .setConnectable(connectable)               // 纯广播不可连；开了连接路线才可连
+        .setScannable(true)                        // 要发扫描响应（放设备名），必须可扫描
+        .setLegacyMode(true)                       // 兼容 4.x 接收端
         .setInterval(AdvertisingSetParameters.INTERVAL_LOW)   // ≈100ms
         .setTxPowerLevel(AdvertisingSetParameters.TX_POWER_MEDIUM)
         .build()
-    advertiser.startAdvertisingSet(params, buildData(), null, null, null, cb)
+    val data = buildData() ?: return false         // 超 31 字节就不发，原因写进 status
+    advertiser.startAdvertisingSet(params, data, buildScanResponse(), null, null, cb)
+    return true
 }
 
 private fun buildData() = AdvertiseData.Builder()
-    .setIncludeDeviceName(true)                      // 名字放 scan response 也行
-    .addServiceData(BTHOME_UUID, encode(current))
+    .addServiceData(BTHOME_UUID, encode(current))  // 主包：Flags 3 + 服务数据
+    .build()
+private fun buildScanResponse() = AdvertiseData.Builder()
+    .setIncludeDeviceName(true)                    // 设备名放扫描响应，各有 31 字节
     .build()
 
-// 数值变了就热更新，不用停广播
+// 数值变了就热更新，不用停广播。异步的：上一次没回调前再设会被丢，用 dirty 合并
 private fun push(ms: List&lt;Measurement&gt;) {
     current = ms
-    set?.setAdvertisingData(buildData())
+    if (updating) dirty = true else { updating = true; set?.setAdvertisingData(buildData()) }
 }</pre>
-      <div class="key"><span class="tag">重点 · 31 字节预算</span>Legacy 广播主包只有 31 字节：Flags 3 + 设备信息 1 + 两个对象 (1+2)×2 = 11，再加名字。名字太长会被系统截断或广播启动失败（<code>ADVERTISE_FAILED_DATA_TOO_LARGE</code>）。想放长名字就把名字挪到 scan response，或开扩展广播。</div>
+      <div class="key"><span class="tag">重点 · 31 字节预算</span>Legacy 广播主包只有 31 字节：Flags 3 + Service Data（长度 1 + 类型 1 + UUID 2 + 数据 7）= <b>14</b>，名字再往里塞就紧张了。名字太长会被系统拒绝（<code>ADVERTISE_FAILED_DATA_TOO_LARGE</code>）。所以源码把名字挪到<b>扫描响应</b>——它另有一份 31 字节预算，两边互不挤占。要更长就开扩展广播。</div>
       <div class="recap"><b>本步收束：</b>encode 升序写小端；setConnectable(false)；INTERVAL_LOW；setAdvertisingData 热更新。</div>
   </section>
 
@@ -467,70 +497,128 @@ class ManualSource : SensorSource { /* StateFlow 由 Slider 驱动 */ }
 // ③ 剧本：专门复现解析坑
 class ScriptSource : SensorSource {
     override val readings = flow {
-        val script = listOf(-5.50f, 0f, 25.06f, 40f, -40f, 85f)   // 85 故意越界
-        for (v in script) { emit(listOf(Measurement(Obj.TEMPERATURE, v))); delay(3000) }
+        val steps = listOf(-5.50f, 0f, 25.06f, 40f, -40f)   // 温度边界，循环播放
+        for (v in steps) { emit(listOf(Measurement(Obj.TEMPERATURE, v))); delay(3000) }
+        emit(listOf(Measurement(Obj.HUMIDITY, 105f)))       // 105 故意越界
     }
 }</pre>
       <table><tr><th>假数据</th><th>验证什么</th></tr>
         <tr><td>正弦波</td><td>UI 刷新节流、RSSI 抖动下读数稳定</td></tr>
         <tr><td>滑杆拉到负数</td><td>sint16 符号扩展 —— 拉到 -5.5°C 看主端显示是否为 -5.50</td></tr>
         <tr><td>滑杆拉到 0</td><td>零值编码、UI 是否显示 0.00 而非空</td></tr>
-        <tr><td>剧本 85%</td><td>湿度越界时 UI 是否标红，而不是直接信</td></tr>
+        <tr><td>剧本湿度 105%</td><td>越界时主端是否标红「越界」，而不是直接信</td></tr>
         <tr><td>关掉从端</td><td>主端超时后把设备标成「离线」</td></tr></table>
       <div class="key"><span class="tag">第三方模拟</span>不想写代码时，nRF Connect 的 <b>Advertiser</b> 可以直接粘贴原始广播 hex；ESP32 / ESP32-S3 刷 ESPHome 一行 <code>bthome:</code> 就能发；HA 生态里的真实 Shelly BLU 设备也可以直接拿来当对照。</div>
       <div class="recap"><b>本步收束：</b>数据源接口化；正弦波 / 滑杆 / 剧本各验一类问题。</div>
   </section>
 
+  <section id="connect">
+    <h2><span class="no">第 8 步</span>连接和发数据：广播没有的，自己补一条练手路线</h2>
+    
+      <p>先把边界说清楚：<b>BTHome 没有连接</b>。规范首页写着它的目标是「用 BLE 发现包共享传感器数据和按键」，不提供控制通道。广播路线里的「发数据」就是从端改广播，主端扫到即得，全程不连接、不配对——这正是它省电的原因。规范里的 Events（0x3A 按钮事件）和 Commands（0x3B）也都是广播里的对象，不是 GATT。</p>
+      <p>那「连接、发数据」怎么练？源码里多了一条明确标注的<b>教学扩展</b>路线（<b>不属于 BTHome 标准</b>）：从端多开一个自定义 GATT 服务，主端连上来订阅，从端每来一帧新读数就推一帧；主端也能写一帧回去改从端的读数。帧格式不变，所以两端共用同一个 <code>parse()</code> / <code>encode()</code>。流程就是 B4、B5、B6 讲的那条线。</p>
+      <table><tr><th>项</th><th>UUID</th><th>说明</th></tr>
+        <tr><td>服务</td><td><code>9d1f0001-5c6b-4e7a-9b0c-1d2e3f4a5b6c</code></td><td>128 位随机 UUID，不冒用任何已登记的 16 位 UUID</td></tr>
+        <tr><td>特征</td><td><code>9d1f0002-5c6b-4e7a-9b0c-1d2e3f4a5b6c</code></td><td>NOTIFY + WRITE</td></tr>
+        <tr><td>CCCD</td><td><code>00002902-0000-1000-8000-00805F9B34FB</code></td><td>标准描述符，主端写 <code>01 00</code> 表示订阅</td></tr></table>
+      <pre>// ── 从端 advertiser/BthomeAdvertiser.kt：勾了“允许连接” ──
+val params = AdvertisingSetParameters.Builder()
+    .setConnectable(connectable)     // 可连接：主端才能 connectGatt
+    .setScannable(true)              // 要发扫描响应（设备名）
+    .setLegacyMode(true).build()
+gatt = BthomeGattServer(ctx).also { it.start(listener) }   // 同时开 GATT 服务
+
+// ── 从端 advertiser/BthomeGattServer.kt：一个特征，三种能力 ──
+val ch = BluetoothGattCharacteristic(CHAR_UUID,
+    PROPERTY_NOTIFY or PROPERTY_WRITE or PROPERTY_WRITE_NO_RESPONSE, PERMISSION_WRITE)
+ch.addDescriptor(BluetoothGattDescriptor(CCCD_UUID, PERMISSION_WRITE))
+
+override fun onDescriptorWriteRequest(device, requestId, descriptor, preparedWrite,
+                                      responseNeeded, offset, value) {
+    if (descriptor.uuid != CCCD_UUID) return
+    if (responseNeeded) server.sendResponse(device, requestId, GATT_SUCCESS, 0, byteArrayOf())
+    subscribed = value.contentEquals(ENABLE_NOTIFICATION_VALUE)   // 收到 0x0001 = 订阅
+    if (subscribed) notify(encode(current))                        // 订阅完立刻给一帧
+}
+
+override fun onCharacteristicWriteRequest(device, requestId, ch, preparedWrite,
+                                          responseNeeded, offset, value) {
+    if (responseNeeded) server.sendResponse(device, requestId, GATT_SUCCESS, 0, byteArrayOf())
+    parse(value)?.let { listener.onCommand(it.measurements) }      // 和广播同一套解析
+}
+
+// ── 主端 scanner/BthomeGattClient.kt：一步步来 ──
+gatt = device.connectGatt(ctx, false, callback, TRANSPORT_LE)
+
+override fun onConnectionStateChange(g, status, newState) {
+    if (newState == STATE_CONNECTED) g.discoverServices()          // ① 连上 → 发现服务
+}
+override fun onServicesDiscovered(g, status) {
+    val ch = g.getService(SERVICE_UUID).getCharacteristic(CHAR_UUID)
+    g.setCharacteristicNotification(ch, true)                      // ② 先让本机栈收
+    g.writeDescriptor(ch.getDescriptor(CCCD_UUID), ENABLE_NOTIFICATION_VALUE)  // ③ 再告诉设备
+}
+override fun onCharacteristicChanged(g, ch, value: ByteArray) {    // ④ Android 13+ 是三参数
+    show(parse(value))                                            //    和广播同一套解析
+}
+// ⑤ 写：把从端温度设为 30.00 °C
+gatt.writeCharacteristic(ch, encode(listOf(Measurement(TEMPERATURE, 30f))), WRITE_TYPE_DEFAULT)</pre>
+      <div class="key"><span class="tag">重点 · 三个坑</span>① <code>setCharacteristicNotification(true)</code> 只让<b>本机</b>蓝牙栈接收，设备并不知道；必须再往设备的 CCCD 写 <code>0x0001</code>，它才会发通知。② 顺序不能反。③ Android 13 起回调多了 <code>value</code> 参数，写入和写描述符改成返回 int 状态码；旧接口标了废弃但仍可用，源码按版本分支。另外：可连接广播<b>被连上后会停</b>，断开后系统自动恢复——被连上期间别的接收端扫不到它是正常的。</div>
+      <p>实际跑起来是这样：从端勾「允许主端连接」并广播 → 主端点列表里这台设备 → 连接面板滚动显示通知帧 → 点「写入：把从端温度设为 30.00 °C」→ 从端解析后切到手动数据源、温度变 30 → 广播同步更新。</p>
+      <div class="recap"><b>本步收束：</b>BTHome 本身不连接；要练连接就用同一套帧走 GATT：connectGatt → discoverServices → CCCD 0x0001 → notify / write。</div>
+  </section>
+
   <section id="accept">
-    <h2><span class="no">第 8 步</span>验收清单：两台手机对时间线</h2>
+    <h2><span class="no">第 9 步</span>验收清单：两台手机对时间线</h2>
     
       <p>A 机开从端（正弦波），B 机开主端。两台都开 Logcat，按下面清单逐条打勾。</p>
       <table><tr><th>#</th><th>操作</th><th>期望</th><th>不通过先查</th></tr>
         <tr><td>1</td><td>B 机进主端页</td><td>3 秒内出现 A 机，温湿度跳动</td><td>权限、蓝牙开关、ScanFilter UUID 拼写</td></tr>
         <tr><td>2</td><td>nRF Connect 同时扫</td><td>能看到 <code>D2FC 40 02…</code> 原始服务数据</td><td>从端根本没广播 → onAdvertisingSetStarted 的 status</td></tr>
-        <tr><td>3</td><td>切滑杆拉到 -5.5</td><td>主端显示 -5.50 °C</td><td>显示 649.86 → 符号扩展没做</td></tr>
+        <tr><td>3</td><td>切滑杆拉到 -5.5</td><td>主端显示 -5.50 °C</td><td>显示 650.50 → 符号扩展没做</td></tr>
         <tr><td>4</td><td>值从 25 改到 30</td><td>1 个广播间隔内更新，无需重连</td><td>没更新 → setAdvertisingData 后没等回调</td></tr>
         <tr><td>5</td><td>A 机走远 10m</td><td>RSSI 下降，读数不变</td><td>读数乱 → 解析越界或字节序错</td></tr>
         <tr><td>6</td><td>A 机点停止</td><td>B 机约 10s 后标离线</td><td>一直在线 → 没做超时清理</td></tr>
         <tr><td>7</td><td>B 机熄屏 1 分钟再亮</td><td>恢复后数据继续</td><td>停了 → 8.1+ 熄屏无过滤扫描被暂停</td></tr>
-        <tr><td>8</td><td>连续启停扫描 7 次</td><td>第 6 次 onScanFailed(6)</td><td>没处理 → 加退避，别死循环重试</td></tr></table>
+        <tr><td>8</td><td>连续启停扫描 7 次</td><td>被限流后退避 1s / 2s / 4s 重试，最多 3 次</td><td>没处理 onScanFailed(6) → 加退避，别死循环重试</td></tr>
+        <tr><td>9</td><td>A 勾「允许连接」，B 点这台设备</td><td>面板显示「订阅成功」，随后点写入，A 的温度变成 30.0</td><td>没通知 → 只调了 setCharacteristicNotification，没写 CCCD</td></tr></table>
       <div class="key"><span class="tag">对标</span>同一台从端，拿 Home Assistant 或 ESPHome BLE Gateway 同时收。三方读数一致（误差 ≤0.01），说明你的解析器对了；不一致就把那一帧 hex 抓出来逐字节对。</div>
-      <div class="recap"><b>本步收束：</b>8 条清单覆盖扫描、符号、热更新、离线、后台、限流。</div>
+      <div class="recap"><b>本步收束：</b>9 条清单覆盖扫描、符号、热更新、离线、后台、限流、连接。</div>
   </section>
 
   <section id="more">
-    <h2><span class="no">第 9 步</span>做完之后往哪走</h2>
+    <h2><span class="no">第 10 步</span>做完之后往哪走</h2>
     
       <table><tr><th>方向</th><th>做什么</th><th>关键点</th></tr>
         <tr><td>加密</td><td>bit0=1，AES-CCM，密钥 16 字节</td><td>nonce = MAC(6) + UUID(2) + 设备信息(1) + counter(4)；末尾是 4 字节 counter + 4 字节 MIC；接收端<b>必须校验 counter 递增</b>防重放</td></tr>
         <tr><td>真传感器</td><td>ESP32-C3 + SHT4x，ESPHome 发 BTHome</td><td>放电量对象 0x01，电池设备把间隔拉到 1s 以上</td></tr>
         <tr><td>接 HA</td><td>HA 装 Bluetooth 集成即自动发现</td><td>你的设备名会成为 HA 里的实体名</td></tr>
-        <tr><td>需要双向</td><td>广播不够用，回到 GATT 连接路线</td><td>BTHome v2 也定义了可连接的事件格式，见规范 Events 节</td></tr>
+        <tr><td>需要双向</td><td>广播不够用，回到 GATT 连接路线</td><td>BTHome 不定义 GATT；本课的连接路线是自定义教学服务，正式产品按 B4–B9 自己定服务、特征和指令</td></tr>
         <tr><td>后台常驻</td><td>从端放前台服务</td><td>回到 B10：connectedDevice 类型 + 通知</td></tr></table>
       <div class="recap"><b>本步收束：</b>广播路线适合单向遥测；要配置、要历史、要可靠送达就走连接。</div>
   </section>
 
   <section id="lab">
     <h2><span class="no">动手</span>从端编码器：拖滑杆，看广播字节</h2>
-    <p>你就是从端。拖温度和湿度，右边实时显示要广播的 BTHome 服务数据。勾「加入电量」看字节变长，切到「名字太长」看预算爆掉。下方用主端解析器把同一串字节解回来，应该和你拖的值一致。</p>
+    <p>你就是从端。拖温度和湿度，右边实时显示要广播的 BTHome 服务数据。勾「加入电量」看字节变长。下面按「名字也塞进主包」算 31 字节预算，切到「名字太长」看它爆掉；下方再用主端解析器把同一串字节解回来，应该和你拖的值一致。</p>
     <div class="lab">
       <div class="lab-head"><b>编码演练 · 你是从端</b><span class="hint">31 字节预算</span></div>
-      <div class="controls"><div class="ctl-row"><label>温度 <b id="lt">25.1</b> °C <input type="range" id="rt" min="-40" max="85" step="0.1" value="25.1"></label><label>湿度 <b id="lh">45.2</b> % <input type="range" id="rh" min="0" max="100" step="0.1" value="45.2"></label><label class="chk"><input type="checkbox" id="cb"> 加入电量 90%</label><label class="chk"><input type="checkbox" id="cn"> 用超长设备名</label></div></div>
-      <div class="lab-body"><div><pre id="bytes14" style="margin:0;"></pre></div><div class="logcat"><div class="logcat-head"><span>主端解析结果</span><span id="bud14">预算 11/31</span></div><div class="logcat-body" id="log14"></div></div></div>
+      <div class="controls"><div class="ctl-row"><label>温度 <b id="lt">25.1</b> °C <input type="range" id="rt" min="-40" max="85" step="0.1" value="25.1"></label><label>湿度 <b id="lh">45.2</b> % <input type="range" id="rh" min="0" max="100" step="0.1" value="45.2"></label><label class="chk"><input type="checkbox" id="cb"> 加入电量 90%</label><label class="chk"><input type="checkbox" id="cn"> 用超长设备名</label></label></div></div>
+      <div class="lab-body"><div><pre id="bytes14" style="margin:0;"></pre></div><div class="logcat"><div class="logcat-head"><span>主端解析结果</span><span id="bud14">预算 23/31</span></div><div class="logcat-body" id="log14"></div></div></div>
       <div class="lab-foot"><span class="hint">编码 → 字节 → 解码，一个闭环</span></div>
     </div>
     <div class="key"><span class="tag">看懂这场演练</span>从端把读数按「对象 ID 升序 + 小端 + 倍率」编码进 31 字节预算；主端用同一张对象表反向解回。两端共用 protocol 包，就不会对不上。</div>
   </section>
 
   <section id="quiz">
-    <h2><span class="no">自测</span>6 个问题</h2>
+    <h2><span class="no">自测</span>7 个问题</h2>
     <div class="card" id="quiz-box"></div>
     <p id="quiz-done" style="display:none;font-weight:700;color:#1E7268;">全对。Android 板十四课全部完成。广播路线走通后，去 iOS / 鸿蒙 / Flutter / RN 板做同一件事。</p>
   </section>
 
   <section id="map">
     <h2><span class="no">回顾</span>项目速查</h2>
-    <table><tr><th>环节</th><th>API / 规范</th><th>最容易错</th></tr><tr><td>规范</td><td>bthome.io/format 对象 ID 表</td><td>拿了 v1 的 UUID</td></tr><tr><td>识别</td><td>Service Data 0xFCD2</td><td>写成 0x181C</td></tr><tr><td>设备信息</td><td>bit0 加密 / bit2 触发 / bit5-7 版本</td><td>没判版本就解</td></tr><tr><td>主端扫描</td><td>ScanFilter.setServiceUuid</td><td>漏 onScanFailed</td></tr><tr><td>主端解析</td><td>and 0xFF + 小端 + 符号扩展 + 未知即停</td><td>零下温度变六万度</td></tr><tr><td>从端编码</td><td>对象 ID 升序 + 小端 + 倍率</td><td>顺序写反</td></tr><tr><td>从端广播</td><td>startAdvertisingSet + setAdvertisingData</td><td>31 字节超预算</td></tr><tr><td>验收</td><td>双机 8 条 + 与 HA 对标</td><td>只测了正常值</td></tr></table>
+    <table><tr><th>环节</th><th>API / 规范</th><th>最容易错</th></tr><tr><td>规范</td><td>bthome.io/format 对象 ID 表</td><td>拿了 v1 的 UUID</td></tr><tr><td>识别</td><td>Service Data 0xFCD2</td><td>写成 0x181C</td></tr><tr><td>设备信息</td><td>bit0 加密 / bit2 触发 / bit5-7 版本</td><td>没判版本就解</td></tr><tr><td>主端扫描</td><td>ScanFilter.setServiceUuid</td><td>漏 onScanFailed</td></tr><tr><td>主端解析</td><td>and 0xFF + 小端 + 符号扩展 + 未知即停</td><td>零下温度变 650 °C</td></tr><tr><td>从端编码</td><td>对象 ID 升序 + 小端 + 倍率</td><td>顺序写反</td></tr><tr><td>从端广播</td><td>startAdvertisingSet + setAdvertisingData</td><td>31 字节超预算；热更新不等回调</td></tr><tr><td>连接路线</td><td>connectGatt → discoverServices → CCCD 0x0001 → notify / write</td><td>只调了 setCharacteristicNotification</td></tr><tr><td>验收</td><td>双机 9 条 + 与 HA 对标</td><td>只测了正常值</td></tr><tr><td>源码</td><td>qingzhu-ble-android / samples / bthome-thermometer</td><td>只看不编译</td></tr></table>
     <div class="note"><span class="tag">说明</span>本页为教学简化，工程细节以正文与官方规范为准；演练为模拟，非真实设备通信。</div>
     <footer>青竹蓝牙学堂 · 蓝牙小课堂Android 第十四课 · B14 · <a href="../index.html">回到学堂</a></footer>
   </section>
@@ -544,6 +632,7 @@ class ScriptSource : SensorSource {
   <a href="#scanner">主端扫描</a>
   <a href="#advertiser">从端广播</a>
   <a href="#fake">模拟数据</a>
+  <a href="#connect">连接路线</a>
   <a href="#accept">双机验收</a>
   <a href="#more">进阶</a>
   <a href="#lab">动手演练</a>
@@ -570,14 +659,14 @@ class ScriptSource : SensorSource {
   }
   function render(){
     var hex=enc(), name=cn.checked?'Qingzhu-BTHome-Temperature-And-Humidity-Sensor-For-Classroom':'QZ-TH01';
-    var used=3+1+hex.split(' ').length-1+2+name.length;
+    var dataLen=hex.split(' ').length, mainOnly=3+4+dataLen, used=mainOnly+2+name.length;   // Flags 3 + 头 2 + UUID 2 + 数据；名字：头 2 + 名字
     document.getElementById('lt').textContent=(+rt.value).toFixed(1);
     document.getElementById('lh').textContent=(+rh.value).toFixed(1);
     document.getElementById('bytes14').textContent='D2FC '+hex;
     var over=used>31;
     document.getElementById('bud14').textContent=(over?'超预算 ':'预算 ')+used+'/31';
     document.getElementById('bud14').style.color=over?'#FF7A2F':'#3FB950';
-    var log=over?'<div><span class="err">ADVERTISE_FAILED_DATA_TOO_LARGE</span></div><div><span class="c">// 名字 '+name.length+' 字节，放不下。把名字挪到 scan response，或缩短。</span></div>'
+    var log=over?'<div><span class="err">ADVERTISE_FAILED_DATA_TOO_LARGE</span></div><div><span class="c">// Flags 3 + 服务数据 '+(4+dataLen)+' + 名字 '+(2+name.length)+'（'+name.length+' 字节）= '+used+'，放不下。</span></div><div><span class="c">// 源码的做法：名字挪到扫描响应，主包只剩 '+mainOnly+'/31。</span></div>'
       :dec(hex).map(function(x){return '<div><span class="ok">'+x+'</span></div>';}).join('')+'<div><span class="c">// 与滑杆一致 → 编解码闭环</span></div>';
     document.getElementById('log14').innerHTML=log;
   }
@@ -589,7 +678,7 @@ const tocLinks=[...document.querySelectorAll('.toc a')];
 const secs=tocLinks.map(a=>document.getElementById(a.getAttribute('href').slice(1)));
 const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){tocLinks.forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+e.target.id));}});},{rootMargin:'-20% 0px -70% 0px'});
 secs.forEach(s=>s&&io.observe(s));
-const QUIZ=[{"q":"1. BTHome v2 识别用的是哪个 UUID？","opts":[["0xFCD2（服务数据里写作 D2FC）",true,"对，v1 的 0x181C 已废弃。"],["0x181C",false,"那是 v1。"],["0x2902",false,"那是 CCCD。"]]},{"q":"2. 设备信息字节 0x41 表示？","opts":[["v2 且已加密",true,"bit0=1 加密，bit5-7=010 是 v2。"],["v2 不加密",false,"0x40 才是不加密。"],["v1 且触发式",false,"版本位看 bit5-7。"]]},{"q":"3. 编码时对象 ID 的顺序要求是？","opts":[["必须按 ID 从小到大",true,"否则老接收端会提前停止解析。"],["任意顺序",false,"规范要求升序。"],["必须先湿度后温度",false,"按 ID 数值，不按语义。"]]},{"q":"4. 解析 02 DA FD 得到的温度是？","opts":[["-5.50 °C",true,"0xFDDA=65050，sint16 → -486，×0.01。"],["65.05 °C",false,"没做符号扩展。"],["650.50 °C",false,"既没扩展也没注意倍率。"]]},{"q":"5. 从端想中途改广播数据又不停广播，用哪个？","opts":[["AdvertisingSet.setAdvertisingData()",true,"对，新数据 <251 字节可直接热更新。"],["必须 stop 再 startAdvertisingSet",false,"能用但会闪断，API 本身支持热更新。"],["只能重启蓝牙",false,"不需要。"]]},{"q":"6. 加密广播的接收端必须额外校验什么？","opts":[["counter 是否递增",true,"否则可被重放攻击。"],["名字是否匹配",false,"名字可伪造。"],["RSSI 是否足够高",false,"与安全无关。"]]}];
+const QUIZ=[{"q":"1. BTHome v2 识别用的是哪个 UUID？","opts":[["0xFCD2（服务数据里写作 D2FC）",true,"对，v1 的 0x181C 已废弃。"],["0x181C",false,"那是 v1。"],["0x2902",false,"那是 CCCD。"]]},{"q":"2. 设备信息字节 0x41 表示？","opts":[["v2 且已加密",true,"bit0=1 加密，bit5-7=010 是 v2。"],["v2 不加密",false,"0x40 才是不加密。"],["v1 且触发式",false,"版本位看 bit5-7。"]]},{"q":"3. 编码时对象 ID 的顺序要求是？","opts":[["必须按 ID 从小到大",true,"否则老接收端会提前停止解析。"],["任意顺序",false,"规范要求升序。"],["必须先湿度后温度",false,"按 ID 数值，不按语义。"]]},{"q":"4. 解析 02 DA FD 得到的温度是？","opts":[["-5.50 °C",true,"0xFDDA=65050，sint16 → -486，×0.01。"],["650.50 °C",false,"没做符号扩展，65050 × 0.01。"],["6505.0 °C",false,"既没扩展也没乘倍率。"]]},{"q":"5. 从端想中途改广播数据又不停广播，用哪个？","opts":[["AdvertisingSet.setAdvertisingData()",true,"对。注意它是异步的：上一次没回调前再设会被丢，要等回调或合并。"],["必须 stop 再 startAdvertisingSet",false,"能用但会闪断，API 本身支持热更新。"],["只能重启蓝牙",false,"不需要。"]]},{"q":"6. 加密广播的接收端必须额外校验什么？","opts":[["counter 是否递增",true,"否则可被重放攻击。"],["名字是否匹配",false,"名字可伪造。"],["RSSI 是否足够高",false,"与安全无关。"]]},{"q":"7. 连接路线里，主端想让从端发通知，必须做哪两步？","opts":[["setCharacteristicNotification(true)，再往设备的 CCCD 写 0x0001",true,"缺一不可：前者让本机栈收，后者让设备发。"],["只调 setCharacteristicNotification(true)",false,"只让本机蓝牙栈接收，设备并不知道要发。"],["只往设备的 CCCD 写 0x0001",false,"设备发了，但本机栈不往回调送。"]]}];
 let solved=0; const box=document.getElementById('quiz-box');
 QUIZ.forEach((item,qi)=>{
   const h=document.createElement('div'); h.className='quiz-q'; h.textContent=item.q; box.appendChild(h);
