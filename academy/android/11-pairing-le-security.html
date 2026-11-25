@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>蓝牙小课堂 · B11 配对与LE安全 · 青竹蓝牙学堂</title>
+<style>
+  :root{
+    --bg:#F7F6F2; --card:#FFFFFF; --ink:#2B2620; --muted:#7A7267; --faint:#A39B8E;
+    --line:#E8E4DC; --line-soft:#F1EEE7;
+    --coral:#D95B43; --coral-soft:#FBEDE9; --coral-line:#F0CFC6;
+    --teal:#2A9D8F; --teal-soft:#E9F4F2; --teal-line:#BFE0DB;
+    --amber:#C07A1E; --amber-soft:#FBF3E4; --amber-line:#EDD9B4;
+    --blue:#3B6FD4; --blue-soft:#ECF1FB; --blue-line:#C9D8F2;
+    --code-bg:#26221C; --code-ink:#EDE7DC; --code-cm:#8D8577; --code-kw:#8FC7E8; --code-str:#A8D5A2; --code-num:#E8C07D;
+    --radius:12px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html{scroll-behavior:smooth;}
+  body{background:var(--bg);color:var(--ink);font-size:16.5px;line-height:1.9;
+    font-family:"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",system-ui,sans-serif;}
+  a{color:var(--blue);text-decoration:none;} a:hover{text-decoration:underline;}
+  code{font-family:ui-monospace,"SF Mono",Consolas,monospace;font-size:.87em;
+    background:#F0EDE6;border:1px solid var(--line);border-radius:5px;padding:1px 6px;color:#5B4A2F;}
+  .topbar{background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:50;}
+  .topbar-in{max-width:1080px;margin:0 auto;padding:0 20px;height:56px;display:flex;align-items:center;gap:14px;}
+  .logo{font-weight:800;font-size:16px;white-space:nowrap;}
+  .logo span{color:var(--coral);}
+  .topnav{margin-left:auto;display:flex;gap:18px;font-size:14px;}
+  .topnav a{color:var(--muted);} .topnav a:hover{color:var(--coral);text-decoration:none;}
+  .layout{max-width:1080px;margin:0 auto;padding:32px 20px 80px;display:grid;grid-template-columns:200px minmax(0,1fr);gap:40px;}
+  .toc{position:sticky;top:84px;align-self:start;font-size:14px;}
+  .toc-title{font-size:12px;font-weight:700;color:var(--faint);letter-spacing:2px;margin-bottom:10px;}
+  .toc a{display:block;color:var(--muted);padding:5px 12px;border-left:2px solid var(--line);line-height:1.5;}
+  .toc a:hover{color:var(--coral);text-decoration:none;}
+  .toc a.on{color:var(--coral);border-left-color:var(--coral);font-weight:600;background:linear-gradient(90deg,var(--coral-soft),transparent);}
+  main{min-width:0;}
+  .crumb{font-size:13.5px;color:var(--faint);margin-bottom:14px;}
+  h1{font-size:30px;line-height:1.4;letter-spacing:.5px;margin-bottom:10px;}
+  h1 em{font-style:normal;color:var(--coral);}
+  .lead{font-size:16.5px;color:var(--muted);margin-bottom:16px;}
+  .meta{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px;}
+  .meta span{font-size:12.5px;color:var(--muted);background:var(--card);border:1px solid var(--line);border-radius:999px;padding:3px 12px;}
+  .journey{display:flex;flex-wrap:wrap;gap:0;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px 10px;margin:0 0 8px;}
+  .j-step{flex:1 1 110px;text-align:center;padding:4px 8px;position:relative;}
+  .j-step .n{display:inline-flex;width:26px;height:26px;border-radius:50%;background:var(--coral-soft);color:var(--coral);font-weight:800;font-size:13px;align-items:center;justify-content:center;border:1px solid var(--coral-line);}
+  .j-step .t{display:block;font-weight:700;font-size:14px;margin-top:4px;}
+  .j-step .s{display:block;font-size:12px;color:var(--faint);}
+  .j-step:not(:last-child)::after{content:"→";position:absolute;right:-7px;top:12px;color:var(--faint);font-size:14px;}
+  section{margin-top:44px;}
+  h2{font-size:22px;padding-bottom:10px;border-bottom:1px solid var(--line);margin-bottom:16px;scroll-margin-top:80px;}
+  h2 .no{display:inline-block;font-size:12.5px;font-weight:700;color:var(--coral);background:var(--coral-soft);
+    border:1px solid var(--coral-line);border-radius:999px;padding:1px 12px;margin-right:10px;vertical-align:3px;}
+  h3{font-size:17px;margin:20px 0 8px;}
+  p{margin:10px 0;}
+  ul{margin:10px 0 10px 24px;} li{margin:5px 0;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:22px 24px;margin:16px 0;}
+  .term{background:var(--teal-soft);color:#1E7268;border:1px solid var(--teal-line);border-radius:6px;padding:0 7px;font-weight:700;white-space:nowrap;font-size:.93em;}
+  .term2{background:var(--blue-soft);color:#2F58A8;border:1px solid var(--blue-line);border-radius:6px;padding:0 7px;font-weight:700;white-space:nowrap;font-size:.93em;}
+  .key{background:var(--amber-soft);border:1px solid var(--amber-line);border-left:4px solid var(--amber);
+    border-radius:8px;padding:12px 18px;margin:16px 0;font-size:15.5px;}
+  .key .tag,.note .tag{display:block;font-size:12px;font-weight:800;letter-spacing:2px;margin-bottom:3px;}
+  .key .tag{color:var(--amber);}
+  .key b{color:#8A5510;}
+  .note{background:#F4F2EC;border:1px solid var(--line);border-left:4px solid var(--faint);
+    border-radius:8px;padding:11px 16px;margin:16px 0;font-size:14px;color:var(--muted);}
+  .note .tag{color:var(--faint);}
+  .recap{margin:18px 0 4px;padding:10px 16px;background:var(--teal-soft);border:1px solid var(--teal-line);border-radius:8px;font-size:15px;}
+  .recap b{color:#1E7268;}
+  figure{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px;margin:16px 0;text-align:center;}
+  figcaption{font-size:13px;color:var(--faint);margin-top:8px;}
+  svg{max-width:100%;height:auto;}
+  table{width:100%;border-collapse:collapse;font-size:14.5px;margin:14px 0;background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden;}
+  th{background:#F4F2EC;text-align:left;padding:9px 14px;font-size:13px;color:var(--muted);border-bottom:1px solid var(--line);}
+  td{padding:9px 14px;border-bottom:1px solid var(--line-soft);vertical-align:top;}
+  tr:last-child td{border-bottom:none;}
+  pre{background:var(--code-bg);color:var(--code-ink);border-radius:10px;padding:14px 18px;margin:14px 0;
+    font:13.5px/1.85 ui-monospace,"SF Mono",Consolas,monospace;overflow-x:auto;}
+  pre .cm{color:var(--code-cm);} pre .num{color:var(--code-num);} pre .str{color:var(--code-str);}
+  .lab{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;margin:16px 0;}
+  .lab-head{padding:12px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  .lab-head b{font-size:15px;}
+  .hint{font-size:13px;color:var(--faint);}
+  .lab-body{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:18px;padding:16px 20px 20px;}
+  .lab-body.single{grid-template-columns:1fr;}
+  .controls{padding:0 20px 6px;display:flex;flex-wrap:wrap;gap:18px;align-items:center;}
+  .ctl{display:flex;align-items:center;gap:10px;font-size:13.5px;}
+  .ctl label{color:var(--muted);font-weight:600;}
+  .ctl input[type=range]{width:150px;accent-color:var(--coral);}
+  .ctl .val{font-family:ui-monospace,Consolas,monospace;font-weight:700;color:var(--coral);min-width:64px;}
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;flex-wrap:wrap;}
+  .seg button{font-family:inherit;font-size:13px;font-weight:600;border:none;background:#F4F2EC;color:var(--muted);padding:6px 14px;cursor:pointer;}
+  .seg button.on{background:var(--teal);color:#fff;}
+  .timeline{border:1px solid var(--line);border-radius:14px;background:#FBFAF7;padding:14px;}
+  .tl-title{font-size:12.5px;color:var(--muted);font-weight:700;margin-bottom:6px;display:flex;justify-content:space-between;}
+  .stats{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;}
+  .stat-box{flex:1;min-width:90px;border:1px solid var(--line);border-radius:9px;padding:9px 12px;background:#fff;text-align:center;}
+  .stat-box b{display:block;font:700 18px/1.2 ui-monospace,Consolas,monospace;color:var(--ink);}
+  .stat-box small{font-size:11px;color:var(--faint);}
+  .stat-box.good b{color:#1E7268;} .stat-box.bad b{color:var(--coral);}
+  .logcat{background:var(--code-bg);border-radius:10px;overflow:hidden;display:flex;flex-direction:column;}
+  .logcat-head{padding:7px 14px;font-size:12px;color:var(--code-cm);border-bottom:1px solid #3A352C;font-family:ui-monospace,Consolas,monospace;display:flex;justify-content:space-between;}
+  .logcat-body{padding:12px 14px;font-size:12.5px;line-height:1.95;font-family:ui-monospace,Consolas,monospace;color:#D6CFC2;overflow-y:auto;max-height:300px;min-height:220px;}
+  .logcat-body .t{color:#6B6455;} .logcat-body .api{color:var(--code-kw);} .logcat-body .ok{color:var(--code-str);} .logcat-body .c{color:var(--code-cm);} .logcat-body .warn{color:var(--code-num);} .logcat-body .err{color:#E88;}
+  .lab-foot{padding:0 20px 20px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+  .btn{font-family:inherit;font-size:14.5px;font-weight:600;cursor:pointer;border-radius:8px;padding:9px 22px;border:1px solid var(--coral);background:var(--coral);color:#fff;transition:background .15s;}
+  .btn:hover{background:#C24E38;}
+  .btn.ghost{background:var(--card);color:var(--muted);border-color:var(--line);}
+  .btn.ghost:hover{color:var(--ink);border-color:var(--faint);}
+  .btn:disabled{opacity:.5;cursor:default;}
+  .btn.teal{background:var(--teal);border-color:var(--teal);} .btn.teal:hover{background:#23867B;}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0;}
+  .chip{font-size:12.5px;font-weight:700;border-radius:999px;padding:4px 12px;border:1px solid var(--line);background:#F4F2EC;color:var(--faint);}
+  .chip.on{background:var(--teal-soft);color:#1E7268;border-color:var(--teal-line);}
+  .chip.bad{background:var(--coral-soft);color:#B04A35;border-color:var(--coral-line);}
+  .attr{width:100%;border-collapse:collapse;font-size:13.5px;font-family:ui-monospace,Consolas,monospace;}
+  .attr td{padding:7px 10px;border-bottom:1px solid var(--line-soft);cursor:pointer;}
+  .attr tr:hover td{background:var(--teal-soft);}
+  .attr tr.hit td{background:var(--teal-soft);font-weight:700;}
+  .attr tr.miss td{background:var(--coral-soft);}
+  .quiz-q{font-weight:700;font-size:16px;margin:20px 0 10px;}
+  .opt{display:block;width:100%;text-align:left;font-family:inherit;font-size:14.5px;cursor:pointer;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px 16px;margin:7px 0;color:var(--ink);transition:border-color .15s;}
+  .opt:hover{border-color:var(--teal);}
+  .opt.right{background:var(--teal-soft);border-color:var(--teal);font-weight:600;}
+  .opt.wrong{background:var(--coral-soft);border-color:var(--coral);}
+  .opt:disabled{cursor:default;}
+  .explain{display:none;font-size:14px;border-radius:8px;padding:10px 14px;margin:6px 0;}
+  .explain.show{display:block;}
+  .explain.good{background:var(--teal-soft);border:1px solid var(--teal-line);}
+  .explain.bad{background:var(--coral-soft);border:1px solid var(--coral-line);}
+  .next-links{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0;}
+  .next-links a{display:inline-block;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:9px 18px;font-size:14px;font-weight:600;}
+  .next-links a:hover{border-color:var(--coral);text-decoration:none;}
+  footer{border-top:1px solid var(--line);margin-top:56px;padding-top:20px;font-size:13px;color:var(--faint);}
+  @media (max-width:900px){
+    .layout{grid-template-columns:1fr;gap:0;}
+    .toc{display:none;}
+    .lab-body{grid-template-columns:1fr;}
+    h1{font-size:25px;}
+    .j-step:not(:last-child)::after{display:none;}
+  }
+</style>
+</head>
+<body>
+<div class="topbar"><div class="topbar-in">
+  <div class="logo">青竹<span>蓝牙学堂</span></div>
+  <nav class="topnav">
+    <a href="../">学堂首页</a>
+    <a href="10-background-fgs-cdm.html">上一课</a>
+    <a href="../../#android">通用知识</a>
+  </nav>
+</div></div>
+<div class="layout">
+<aside class="toc" id="toc">
+  <div class="toc-title">本课目录</div>
+  <a href="#bond">createBond</a>
+  <a href="#enc">加密</a>
+  <a href="#reset">恢复出厂</a>
+  <a href="#lab">动手演练</a>
+  <a href="#quiz">本课自测</a>
+  <a href="#map">回顾与速查</a>
+</aside>
+<main>
+  <div class="crumb">蓝牙小课堂 / Android 第十一课 · B11</div>
+  <h1>配对与 LE 安全：<em>createBond</em> 与加密事件</h1>
+  <p class="lead">写配置返回 0x05/0x0F，是安全层问题。这一课讲 Android createBond、绑定状态广播、加密启用，以及恢复出厂两侧密钥清理。</p>
+  <div class="meta"><span>平台：Android/Kotlin</span><span>约 12 分钟</span><span>含交互演练</span><span>前置：B4</span></div>
+  <div class="journey">
+    <div class="j-step"><span class="n">1</span><span class="t">createBond</span><span class="s">配对</span></div>
+    <div class="j-step"><span class="n">2</span><span class="t">状态</span><span class="s">BOND_BONDED</span></div>
+    <div class="j-step"><span class="n">3</span><span class="t">加密</span><span class="s">重新启用</span></div>
+    <div class="j-step"><span class="n">4</span><span class="t">恢复出厂</span><span class="s">两侧清</span></div>
+    <div class="j-step"><span class="n">5</span><span class="t">动手</span><span class="s">走绑定</span></div>
+  </div>
+
+  <section id="bond">
+    <h2><span class="no">第 1 步</span>createBond 与绑定状态</h2>
+    
+      <pre>device.createBond()
+// 监听 ACTION_BOND_STATE_CHANGED: BOND_NONE→BONDING→BONDED
+// 读写遇 0x05/0x0F 时触发配对/加密</pre>
+      <div class="recap"><b>本步收束：</b>createBond 异步，监听绑定状态广播。</div>
+  </section>
+
+  <section id="enc">
+    <h2><span class="no">第 2 步</span>绑定重连要重新启用加密</h2>
+    
+      <p>绑定保存 LTK/IRK，但重连后<b>不自动加密</b>，要用保存的 LTK 重新启用。0x05 认证不足、0x0F 加密不足是安全层（配对加密可解）；0x08 授权不足是业务层（走厂商授权）。</p>
+      <div class="recap"><b>本步收束：</b>重连重新启用加密；分清安全层与业务层错误。</div>
+  </section>
+
+  <section id="reset">
+    <h2><span class="no">第 3 步</span>恢复出厂两侧密钥一起清</h2>
+    
+      <div class="key"><span class="tag">重点 · 高频客诉</span>外设恢复出厂丢密钥，手机留旧 LTK→加密失败「连上但读写报错/反复弹配对」。用 <code>removeBond()</code>（反射/系统设置）删旧绑定重新配对。把恢复出厂列入测试用例。</div>
+      <div class="recap"><b>本步收束：</b>密钥失效要删旧绑定重配，两侧一起清。</div>
+  </section>
+
+  <section id="lab">
+    <h2><span class="no">动手</span>走绑定→加密，再恢复出厂看故障</h2>
+    <p>点 createBond→BONDED→启用加密。再点「外设恢复出厂」后启用加密，看密钥不匹配；点 removeBond 清理后重新配对恢复。</p>
+    <div class="lab">
+      <div class="lab-head"><b>Android 配对演练</b><span class="hint">createBond / removeBond</span></div>
+      <div class="controls"><div class="seg" id="b11"><button data-b="bond">createBond</button><button data-b="enc">启用加密</button><button data-b="reset">外设恢复出厂</button><button data-b="remove">removeBond</button></div></div>
+      <div class="lab-body"><div><div class="chips" id="st11"></div></div><div class="logcat"><div class="logcat-head"><span>logcat · bond</span><span>verbose</span></div><div class="logcat-body" id="log11"><span class="c">// createBond</span></div></div></div>
+      <div class="lab-foot"><span class="hint">恢复出厂后加密失败→removeBond→重新 createBond</span></div>
+    </div>
+    <div class="key"><span class="tag">看懂这场演练</span>createBond 异步监听状态；绑定重连要重新启用加密。恢复出厂密钥不匹配是「连上但读写报错」根因，removeBond 删旧绑定重配，两侧一起清。</div>
+  </section>
+
+  <section id="quiz">
+    <h2><span class="no">自测</span>三个问题</h2>
+    <div class="card" id="quiz-box"></div>
+    <p id="quiz-done" style="display:none;font-weight:700;color:#1E7268;">全对。下一课讲抓包与错误码排障。</p>
+  </section>
+
+  <section id="map">
+    <h2><span class="no">回顾</span>速查</h2>
+    <table><tr><th>项</th><th>记住</th></tr><tr><td>createBond</td><td>异步+状态广播</td></tr><tr><td>0x05/0x0F</td><td>安全层</td></tr><tr><td>0x08</td><td>业务授权</td></tr><tr><td>恢复出厂</td><td>removeBond 两侧清</td></tr></table>
+    <h3>接下来读什么</h3>
+    <div class="next-links">
+      <a href="10-background-fgs-cdm.html">← 上一课</a>
+      <a href="../">学堂首页 · 课程地图</a>
+      <a href="../../#android">通用知识正文</a>
+    </div>
+    <div class="note"><span class="tag">说明</span>本页为教学简化，工程细节以正文与官方规范为准；演练为模拟，非真实设备通信。</div>
+    <footer>青竹蓝牙学堂 · 蓝牙小课堂Android 第十一课 · B11 · <a href="../">回到学堂</a></footer>
+  </section>
+</main>
+</div>
+<script>
+
+(function(){
+  var bonded=false, devKeys=true, enc=false;
+  function paint(){ document.getElementById('st11').innerHTML='<span class="chip '+(bonded?'on':'')+'">'+(bonded?'BONDED':'BOND_NONE')+'</span><span class="chip '+(enc?'on':'')+'">'+(enc?'加密':'明文')+'</span><span class="chip '+(devKeys?'':'bad')+'">'+(devKeys?'外设有密钥':'外设已清空')+'</span>'; }
+  document.querySelectorAll('#b11 button').forEach(function(b){b.addEventListener('click',function(){
+    var k=b.getAttribute('data-b'), log=document.getElementById('log11');
+    if(k==='bond'){bonded=true;devKeys=true;enc=false;log.innerHTML='<div><span class="ok">BOND_NONE→BONDING→BONDED</span> 存 LTK/IRK</div>';}
+    if(k==='enc'){ if(!bonded){log.innerHTML='<div><span class="warn">先 createBond</span></div>';} else if(!devKeys){enc=false;log.innerHTML='<div><span class="err">✗ 旧 LTK 不匹配（0x05/0x0F）</span></div><div><span class="warn">→ removeBond 重新配对</span></div>';} else {enc=true;log.innerHTML='<div><span class="ok">用 LTK 启用加密</span></div>';} }
+    if(k==='reset'){devKeys=false;enc=false;log.innerHTML='<div><span class="warn">外设恢复出厂清空密钥</span> 手机仍留旧 LTK</div>';}
+    if(k==='remove'){bonded=false;enc=false;log.innerHTML='<div><span class="api">removeBond()</span> 删旧绑定 → 重新 createBond</div>';}
+    paint();
+  });});
+  paint();
+})();
+
+const tocLinks=[...document.querySelectorAll('.toc a')];
+const secs=tocLinks.map(a=>document.getElementById(a.getAttribute('href').slice(1)));
+const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){tocLinks.forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+e.target.id));}});},{rootMargin:'-20% 0px -70% 0px'});
+secs.forEach(s=>s&&io.observe(s));
+const QUIZ=[{"q":"1. 0x05/0x0F 与 0x08 区别？","opts":[["前者安全层(配对加密可解)，后者业务层(厂商授权)",true,"对。"],["一样",false,"层次不同。"],["都配对解决",false,"0x08 配对没用。"]]},{"q":"2. 绑定重连后链路自动加密吗？","opts":[["不，要用 LTK 重新启用",true,"对。"],["自动",false,"需要启用。"],["看 MTU",false,"无关。"]]},{"q":"3. 外设恢复出厂后读写报错，产品流程？","opts":[["检测密钥失效，引导 removeBond 重新配对",true,"对。"],["重启 App",false,"不解决密钥。"],["换设备",false,"不必。"]]}];
+let solved=0; const box=document.getElementById('quiz-box');
+QUIZ.forEach((item,qi)=>{
+  const h=document.createElement('div'); h.className='quiz-q'; h.textContent=item.q; box.appendChild(h);
+  const ex=document.createElement('div'); ex.className='explain';
+  item.opts.forEach(([text,ok,why])=>{
+    const b=document.createElement('button'); b.className='opt'; b.textContent=text; b.dataset.q=qi;
+    b.addEventListener('click',()=>{
+      const sib=[...box.querySelectorAll('[data-q="'+qi+'"]')];
+      if(sib.some(s=>s.disabled))return;
+      sib.forEach(s=>s.disabled=true);
+      b.classList.add(ok?'right':'wrong');
+      ex.className='explain show '+(ok?'good':'bad'); ex.textContent=(ok?'✓ ':'✗ ')+why;
+      if(ok){ solved++; if(solved===QUIZ.length)document.getElementById('quiz-done').style.display='block'; }
+      else setTimeout(()=>{ sib.forEach(s=>{s.disabled=false;s.classList.remove('wrong');}); ex.className='explain'; },2000);
+    });
+    box.appendChild(b);
+  });
+  box.appendChild(ex);
+});
+
+</script>
+</body>
+</html>

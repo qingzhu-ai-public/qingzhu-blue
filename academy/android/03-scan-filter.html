@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>蓝牙小课堂 · B3 扫描与过滤 · 青竹蓝牙学堂</title>
+<style>
+  :root{
+    --bg:#F7F6F2; --card:#FFFFFF; --ink:#2B2620; --muted:#7A7267; --faint:#A39B8E;
+    --line:#E8E4DC; --line-soft:#F1EEE7;
+    --coral:#D95B43; --coral-soft:#FBEDE9; --coral-line:#F0CFC6;
+    --teal:#2A9D8F; --teal-soft:#E9F4F2; --teal-line:#BFE0DB;
+    --amber:#C07A1E; --amber-soft:#FBF3E4; --amber-line:#EDD9B4;
+    --blue:#3B6FD4; --blue-soft:#ECF1FB; --blue-line:#C9D8F2;
+    --code-bg:#26221C; --code-ink:#EDE7DC; --code-cm:#8D8577; --code-kw:#8FC7E8; --code-str:#A8D5A2; --code-num:#E8C07D;
+    --radius:12px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html{scroll-behavior:smooth;}
+  body{background:var(--bg);color:var(--ink);font-size:16.5px;line-height:1.9;
+    font-family:"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",system-ui,sans-serif;}
+  a{color:var(--blue);text-decoration:none;} a:hover{text-decoration:underline;}
+  code{font-family:ui-monospace,"SF Mono",Consolas,monospace;font-size:.87em;
+    background:#F0EDE6;border:1px solid var(--line);border-radius:5px;padding:1px 6px;color:#5B4A2F;}
+  .topbar{background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:50;}
+  .topbar-in{max-width:1080px;margin:0 auto;padding:0 20px;height:56px;display:flex;align-items:center;gap:14px;}
+  .logo{font-weight:800;font-size:16px;white-space:nowrap;}
+  .logo span{color:var(--coral);}
+  .topnav{margin-left:auto;display:flex;gap:18px;font-size:14px;}
+  .topnav a{color:var(--muted);} .topnav a:hover{color:var(--coral);text-decoration:none;}
+  .layout{max-width:1080px;margin:0 auto;padding:32px 20px 80px;display:grid;grid-template-columns:200px minmax(0,1fr);gap:40px;}
+  .toc{position:sticky;top:84px;align-self:start;font-size:14px;}
+  .toc-title{font-size:12px;font-weight:700;color:var(--faint);letter-spacing:2px;margin-bottom:10px;}
+  .toc a{display:block;color:var(--muted);padding:5px 12px;border-left:2px solid var(--line);line-height:1.5;}
+  .toc a:hover{color:var(--coral);text-decoration:none;}
+  .toc a.on{color:var(--coral);border-left-color:var(--coral);font-weight:600;background:linear-gradient(90deg,var(--coral-soft),transparent);}
+  main{min-width:0;}
+  .crumb{font-size:13.5px;color:var(--faint);margin-bottom:14px;}
+  h1{font-size:30px;line-height:1.4;letter-spacing:.5px;margin-bottom:10px;}
+  h1 em{font-style:normal;color:var(--coral);}
+  .lead{font-size:16.5px;color:var(--muted);margin-bottom:16px;}
+  .meta{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px;}
+  .meta span{font-size:12.5px;color:var(--muted);background:var(--card);border:1px solid var(--line);border-radius:999px;padding:3px 12px;}
+  .journey{display:flex;flex-wrap:wrap;gap:0;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px 10px;margin:0 0 8px;}
+  .j-step{flex:1 1 110px;text-align:center;padding:4px 8px;position:relative;}
+  .j-step .n{display:inline-flex;width:26px;height:26px;border-radius:50%;background:var(--coral-soft);color:var(--coral);font-weight:800;font-size:13px;align-items:center;justify-content:center;border:1px solid var(--coral-line);}
+  .j-step .t{display:block;font-weight:700;font-size:14px;margin-top:4px;}
+  .j-step .s{display:block;font-size:12px;color:var(--faint);}
+  .j-step:not(:last-child)::after{content:"→";position:absolute;right:-7px;top:12px;color:var(--faint);font-size:14px;}
+  section{margin-top:44px;}
+  h2{font-size:22px;padding-bottom:10px;border-bottom:1px solid var(--line);margin-bottom:16px;scroll-margin-top:80px;}
+  h2 .no{display:inline-block;font-size:12.5px;font-weight:700;color:var(--coral);background:var(--coral-soft);
+    border:1px solid var(--coral-line);border-radius:999px;padding:1px 12px;margin-right:10px;vertical-align:3px;}
+  h3{font-size:17px;margin:20px 0 8px;}
+  p{margin:10px 0;}
+  ul{margin:10px 0 10px 24px;} li{margin:5px 0;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:22px 24px;margin:16px 0;}
+  .term{background:var(--teal-soft);color:#1E7268;border:1px solid var(--teal-line);border-radius:6px;padding:0 7px;font-weight:700;white-space:nowrap;font-size:.93em;}
+  .term2{background:var(--blue-soft);color:#2F58A8;border:1px solid var(--blue-line);border-radius:6px;padding:0 7px;font-weight:700;white-space:nowrap;font-size:.93em;}
+  .key{background:var(--amber-soft);border:1px solid var(--amber-line);border-left:4px solid var(--amber);
+    border-radius:8px;padding:12px 18px;margin:16px 0;font-size:15.5px;}
+  .key .tag,.note .tag{display:block;font-size:12px;font-weight:800;letter-spacing:2px;margin-bottom:3px;}
+  .key .tag{color:var(--amber);}
+  .key b{color:#8A5510;}
+  .note{background:#F4F2EC;border:1px solid var(--line);border-left:4px solid var(--faint);
+    border-radius:8px;padding:11px 16px;margin:16px 0;font-size:14px;color:var(--muted);}
+  .note .tag{color:var(--faint);}
+  .recap{margin:18px 0 4px;padding:10px 16px;background:var(--teal-soft);border:1px solid var(--teal-line);border-radius:8px;font-size:15px;}
+  .recap b{color:#1E7268;}
+  figure{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px;margin:16px 0;text-align:center;}
+  figcaption{font-size:13px;color:var(--faint);margin-top:8px;}
+  svg{max-width:100%;height:auto;}
+  table{width:100%;border-collapse:collapse;font-size:14.5px;margin:14px 0;background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden;}
+  th{background:#F4F2EC;text-align:left;padding:9px 14px;font-size:13px;color:var(--muted);border-bottom:1px solid var(--line);}
+  td{padding:9px 14px;border-bottom:1px solid var(--line-soft);vertical-align:top;}
+  tr:last-child td{border-bottom:none;}
+  pre{background:var(--code-bg);color:var(--code-ink);border-radius:10px;padding:14px 18px;margin:14px 0;
+    font:13.5px/1.85 ui-monospace,"SF Mono",Consolas,monospace;overflow-x:auto;}
+  pre .cm{color:var(--code-cm);} pre .num{color:var(--code-num);} pre .str{color:var(--code-str);}
+  .lab{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;margin:16px 0;}
+  .lab-head{padding:12px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  .lab-head b{font-size:15px;}
+  .hint{font-size:13px;color:var(--faint);}
+  .lab-body{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:18px;padding:16px 20px 20px;}
+  .lab-body.single{grid-template-columns:1fr;}
+  .controls{padding:0 20px 6px;display:flex;flex-wrap:wrap;gap:18px;align-items:center;}
+  .ctl{display:flex;align-items:center;gap:10px;font-size:13.5px;}
+  .ctl label{color:var(--muted);font-weight:600;}
+  .ctl input[type=range]{width:150px;accent-color:var(--coral);}
+  .ctl .val{font-family:ui-monospace,Consolas,monospace;font-weight:700;color:var(--coral);min-width:64px;}
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;flex-wrap:wrap;}
+  .seg button{font-family:inherit;font-size:13px;font-weight:600;border:none;background:#F4F2EC;color:var(--muted);padding:6px 14px;cursor:pointer;}
+  .seg button.on{background:var(--teal);color:#fff;}
+  .timeline{border:1px solid var(--line);border-radius:14px;background:#FBFAF7;padding:14px;}
+  .tl-title{font-size:12.5px;color:var(--muted);font-weight:700;margin-bottom:6px;display:flex;justify-content:space-between;}
+  .stats{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;}
+  .stat-box{flex:1;min-width:90px;border:1px solid var(--line);border-radius:9px;padding:9px 12px;background:#fff;text-align:center;}
+  .stat-box b{display:block;font:700 18px/1.2 ui-monospace,Consolas,monospace;color:var(--ink);}
+  .stat-box small{font-size:11px;color:var(--faint);}
+  .stat-box.good b{color:#1E7268;} .stat-box.bad b{color:var(--coral);}
+  .logcat{background:var(--code-bg);border-radius:10px;overflow:hidden;display:flex;flex-direction:column;}
+  .logcat-head{padding:7px 14px;font-size:12px;color:var(--code-cm);border-bottom:1px solid #3A352C;font-family:ui-monospace,Consolas,monospace;display:flex;justify-content:space-between;}
+  .logcat-body{padding:12px 14px;font-size:12.5px;line-height:1.95;font-family:ui-monospace,Consolas,monospace;color:#D6CFC2;overflow-y:auto;max-height:300px;min-height:220px;}
+  .logcat-body .t{color:#6B6455;} .logcat-body .api{color:var(--code-kw);} .logcat-body .ok{color:var(--code-str);} .logcat-body .c{color:var(--code-cm);} .logcat-body .warn{color:var(--code-num);} .logcat-body .err{color:#E88;}
+  .lab-foot{padding:0 20px 20px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+  .btn{font-family:inherit;font-size:14.5px;font-weight:600;cursor:pointer;border-radius:8px;padding:9px 22px;border:1px solid var(--coral);background:var(--coral);color:#fff;transition:background .15s;}
+  .btn:hover{background:#C24E38;}
+  .btn.ghost{background:var(--card);color:var(--muted);border-color:var(--line);}
+  .btn.ghost:hover{color:var(--ink);border-color:var(--faint);}
+  .btn:disabled{opacity:.5;cursor:default;}
+  .btn.teal{background:var(--teal);border-color:var(--teal);} .btn.teal:hover{background:#23867B;}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0;}
+  .chip{font-size:12.5px;font-weight:700;border-radius:999px;padding:4px 12px;border:1px solid var(--line);background:#F4F2EC;color:var(--faint);}
+  .chip.on{background:var(--teal-soft);color:#1E7268;border-color:var(--teal-line);}
+  .chip.bad{background:var(--coral-soft);color:#B04A35;border-color:var(--coral-line);}
+  .attr{width:100%;border-collapse:collapse;font-size:13.5px;font-family:ui-monospace,Consolas,monospace;}
+  .attr td{padding:7px 10px;border-bottom:1px solid var(--line-soft);cursor:pointer;}
+  .attr tr:hover td{background:var(--teal-soft);}
+  .attr tr.hit td{background:var(--teal-soft);font-weight:700;}
+  .attr tr.miss td{background:var(--coral-soft);}
+  .quiz-q{font-weight:700;font-size:16px;margin:20px 0 10px;}
+  .opt{display:block;width:100%;text-align:left;font-family:inherit;font-size:14.5px;cursor:pointer;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px 16px;margin:7px 0;color:var(--ink);transition:border-color .15s;}
+  .opt:hover{border-color:var(--teal);}
+  .opt.right{background:var(--teal-soft);border-color:var(--teal);font-weight:600;}
+  .opt.wrong{background:var(--coral-soft);border-color:var(--coral);}
+  .opt:disabled{cursor:default;}
+  .explain{display:none;font-size:14px;border-radius:8px;padding:10px 14px;margin:6px 0;}
+  .explain.show{display:block;}
+  .explain.good{background:var(--teal-soft);border:1px solid var(--teal-line);}
+  .explain.bad{background:var(--coral-soft);border:1px solid var(--coral-line);}
+  .next-links{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0;}
+  .next-links a{display:inline-block;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:9px 18px;font-size:14px;font-weight:600;}
+  .next-links a:hover{border-color:var(--coral);text-decoration:none;}
+  footer{border-top:1px solid var(--line);margin-top:56px;padding-top:20px;font-size:13px;color:var(--faint);}
+  @media (max-width:900px){
+    .layout{grid-template-columns:1fr;gap:0;}
+    .toc{display:none;}
+    .lab-body{grid-template-columns:1fr;}
+    h1{font-size:25px;}
+    .j-step:not(:last-child)::after{display:none;}
+  }
+</style>
+</head>
+<body>
+<div class="topbar"><div class="topbar-in">
+  <div class="logo">青竹<span>蓝牙学堂</span></div>
+  <nav class="topnav">
+    <a href="../">学堂首页</a>
+    <a href="02-permissions-manifest.html">上一课</a>
+    <a href="../../#android">通用知识</a>
+  </nav>
+</div></div>
+<div class="layout">
+<aside class="toc" id="toc">
+  <div class="toc-title">本课目录</div>
+  <a href="#scan">扫描回调</a>
+  <a href="#filter">ScanFilter</a>
+  <a href="#limit">限流与后台</a>
+  <a href="#lab">动手演练</a>
+  <a href="#quiz">本课自测</a>
+  <a href="#map">回顾与速查</a>
+</aside>
+<main>
+  <div class="crumb">蓝牙小课堂 / Android 第三课 · B3</div>
+  <h1>扫描与过滤：<em>ScanFilter</em> 与限流</h1>
+  <p class="lead">startScan 把附近广播全收进来，费电又吵。ScanFilter 让系统只把匹配的交给你。这一课讲过滤怎么建、为什么加了过滤设备消失，以及 Android 的扫描限流。</p>
+  <div class="meta"><span>平台：Android/Kotlin</span><span>约 12 分钟</span><span>含交互演练</span><span>前置：B2</span></div>
+  <div class="journey">
+    <div class="j-step"><span class="n">1</span><span class="t">扫描</span><span class="s">startScan</span></div>
+    <div class="j-step"><span class="n">2</span><span class="t">过滤</span><span class="s">ScanFilter</span></div>
+    <div class="j-step"><span class="n">3</span><span class="t">限流</span><span class="s">5 次/30s</span></div>
+    <div class="j-step"><span class="n">4</span><span class="t">后台</span><span class="s">PendingIntent</span></div>
+    <div class="j-step"><span class="n">5</span><span class="t">动手</span><span class="s">建过滤</span></div>
+  </div>
+
+  <section id="scan">
+    <h2><span class="no">第 1 步</span>startScan + ScanCallback</h2>
+    
+      <pre>val cb = object : ScanCallback() {
+  override fun onScanResult(type:Int, r:ScanResult) {
+    val dev = r.device; val rssi = r.rssi
+    val record = r.scanRecord   // 原始广播字节
+  }
+  override fun onScanFailed(code:Int) { /* 1 重复注册 2 注册失败 6 过频 */ }
+}
+scanner.startScan(filters, settings, cb)</pre>
+      <div class="recap"><b>本步收束：</b>每个广播回调一次 onScanResult；onScanFailed 的 1/2/6 各有含义。</div>
+  </section>
+
+  <section id="filter">
+    <h2><span class="no">第 2 步</span>过滤条件必须真的在广播里</h2>
+    
+      <pre>val f = ScanFilter.Builder()
+  .setServiceUuid(ParcelUuid.fromString("00001809-0000-1000-8000-00805F9B34FB"))
+  .build()</pre>
+      <div class="key"><span class="tag">重点 · 高频坑</span>服务 UUID 过滤失效，多半是 <b>UUID 根本没写进广播</b>（设备连接后才暴露服务）。名字过滤失效可能是名字在扫描响应里平台没交付。RSSI 过滤慎用（波动大）。排查先去掉全部过滤看原始字节。</div>
+      <div class="recap"><b>本步收束：</b>过滤字段必须真实存在于广播；筛不到先去掉过滤看 RAW。</div>
+  </section>
+
+  <section id="limit">
+    <h2><span class="no">第 3 步</span>7.0 限流、8.1 熄屏、后台 PendingIntent</h2>
+    
+      <ul><li>Android 7.0 起 <b>30 秒内启停扫描超 5 次</b>被限流（onScanFailed 2/6）。</li>
+        <li>8.1 起<b>熄屏时不带过滤器的扫描暂停</b>——后台扫描务必带 ScanFilter。</li>
+        <li>进程未运行也要收匹配：用 <code>startScan(filters, settings, PendingIntent)</code>。</li></ul>
+      <div class="recap"><b>本步收束：</b>别频繁启停；后台带过滤；离线匹配用 PendingIntent。</div>
+  </section>
+
+  <section id="lab">
+    <h2><span class="no">动手</span>勾选过滤条件，看目标设备还匹配吗</h2>
+    <p>目标设备广播里有名字 XiaoWen-T 和服务 1809，但没有厂商数据。勾选过滤条件，看它是否还被匹配。体会「过滤了广播里没有的字段→设备消失」。</p>
+    <div class="lab">
+      <div class="lab-head"><b>ScanFilter 演练</b><span class="hint">目标广播：有名字、有 1809、无厂商数据</span></div>
+      <div class="controls"><div class="seg" id="f3"><button data-f="name">按名字</button><button data-f="uuid">按 1809</button><button data-f="mfr">按厂商数据</button></div></div>
+      <div class="lab-body"><div><div class="chips" id="match3"></div><pre id="code3" style="margin:10px 0;"></pre></div><div class="logcat"><div class="logcat-head"><span>扫描结果</span><span>live</span></div><div class="logcat-body" id="log3"></div></div></div>
+      <div class="lab-foot"><span class="hint">勾「按厂商数据」→ 设备消失，因为广播里根本没有厂商数据</span></div>
+    </div>
+    <div class="key"><span class="tag">看懂这场演练</span>过滤是「与」逻辑：每个条件都必须在广播里真实存在。勾了广播没有的字段（如厂商数据），设备就被滤掉。这正是「加了过滤设备消失」的根因。</div>
+  </section>
+
+  <section id="quiz">
+    <h2><span class="no">自测</span>三个问题</h2>
+    <div class="card" id="quiz-box"></div>
+    <p id="quiz-done" style="display:none;font-weight:700;color:#1E7268;">全对。下一课讲连接生命周期。</p>
+  </section>
+
+  <section id="map">
+    <h2><span class="no">回顾</span>速查</h2>
+    <table><tr><th>要点</th><th>记住</th></tr><tr><td>startScan</td><td>filters+settings+callback</td></tr><tr><td>ScanFilter</td><td>字段必须真实在广播里</td></tr><tr><td>限流</td><td>30s 启停&gt;5 次</td></tr><tr><td>后台</td><td>带过滤；离线用 PendingIntent</td></tr></table>
+    <h3>接下来读什么</h3>
+    <div class="next-links">
+      <a href="02-permissions-manifest.html">← 上一课</a>
+      <a href="../">学堂首页 · 课程地图</a>
+      <a href="../../#android">通用知识正文</a>
+    </div>
+    <div class="note"><span class="tag">说明</span>本页为教学简化，工程细节以正文与官方规范为准；演练为模拟，非真实设备通信。</div>
+    <footer>青竹蓝牙学堂 · 蓝牙小课堂Android 第三课 · B3 · <a href="../">回到学堂</a></footer>
+  </section>
+</main>
+</div>
+<script>
+
+(function(){
+  var has={name:true,uuid:true,mfr:false}; var on={name:false,uuid:false,mfr:false};
+  function calc(){
+    var active=Object.keys(on).filter(function(k){return on[k];});
+    var match=active.every(function(k){return has[k];});
+    var chips=active.length?active.map(function(k){return '<span class="chip '+(has[k]?'on':'bad')+'">'+k+(has[k]?'✓':'✗不在广播')+'</span>';}).join(''):'<span class="chip">无过滤（全收）</span>';
+    document.getElementById('match3').innerHTML=chips+'<span class="chip '+(match?'on':'bad')+'">'+(match?'匹配':'设备消失')+'</span>';
+    var code='ScanFilter.Builder()'+(active.length?active.map(function(k){return k==='name'?'.setDeviceName("XiaoWen-T")':k==='uuid'?'.setServiceUuid(1809)':'.setManufacturerData(0x0059,…)';}).join(''):'')+'.build()';
+    document.getElementById('code3').textContent=code;
+    document.getElementById('log3').innerHTML='<div>过滤条件: '+(active.join(',')||'无')+'</div>'+(match?'<div><span class="ok">onScanResult XiaoWen-T</span></div>':'<div><span class="err">无回调：某条件不在广播里</span></div><div><span class="c">// 去掉过滤看 RAW 验证</span></div>');
+  }
+  document.querySelectorAll('#f3 button').forEach(function(b){b.addEventListener('click',function(){var k=b.getAttribute('data-f');on[k]=!on[k];b.classList.toggle('on',on[k]);calc();});});
+  calc();
+})();
+
+const tocLinks=[...document.querySelectorAll('.toc a')];
+const secs=tocLinks.map(a=>document.getElementById(a.getAttribute('href').slice(1)));
+const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){tocLinks.forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+e.target.id));}});},{rootMargin:'-20% 0px -70% 0px'});
+secs.forEach(s=>s&&io.observe(s));
+const QUIZ=[{"q":"1. 服务 UUID 过滤失效最常见原因？","opts":[["UUID 没写进广播",true,"对。设备可能连接后才暴露服务。"],["权限没给",false,"权限问题会扫不到全部。"],["RSSI 太低",false,"与 UUID 无关。"]]},{"q":"2. onScanFailed=2/6 常见于？","opts":[["频繁启停被限流",true,"对。30 秒超 5 次。"],["设备坏了",false,"是 App 扫描行为。"],["名字太长",false,"无关。"]]},{"q":"3. 8.1 熄屏后台扫描要怎样？","opts":[["带 ScanFilter",true,"对。无过滤的扫描熄屏暂停。"],["不带过滤",false,"会被暂停。"],["提高 RSSI",false,"无关。"]]}];
+let solved=0; const box=document.getElementById('quiz-box');
+QUIZ.forEach((item,qi)=>{
+  const h=document.createElement('div'); h.className='quiz-q'; h.textContent=item.q; box.appendChild(h);
+  const ex=document.createElement('div'); ex.className='explain';
+  item.opts.forEach(([text,ok,why])=>{
+    const b=document.createElement('button'); b.className='opt'; b.textContent=text; b.dataset.q=qi;
+    b.addEventListener('click',()=>{
+      const sib=[...box.querySelectorAll('[data-q="'+qi+'"]')];
+      if(sib.some(s=>s.disabled))return;
+      sib.forEach(s=>s.disabled=true);
+      b.classList.add(ok?'right':'wrong');
+      ex.className='explain show '+(ok?'good':'bad'); ex.textContent=(ok?'✓ ':'✗ ')+why;
+      if(ok){ solved++; if(solved===QUIZ.length)document.getElementById('quiz-done').style.display='block'; }
+      else setTimeout(()=>{ sib.forEach(s=>{s.disabled=false;s.classList.remove('wrong');}); ex.className='explain'; },2000);
+    });
+    box.appendChild(b);
+  });
+  box.appendChild(ex);
+});
+
+</script>
+</body>
+</html>
