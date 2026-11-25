@@ -151,22 +151,23 @@
     .j-step:not(:last-child)::after{display:none;}
   }
 
-  :root{--bg:#F2F3F5;--card:#FFFFFF;--ink:#16181D;--muted:#6B7280;--faint:#9CA3AF;--line:#E5E7EB;--line-soft:#EEF0F2;--radius:20px;}
+  :root{--bg:#FAF3EC;--card:#FFFFFF;--ink:#201A15;--muted:#7C7166;--faint:#A79B8D;--line:#EADFD3;--line-soft:#F3EAE0;--radius:16px;--code-bg:#1B1512;
+    --shadow-card:0 1px 2px rgba(64,42,24,.06),0 8px 20px -6px rgba(64,42,24,.10),0 28px 60px -24px rgba(64,42,24,.14);}
   body{background:var(--bg);}
-  .topbar{background:rgba(242,243,245,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);}
-  .boardnav,.toc{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px 10px;box-shadow:0 1px 3px rgba(0,0,0,.05);}
+  .topbar{background:rgba(250,243,236,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);}
+  .boardnav,.toc{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px 10px;box-shadow:var(--shadow-card);}
   .boardnav a,.toc a{border-left:0;border-radius:10px;padding:7px 12px;}
   .boardnav a.cur,.toc a.on{background:var(--coral-soft);border-left:0;background-image:none;}
-  .card,.lab{border-radius:var(--radius);box-shadow:0 1px 3px rgba(0,0,0,.05);border:1px solid var(--line);}
-  .key{border-radius:14px;}
-  .btn{border-radius:10px;}
-  .journey .j-step{border-radius:14px;}
-  .next-links a{border-radius:10px;}
-  .lab-head{border-radius:0;}
+  .card,.lab{border-radius:var(--radius);box-shadow:var(--shadow-card);border:1px solid var(--line);}
+  .key{border-radius:12px;}
+  .btn{border-radius:999px;}
+  .journey .j-step{border-radius:12px;}
+  .next-links a{border-radius:999px;}
   table{border-radius:12px;overflow:hidden;}
+  h1{font-weight:900;}
 </style>
 </head>
-<body style="--coral:#2A9D8F;--coral-soft:#E9F4F2;--coral-line:#BFE0DB">
+<body style="--coral:#E8590C;--coral-soft:#FBEADF;--coral-line:#F2C4A4">
 <div class="topbar"><div class="topbar-in">
   <a class="logo" href="../index.html">青竹<span>蓝牙学堂</span></a>
   <nav class="topnav">
