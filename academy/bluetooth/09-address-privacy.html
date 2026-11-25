@@ -147,7 +147,7 @@
   <nav class="topnav">
     <a href="../">学堂首页</a>
     <a href="02-advertising-scanning.html">上一课</a>
-    <a href="../../#bluetooth">通用知识</a>
+    <a href="../index.html">课程地图</a>
   </nav>
 </div></div>
 <div class="layout">
@@ -221,7 +221,7 @@
     <div class="next-links">
       <a href="02-advertising-scanning.html">← 上一课</a>
       <a href="../">学堂首页 · 课程地图</a>
-      <a href="../../#bluetooth">通用知识正文</a>
+      <a href="../index.html">课程地图</a>
     </div>
     <div class="note"><span class="tag">说明</span>本页为教学简化，工程细节以正文与官方规范为准；演练为模拟，非真实设备通信。</div>
     <footer>青竹蓝牙学堂 · 蓝牙小课堂第九课 · A9 · <a href="../">回到学堂</a></footer>
@@ -254,7 +254,7 @@
 
 
 const tocLinks=[...document.querySelectorAll('.toc a')];
-const secs=tocLinks.map(a=>document.querySelector(a.getAttribute('href')));
+const secs=tocLinks.map(a=>document.getElementById(a.getAttribute('href').slice(1)));
 const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){tocLinks.forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+e.target.id));}});},{rootMargin:'-20% 0px -70% 0px'});
 secs.forEach(s=>s&&io.observe(s));
 const QUIZ=[{"q":"1. 同一台 BLE 外设在两台 iPhone 上标识不同，是 bug 吗？","opts":[["不是，iOS 给系统生成的 per-device 标识",true,"对。跨手机关联用产品 stableId。"],["是",false,"是平台隐私策略。"],["设备坏了",false,"与设备无关。"]]},{"q":"2. 地址轮换后靠什么认出是同一台设备？","opts":[["IRK 解析",true,"对。绑定时交换了 IRK。"],["地址字面值",false,"地址会变。"],["设备名",false,"名字可变且可重复。"]]},{"q":"3. 长期关联设备列表/历史数据，应该用？","opts":[["产品定义的稳定标识 stableId",true,"对。可信连接后读序列号建映射。"],["RSSI",false,"RSSI 波动大。"],["广播明文地址",false,"会轮换且涉及追踪。"]]}];

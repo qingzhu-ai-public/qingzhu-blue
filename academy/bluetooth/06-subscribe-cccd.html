@@ -147,7 +147,7 @@
   <nav class="topnav">
     <a href="../">学堂首页</a>
     <a href="02-advertising-scanning.html">上一课</a>
-    <a href="../../#bluetooth">通用知识</a>
+    <a href="../index.html">课程地图</a>
   </nav>
 </div></div>
 <div class="layout">
@@ -225,7 +225,7 @@
     <div class="next-links">
       <a href="02-advertising-scanning.html">← 上一课</a>
       <a href="../">学堂首页 · 课程地图</a>
-      <a href="../../#bluetooth">通用知识正文</a>
+      <a href="../index.html">课程地图</a>
     </div>
     <div class="note"><span class="tag">说明</span>本页为教学简化，工程细节以正文与官方规范为准；演练为模拟，非真实设备通信。</div>
     <footer>青竹蓝牙学堂 · 蓝牙小课堂第六课 · A6 · <a href="../">回到学堂</a></footer>
@@ -266,7 +266,7 @@
 
 
 const tocLinks=[...document.querySelectorAll('.toc a')];
-const secs=tocLinks.map(a=>document.querySelector(a.getAttribute('href')));
+const secs=tocLinks.map(a=>document.getElementById(a.getAttribute('href').slice(1)));
 const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){tocLinks.forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+e.target.id));}});},{rootMargin:'-20% 0px -70% 0px'});
 secs.forEach(s=>s&&io.observe(s));
 const QUIZ=[{"q":"1. 订阅一个 Notify 特征，手机要做哪两件事？","opts":[["本地启用接收 + 远端写 CCCD",true,"对。缺一件都收不到。"],["只写 CCCD",false,"设备发了但系统不交给 App。"],["只本地登记",false,"设备根本不会发。"]]},{"q":"2. 启用 Notify 向 CCCD 写什么（空口）？","opts":[["01 00",true,"对。0x0001 小端。"],["00 01",false,"字节序反了。"],["02 00",false,"那是 Indicate。"]]},{"q":"3. 绑定设备重连后「设备在发、手机收不到」，为什么？","opts":[["服务端保留旧 CCCD 直接发，手机本地监听没重新登记",true,"对。重连要重新登记本地。"],["设备坏了",false,"是订阅时序错位。"],["CCCD 不能保留",false,"绑定客户端的 CCCD 会被保留。"]]}];

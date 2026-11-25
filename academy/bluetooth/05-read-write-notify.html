@@ -147,7 +147,7 @@
   <nav class="topnav">
     <a href="../">学堂首页</a>
     <a href="02-advertising-scanning.html">上一课</a>
-    <a href="../../#bluetooth">通用知识</a>
+    <a href="../index.html">课程地图</a>
   </nav>
 </div></div>
 <div class="layout">
@@ -235,7 +235,7 @@
     <div class="next-links">
       <a href="02-advertising-scanning.html">← 上一课</a>
       <a href="../">学堂首页 · 课程地图</a>
-      <a href="../../#bluetooth">通用知识正文</a>
+      <a href="../index.html">课程地图</a>
     </div>
     <div class="note"><span class="tag">说明</span>本页为教学简化，工程细节以正文与官方规范为准；演练为模拟，非真实设备通信。</div>
     <footer>青竹蓝牙学堂 · 蓝牙小课堂第五课 · A5 · <a href="../">回到学堂</a></footer>
@@ -267,7 +267,7 @@
 
 
 const tocLinks=[...document.querySelectorAll('.toc a')];
-const secs=tocLinks.map(a=>document.querySelector(a.getAttribute('href')));
+const secs=tocLinks.map(a=>document.getElementById(a.getAttribute('href').slice(1)));
 const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){tocLinks.forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+e.target.id));}});},{rootMargin:'-20% 0px -70% 0px'});
 secs.forEach(s=>s&&io.observe(s));
 const QUIZ=[{"q":"1. Write Request 收到 Write Response，能说明采样间隔已生效吗？","opts":[["不能，只确认 ATT 层接受写入",true,"对。要读回配置或等业务回执。"],["能",false,"ATT 接受 ≠ 业务生效。"],["取决于 MTU",false,"与 MTU 无关。"]]},{"q":"2. Indicate 的确认是谁发的？","opts":[["手机协议栈自动回，App 不参与",true,"对。App 是否处理数据是另一层。"],["App 手动写代码回",false,"协议栈自动处理。"],["设备自己回",false,"确认由 Client 侧协议栈回。"]]},{"q":"3. 收到 01 12 15 00 05，下一步？","opts":[["0x05 需认证，完成配对/加密后重试",true,"对。这是安全层错误。"],["重写一遍就好",false,"不解决认证问题。"],["换 UUID",false,"与 UUID 无关。"]]}];

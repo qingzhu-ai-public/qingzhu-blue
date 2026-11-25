@@ -147,7 +147,7 @@
   <nav class="topnav">
     <a href="../">学堂首页</a>
     <a href="02-advertising-scanning.html">上一课</a>
-    <a href="../../#bluetooth">通用知识</a>
+    <a href="../index.html">课程地图</a>
   </nav>
 </div></div>
 <div class="layout">
@@ -231,7 +231,7 @@
     <div class="next-links">
       <a href="02-advertising-scanning.html">← 上一课</a>
       <a href="../">学堂首页 · 课程地图</a>
-      <a href="../../#bluetooth">通用知识正文</a>
+      <a href="../index.html">课程地图</a>
     </div>
     <div class="note"><span class="tag">说明</span>本页为教学简化，工程细节以正文与官方规范为准；演练为模拟，非真实设备通信。</div>
     <footer>青竹蓝牙学堂 · 蓝牙小课堂第十二课 · A12 · <a href="../">回到学堂</a></footer>
@@ -260,7 +260,7 @@
 
 
 const tocLinks=[...document.querySelectorAll('.toc a')];
-const secs=tocLinks.map(a=>document.querySelector(a.getAttribute('href')));
+const secs=tocLinks.map(a=>document.getElementById(a.getAttribute('href').slice(1)));
 const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){tocLinks.forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+e.target.id));}});},{rootMargin:'-20% 0px -70% 0px'});
 secs.forEach(s=>s&&io.observe(s));
 const QUIZ=[{"q":"1. 标称蓝牙 5.0 的传感器，一定能用 2M PHY 吗？","opts":[["不一定，2M 是可选特性",true,"对。要查能力声明且两端+系统都支持。"],["一定",false,"版本号不承诺能力。"],["看电池",false,"与电池无关。"]]},{"q":"2. 温度每分钟发一次、附近十几台手机都要显示，选？","opts":[["广播",true,"对。一对多无连接数限制、最省电、可容忍漏收。"],["连接",false,"十几台连接不现实且费电。"],["经典 SPP",false,"不适合一对多小数据。"]]},{"q":"3. 只开 DLE 不换 MTU，应用每次能发多少值？","opts":[["仍 20 字节（MTU 默认 23）",true,"对。MTU 与 DLE 要配合。"],["251 字节",false,"那是链路层载荷，不是 ATT 值。"],["244 字节",false,"需要 MTU 提到 247。"]]}];

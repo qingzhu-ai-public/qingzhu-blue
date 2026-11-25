@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>蓝牙小课堂 · A1 开课导学 · 青竹蓝牙学堂</title>
+<style>
+  :root{--bg:#F7F6F2;--card:#FFF;--ink:#2B2620;--muted:#7A7267;--faint:#A39B8E;--line:#E8E4DC;--coral:#D95B43;--coral-soft:#FBEDE9;--teal:#2A9D8F;--teal-soft:#E9F4F2;--teal-line:#BFE0DB;--blue:#3B6FD4;--code-bg:#2B2620;--radius:14px;}
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--ink);font-size:16px;line-height:1.8;font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;}
+  a{color:var(--blue);text-decoration:none;}
+  .topbar{background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:50;}
+  .topbar-in{max-width:1080px;margin:0 auto;padding:0 20px;height:56px;display:flex;align-items:center;gap:14px;}
+  .logo{font-weight:800;font-size:17px;}.logo span{color:var(--coral);}
+  .topnav{margin-left:auto;display:flex;gap:18px;font-size:14px;}.topnav a{color:var(--muted);}
+  .wrap{max-width:860px;margin:0 auto;padding:34px 20px 80px;}
+  h1{font-size:30px;margin:10px 0 12px;}
+  .lead{font-size:17px;color:var(--muted);margin-bottom:18px;}
+  h2{font-size:21px;margin:34px 0 12px;border-bottom:2px solid var(--line);padding-bottom:8px;}
+  h2 .no{color:var(--coral);font-size:13px;font-weight:800;margin-right:8px;}
+  p{margin:10px 0;}
+  .key{background:var(--coral-soft);border:1px solid #F0CFC6;border-radius:10px;padding:12px 16px;margin:14px 0;}
+  .key .tag{display:inline-block;font-size:12px;font-weight:800;color:var(--coral);margin-right:8px;}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;margin:14px 0;}
+  .b{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;}
+  .b .n{font-size:12px;font-weight:800;color:var(--coral);}
+  .b b{display:block;font-size:16px;margin:4px 0;}
+  .b span{font-size:13px;color:var(--muted);}
+  .seg{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0;}
+  .seg button{font-family:inherit;font-size:14px;padding:8px 16px;border-radius:8px;border:1px solid var(--line);background:var(--card);cursor:pointer;}
+  .seg button.on{border-color:var(--coral);background:var(--coral-soft);color:var(--coral);font-weight:700;}
+  .quiz-q{font-weight:700;margin:16px 0 8px;}
+  .opt{display:block;width:100%;text-align:left;font-family:inherit;font-size:14.5px;margin:6px 0;padding:10px 14px;border-radius:8px;border:1px solid var(--line);background:var(--card);cursor:pointer;}
+  .opt.good{border-color:var(--teal);background:var(--teal-soft);}
+  .opt.bad{border-color:var(--coral);background:var(--coral-soft);}
+  .explain{display:none;font-size:13.5px;margin:4px 0 10px;padding:8px 12px;border-radius:8px;}
+  .explain.show{display:block;}.explain.good{background:var(--teal-soft);}.explain.bad{background:var(--coral-soft);}
+  footer{margin-top:50px;border-top:1px solid var(--line);padding-top:18px;font-size:13px;color:var(--faint);}
+</style>
+</head>
+<body>
+<div class="topbar"><div class="topbar-in">
+  <div class="logo">青竹<span>蓝牙学堂</span></div>
+  <nav class="topnav"><a href="../index.html">学堂首页</a><a href="02-advertising-scanning.html">下一课 →</a></nav>
+</div></div>
+<div class="wrap">
+  <h1>A1 · 开课导学：这套课怎么学</h1>
+  <p class="lead">先摆实物：一个 BLE 温湿度计 + 一部手机。整套课就讲清「手机怎么发现它、连上它、读到温湿度」，再落到你用的平台。</p>
+
+  <h2><span class="no">第 1 步</span>课程地图：先通用，再选端</h2>
+  <p>通用基础平台无关，先懂蓝牙怎么回事；然后到你用的端落地；最后做一个能读温湿度的完整 App。</p>
+  <div class="grid">
+    <a class="b" href="02-advertising-scanning.html"><span class="n">A · 12 课</span><b>通用基础</b><span>广播/连接/GATT/MTU/配对/排障</span></a>
+    <a class="b" href="../android/01-android-overview.html"><span class="n">B · 14 课</span><b>Android</b><span>权限/133/队列/后台/抓包/厂商</span></a>
+    <a class="b" href="../ios/01-corebluetooth-overview.html"><span class="n">C · 11 课</span><b>iOS</b><span>identifier/setNotify/后台恢复</span></a>
+    <a class="b" href="../harmonyos/01-overview.html"><span class="n">D · 9 课</span><b>鸿蒙</b><span>ble.* 与 Android 对照</span></a>
+    <a class="b" href="../flutter/01-lib-overview.html"><span class="n">E · 8 课</span><b>Flutter</b><span>跨端库 + 原生桥</span></a>
+    <a class="b" href="../react-native/01-lib-overview.html"><span class="n">F · 8 课</span><b>React Native</b><span>ble-plx + base64 + 桥</span></a>
+  </div>
+
+  <h2><span class="no">第 2 步</span>每课长什么样</h2>
+  <p>统一模板：实物直讲 → 分步拆解 → 可点击演练 → 3 题自测 → 速查表。不堆术语，先摆事实再讲机制。</p>
+  <div class="key"><span class="tag">建议</span>先修完通用基础 A，再选你的端。跨端（Flutter/RN）也要先懂 A 和对应原生板，因为权限/后台/配对都落原生。</div>
+
+  <h2><span class="no">动手</span>选你的端，看路线</h2>
+  <div class="seg" id="pick"><button data-k="a" class="on">先通用</button><button data-k="b">Android</button><button data-k="c">iOS</button><button data-k="d">鸿蒙</button><button data-k="e">Flutter</button><button data-k="f">RN</button></div>
+  <div class="key" id="route"></div>
+
+  <h2><span class="no">自测</span>三个问题</h2>
+  <div id="quiz"></div>
+  <p id="done" style="display:none;font-weight:700;color:#1E7268;">全对。从 A2 广播与扫描开始。</p>
+
+  <footer>青竹蓝牙学堂 · A1 开课导学 · <a href="../index.html">回到学堂</a></footer>
+</div>
+<script>
+(function(){
+  var R={a:'路线：A2→A12 打基础，再选端。通用基础平台无关，是所有端的公共底座。',b:'路线：A 基础 → B1→B14。重点：权限分代、133 排障、串行队列、后台 FGS/CDM。',c:'路线：A 基础 → C1→C11。重点：identifier 非 MAC、setNotifyValue、后台恢复。',d:'路线：A 基础 → D1→D9。ble.* 与 Android 一一映射，对照着学。',e:'路线：A + B/C 原生 → E1→E8。库只是桥，权限/后台落原生。',f:'路线：A + B/C 原生 → F1→F8。值 base64，桥接原生模块。'};
+  function show(k){document.getElementById('route').innerHTML='<span class="tag">路线</span>'+R[k];}
+  document.querySelectorAll('#pick button').forEach(function(b){b.addEventListener('click',function(){document.querySelectorAll('#pick button').forEach(function(x){x.classList.remove('on');});b.classList.add('on');show(b.getAttribute('data-k'));});});
+  show('a');
+  var Q=[{q:'1. 应该先修哪块？',o:[['通用基础 A',1,'对，平台无关的公共底座。'],['直接 Flutter',0,'跨端也要先懂 A 和原生。'],['直接抓包',0,'先懂流程再抓包。']]},
+         {q:'2. 跨端库能绕过原生权限/后台吗？',o:[['不能',1,'对，都落原生。'],['能',0,'库只是桥。'],['只看 Dart 层',0,'不够。']]},
+         {q:'3. 每课不包含哪个？',o:[['交互演练',0,'包含。'],['自测',0,'包含。'],['纯术语背诵',1,'对，不堆术语。']]}];
+  var box=document.getElementById('quiz'),correct=0,answered=0;
+  Q.forEach(function(item,qi){var h=document.createElement('div');h.className='quiz-q';h.textContent=item.q;box.appendChild(h);
+    item.o.forEach(function(op){var b=document.createElement('button');b.className='opt';b.textContent=op[0];box.appendChild(b);
+      var ex=document.createElement('div');ex.className='explain';box.appendChild(ex);
+      b.addEventListener('click',function(){if(b.dataset.done)return;var ok=op[1]===1;answered++;if(ok)correct++;
+        b.classList.add(ok?'good':'bad');b.dataset.done=1;ex.className='explain show '+(ok?'good':'bad');ex.textContent=(ok?'✓ ':'✗ ')+op[2];
+        if(answered===Q.length&&correct===Q.length)document.getElementById('done').style.display='block';});});});
+})();
+</script>
+</body>
+</html>

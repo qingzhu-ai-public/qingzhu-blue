@@ -147,7 +147,7 @@
   <nav class="topnav">
     <a href="../">学堂首页</a>
     <a href="02-advertising-scanning.html">上一课</a>
-    <a href="../../#bluetooth">通用知识</a>
+    <a href="../index.html">课程地图</a>
   </nav>
 </div></div>
 <div class="layout">
@@ -242,7 +242,7 @@
     <div class="next-links">
       <a href="02-advertising-scanning.html">← 上一课</a>
       <a href="../">学堂首页 · 课程地图</a>
-      <a href="../../#bluetooth">通用知识正文</a>
+      <a href="../index.html">课程地图</a>
     </div>
     <div class="note"><span class="tag">说明</span>本页为教学简化，工程细节以正文与官方规范为准；演练为模拟，非真实设备通信。</div>
     <footer>青竹蓝牙学堂 · 蓝牙小课堂第三课 · A3 · <a href="../">回到学堂</a></footer>
@@ -277,7 +277,7 @@
 
 
 const tocLinks=[...document.querySelectorAll('.toc a')];
-const secs=tocLinks.map(a=>document.querySelector(a.getAttribute('href')));
+const secs=tocLinks.map(a=>document.getElementById(a.getAttribute('href').slice(1)));
 const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){tocLinks.forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+e.target.id));}});},{rootMargin:'-20% 0px -70% 0px'});
 secs.forEach(s=>s&&io.observe(s));
 const QUIZ=[{"q":"1. interval 100 ms、latency 9，外设最长多久不出现仍合法？超时至少设多少？","opts":[["最长 1000 ms，超时需 > 2000 ms",true,"对。(1+9)×100=1000，超时>2×1000=2000，实践留更大余量。"],["最长 100 ms，超时 100 ms",false,"没算 latency 跳过的 9 个事件。"],["最长 900 ms，超时 900 ms",false,"公式是 (1+latency)×interval×2。"]]},{"q":"2. 外设请求 interval 15 ms，两台手机实测 15 和 50 ms，是故障吗？","opts":[["不是，参数决定权在 Central，各系统策略不同",true,"对。这是策略差异，不是 bug。"],["是，固件坏了",false,"固件请求只是偏好，手机可调整。"],["是，蓝牙版本不同",false,"与版本无关，是系统接受策略。"]]},{"q":"3. 断开原因 0x08 和 0x3E 分别指向？","opts":[["0x08 链路曾活着后丢了；0x3E 根本没建立",true,"对。前者查距离/干扰/休眠，后者查广播/连接竞争。"],["两者一样",false,"排查方向完全不同。"],["0x08 没建立；0x3E 后来丢了",false,"说反了。"]]}];

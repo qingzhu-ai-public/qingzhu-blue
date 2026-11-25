@@ -147,7 +147,7 @@
   <nav class="topnav">
     <a href="../">学堂首页</a>
     <a href="02-advertising-scanning.html">上一课</a>
-    <a href="../../#bluetooth">通用知识</a>
+    <a href="../index.html">课程地图</a>
   </nav>
 </div></div>
 <div class="layout">
@@ -229,7 +229,7 @@
     <div class="next-links">
       <a href="02-advertising-scanning.html">← 上一课</a>
       <a href="../">学堂首页 · 课程地图</a>
-      <a href="../../#bluetooth">通用知识正文</a>
+      <a href="../index.html">课程地图</a>
     </div>
     <div class="note"><span class="tag">说明</span>本页为教学简化，工程细节以正文与官方规范为准；演练为模拟，非真实设备通信。</div>
     <footer>青竹蓝牙学堂 · 蓝牙小课堂第十一课 · A11 · <a href="../">回到学堂</a></footer>
@@ -264,7 +264,7 @@
 
 
 const tocLinks=[...document.querySelectorAll('.toc a')];
-const secs=tocLinks.map(a=>document.querySelector(a.getAttribute('href')));
+const secs=tocLinks.map(a=>document.getElementById(a.getAttribute('href').slice(1)));
 const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){tocLinks.forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+e.target.id));}});},{rootMargin:'-20% 0px -70% 0px'});
 secs.forEach(s=>s&&io.observe(s));
 const QUIZ=[{"q":"1. 不可连接设备在 nRF 里没有 CONNECT 按钮，对应广播什么性质？","opts":[["发不可连接广播（如 ADV_NONCONN_IND）",true,"对。只发数据不接受连接。"],["蓝牙坏了",false,"是广播类型。"],["距离远",false,"距离远会扫不到。"]]},{"q":"2. 三箭头图标按下后，App 实际写了什么？","opts":[["向 CCCD 写开启值（Notify 01 00）",true,"对。"],["读特征",false,"那是向下箭头。"],["写特征值",false,"那是向上箭头。"]]},{"q":"3. 想验证「RSSI 不可靠」，实验里怎么做？","opts":[["固定位置记录后遮挡/换姿态/挪动看波动",true,"对。同一设备波动可达几十 dBm。"],["只看一次数值",false,"看不出波动。"],["换设备名",false,"与 RSSI 无关。"]]}];
